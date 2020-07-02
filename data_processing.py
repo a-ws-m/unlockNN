@@ -68,7 +68,7 @@ class GPDataParser:
     def __init__(
         self,
         model: MEGNetModel,
-        sf: Optional[float] = None,
+        sf: Optional[np.ndarray] = None,
         training_df: Optional[pd.DataFrame] = None,
     ):
         """Initialize class attributes."""
@@ -97,7 +97,9 @@ class GPDataParser:
             self.sf = self._calc_scaling_factor()
 
             # Scale by the factor
-            self.training_data["layer_out"] /= self.sf
+            self.training_data["layer_out"] = self.training_data["layer_out"].apply(
+                lambda x: x / self.sf
+            )
 
     def structures_to_input(
         self, structures: List[pymatgen.Structure]
@@ -111,14 +113,14 @@ class GPDataParser:
         # Squeeze each value to a nicer shape
         return list(map(np.squeeze, layer_outs))
 
-    def _calc_scaling_factor(self) -> float:
+    def _calc_scaling_factor(self) -> np.ndarray:
         """Calculate the scaling factor to use.
 
-        Scaling factor is the absolute greatest value across
+        Scaling factor is the elementwise greatest value across
         all of the `layer_out` vectors.
 
         Returns:
-            sf (float): The scaling factor.
+            sf (:obj:`np.ndarray`): The scaling factor.
 
         """
         if self.training_data is None:
@@ -127,9 +129,17 @@ class GPDataParser:
                 " to calculate a scaling factor."
             )
 
-        abs_values = map(np.absolute, self.training_data["layer_out"])
-        max_values = map(np.amax, abs_values)
-        return max(max_values)
+        abs_values = map(np.abs, self.training_data["layer_out"])
+
+        layer_shape = self.training_data["layer_out"][0].shape
+        sf = np.zeros(layer_shape)
+        for array in abs_values:
+            sf = np.maximum(sf, array)
+
+        # Replace zeros with a scaling factor of 1
+        # so there's no zero division errors
+        sf[sf == 0.0] = 1.0
+        return sf
 
 
 if __name__ == "__main__":
@@ -146,9 +156,7 @@ if __name__ == "__main__":
     processor = GPDataParser(model, training_df=train_df)
 
     # Save scaling factor to file
-    sf_file = Path("megnet_model", "sf.txt")
-    with sf_file.open("w") as f:
-        f.write(str(processor.sf))
+    np.savetxt("megnet_model/sf.txt", processor.sf)
 
     # Save training data (with calculated outputs) to file
     assert processor.training_data is not None
