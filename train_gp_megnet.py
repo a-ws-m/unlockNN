@@ -1,5 +1,5 @@
 """Utilities for training a GP fed from the MEGNet Concatenation layer for a pretrained model."""
-from typing import Optional
+from typing import List
 from operator import itemgetter
 
 import numpy as np
@@ -73,6 +73,20 @@ class GPTrainer:
 
         print(f"Final NLL after {epochs} steps: {neg_log_likelihood}")
 
+    def train_with_val(
+        self, val_points: tf.Tensor, val_obs: tf.Tensor, epochs: int = 1000,
+    ) -> List:
+        """Optimize the parameters and measure MAE of validation predictions at each step."""
+        maes = []
+        for i in tqdm(range(epochs), "Training epochs"):
+            neg_log_likelihood = self.optimize_cycle()
+            gprm = self.get_model(val_points)
+            mae = tf.losses.mae(val_obs, gprm.mean().numpy())
+            maes.append(mae.numpy())
+
+        print(f"Final NLL after {epochs} steps: {neg_log_likelihood}")
+        return maes
+
     @tf.function
     def optimize_cycle(self) -> tf.Tensor:
         """Perform one training step.
@@ -108,7 +122,19 @@ if __name__ == "__main__":
     cat_observations = tf.constant(cation_sses, dtype=tf.float64)
     an_observations = tf.constant(anion_sses, dtype=tf.float64)
 
+    cat_test_vals = tf.constant(
+        list(map(itemgetter(0), test_df["sses"])), dtype=tf.float64
+    )
+    an_test_vals = tf.constant(
+        list(map(itemgetter(1), test_df["sses"])), dtype=tf.float64
+    )
+
     # Build cation SSE GP model
     cat_gp_trainer = GPTrainer(observation_index_points, cat_observations)
-    cat_gp_trainer.train()
-    cat_gprm = cat_gp_trainer.get_model(index_points)
+    maes = cat_gp_trainer.train_with_val(index_points, cat_test_vals)
+
+    with open("maes.csv", "w") as f:
+        f.write("\n".join(map(str, maes)))
+
+    cat_gp_trainer.kernel.amplitude.numpy().tofile("amplitude.npy")
+    cat_gp_trainer.kernel.length_scale.numpy().tofile("length_scale.npy")
