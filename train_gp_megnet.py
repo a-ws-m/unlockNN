@@ -13,44 +13,59 @@ tfd = tfp.distributions
 tfk = tfp.math.psd_kernels
 
 
-def gen_index_points(ndim: int, npoints: int) -> np.ndarray:
-    """Generate index points with a given number of dimensions.
+def convert_index_points(array: np.ndarray) -> tf.Tensor:
+    """Reshape an array into a tensor appropriate for GP index points.
 
-    Index points are based off a uniform distribution from -1 to 1.
+    Extends the amount of dimensions by `array.shape[1] - 1` and converts
+    to a `Tensor`.
 
     Args:
-        ndim (int): The number of dimensions.
-        npoints (int): The number of samples per dimension.
-    
-    Returns:
-        points_matrix: A matrix with shape (npoints, ndim).
-    
+        array (:obj:`np.ndarray`): The array to extend.
+
+    Returns
+        tensor (:obj:`tf.Tensor`): The converted Tensor.
+
     """
-    lin_points = np.linspace(-1, 1, npoints)
-    points_matrix = np.stack([lin_points for _ in range(ndim)])
-    points_matrix = points_matrix.T
-    return points_matrix
+    shape = array.shape
+    shape += (1,) * (shape[1] - 1)
+    return tf.constant(array, shape=shape)
+
+
+class kernel_trainer:
+    """Class for training hyperparameters for GP kernels."""
+
+    def __init__(
+        self, observation_index_points: tf.constant, observations: tf.constant
+    ):
+        pass
 
 
 if __name__ == "__main__":
     # * Get the data and perform some regression
+    NDIMS = 96
+
     train_df = pd.read_pickle("dataframes/gp_train_df.pickle")
     test_df = pd.read_pickle("dataframes/gp_test_df.pickle")
 
     # Slightly arbitrary kernel choice for now...
-    kernel = tfk.MaternOneHalf(feature_ndims=96)
+    kernel = tfk.MaternOneHalf(feature_ndims=NDIMS)
 
-    # Create our index points
-    index_points = gen_index_points(96, 100)
-
-    # Observation index points
     observation_index_points = np.stack(train_df["layer_out"].values)
+    index_points = np.stack(test_df["layer_out"].values)
 
-    cation_sses = map(itemgetter(0), train_df["sses"])
-    anion_sses = map(itemgetter(1), train_df["sses"])
+    observation_index_points = convert_index_points(observation_index_points)
+    index_points = convert_index_points(index_points)
 
-    cat_observations = np.array(cation_sses)[:, np.newaxis]
-    an_observations = np.array(anion_sses)[:, np.newaxis]
+    cation_sses = list(map(itemgetter(0), train_df["sses"]))
+    anion_sses = list(map(itemgetter(1), train_df["sses"]))
+
+    cat_observations = tf.constant(cation_sses)
+    an_observations = tf.constant(anion_sses)
 
     # Build cation SSE GP model
-    cat_gp_prior = tfd.GaussianProcess(kernel=kernel, index_points=index_points)
+    cat_gp_prior = tfd.GaussianProcessRegressionModel(
+        kernel=kernel,
+        index_points=index_points,
+        observation_index_points=observation_index_points,
+        observations=cat_observations,
+    )
