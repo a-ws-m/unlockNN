@@ -170,3 +170,4 @@ callback/*
 
 ### GP Trainer ###
 tf_ckpts/*
+saved_gp/*

@@ -1,14 +1,18 @@
 """Utilities for training a GP fed from the MEGNet Concatenation layer for a pretrained model."""
-from typing import List, Optional
 from operator import itemgetter
+from typing import Iterator, List, Optional
 
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import tensorflow.python.util.deprecation as deprecation
 import tensorflow_probability as tfp
 from tqdm import tqdm
 
 from data_processing import GPDataParser
+
+deprecation._PRINT_DEPRECATION_WARNINGS = False
+
 
 tfd = tfp.distributions
 tfk = tfp.math.psd_kernels
@@ -41,9 +45,16 @@ class GPTrainer(tf.Module):
         observations: tf.Tensor,
         checkpoint_dir: Optional[str] = None,
     ):
-        """Initialze attributes and kernel, then optimize."""
-        self.observation_index_points = observation_index_points
-        self.observations = observations
+        """Initialze attributes, kernel, optimizer and checkpoint manager."""
+        self.observation_index_points = tf.Variable(
+            observation_index_points,
+            dtype=tf.float64,
+            trainable=False,
+            name="observation_index_points",
+        )
+        self.observations = tf.Variable(
+            observations, dtype=tf.float64, trainable=False, name="observations",
+        )
 
         self.amplitude = tf.Variable(1.0, dtype=tf.float64, name="amplitude")
         self.length_scale = tf.Variable(1.0, dtype=tf.float64, name="length_scale")
@@ -57,23 +68,30 @@ class GPTrainer(tf.Module):
 
         self.optimizer = tf.optimizers.Adam()
 
-        self.training_steps = tf.Variable(0, trainable=False, name="training_steps")
+        self.training_steps = tf.Variable(
+            0, dtype=tf.int32, trainable=False, name="training_steps"
+        )
+
+        self.mae = tf.Variable(np.inf, dtype=tf.float64, trainable=False, name="MAE")
 
         if checkpoint_dir:
             self.ckpt = tf.train.Checkpoint(
-                step=self.training_steps, amp=self.amplitude, ls=self.length_scale,
+                step=self.training_steps,
+                amp=self.amplitude,
+                ls=self.length_scale,
+                mae=self.mae,
             )
             self.ckpt_manager = tf.train.CheckpointManager(
                 self.ckpt,
                 checkpoint_dir,
                 max_to_keep=3,
                 step_counter=self.training_steps,
-                checkpoint_interval=10,
+                # checkpoint_interval=50,
             )
 
             self.ckpt.restore(self.ckpt_manager.latest_checkpoint)
             if self.ckpt_manager.latest_checkpoint:
-                print(f"Restored from {self.ckpt_manager.latest_checkpoint}.")
+                print(f"Restored from {self.ckpt_manager.latest_checkpoint}")
             else:
                 print("No checkpoints found.")
 
@@ -83,7 +101,14 @@ class GPTrainer(tf.Module):
 
         self.gp_prior = tfd.GaussianProcess(self.kernel, self.observation_index_points)
 
-    def get_model(self, index_points: tf.Tensor) -> tfd.GaussianProcessRegressionModel:
+    @staticmethod
+    def load_model(model_dir: str):
+        """Load a `GPTrainer` model from a file."""
+        return tf.saved_model.load(model_dir)
+
+    def get_model(
+        self, index_points: tf.Tensor
+    ) -> tfp.python.distributions.GaussianProcessRegressionModel:
         """Get a regression model for a set of index points."""
         return tfd.GaussianProcessRegressionModel(
             kernel=self.kernel,
@@ -93,21 +118,29 @@ class GPTrainer(tf.Module):
         )
 
     def train_model(
-        self, val_points: tf.Tensor, val_obs: tf.Tensor, epochs: int = 1000,
-    ) -> List:
+        self,
+        val_points: tf.Tensor,
+        val_obs: tf.Tensor,
+        epochs: int = 1000,
+        save_dir: Optional[str] = None,
+    ) -> Iterator[float]:
         """Optimize the parameters and measure MAE of validation predictions at each step."""
-        maes = []
+        best_mae: float = self.mae.numpy()
         for i in tqdm(range(epochs), "Training epochs"):
             neg_log_likelihood = self.optimize_cycle()
-            gprm = self.get_model(val_points)
-            mae = tf.losses.mae(val_obs, gprm.mean().numpy())
-            maes.append(mae.numpy())
-
             self.training_steps.assign_add(1)
-            if self.ckpt_manager:
-                self.ckpt_manager.save(self.training_steps)
+            gprm = self.get_model(val_points)
 
-        return maes
+            self.mae.assign(tf.losses.mae(val_obs, gprm.mean().numpy()))
+            if self.mae < best_mae:
+                best_mae = self.mae.numpy()
+                if self.ckpt_manager:
+                    self.ckpt_manager.save(self.training_steps)
+
+            yield self.mae.numpy()
+
+        if save_dir:
+            tf.saved_model.save(self, save_dir)
 
     @tf.function
     def optimize_cycle(self) -> tf.Tensor:
@@ -153,8 +186,9 @@ if __name__ == "__main__":
 
     # Build cation SSE GP model
     cat_gp_trainer = GPTrainer(observation_index_points, cat_observations, "./tf_ckpts")
-    maes = cat_gp_trainer.train_model(index_points, cat_test_vals, 11)
+    maes = list(
+        cat_gp_trainer.train_model(index_points, cat_test_vals, 15, "./saved_gp")
+    )
 
     with open("maes1.csv", "a") as f:
         f.write("\n".join(map(str, maes)) + "\n")
-
