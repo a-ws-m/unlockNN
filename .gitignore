@@ -167,3 +167,6 @@ dmypy.json
 
 ### MEGNet ###
 callback/*
+
+### GP Trainer ###
+tf_ckpts/*

@@ -1,5 +1,5 @@
 """Utilities for training a GP fed from the MEGNet Concatenation layer for a pretrained model."""
-from typing import List
+from typing import List, Optional
 from operator import itemgetter
 
 import numpy as np
@@ -32,25 +32,56 @@ def convert_index_points(array: np.ndarray) -> tf.Tensor:
     return tf.constant(array, dtype=tf.float64, shape=shape)
 
 
-class GPTrainer:
+class GPTrainer(tf.Module):
     """Class for training hyperparameters for GP kernels."""
 
     def __init__(
-        self, observation_index_points: tf.Tensor, observations: tf.Tensor,
+        self,
+        observation_index_points: tf.Tensor,
+        observations: tf.Tensor,
+        checkpoint_dir: Optional[str] = None,
     ):
         """Initialze attributes and kernel, then optimize."""
         self.observation_index_points = observation_index_points
         self.observations = observations
 
+        self.amplitude = tf.Variable(1.0, dtype=tf.float64, name="amplitude")
+        self.length_scale = tf.Variable(1.0, dtype=tf.float64, name="length_scale")
+
         # TODO: Customizable kernel
         self.kernel = tfk.MaternOneHalf(
-            amplitude=tf.Variable(1.0, dtype=tf.float64, name="amplitude"),
-            length_scale=tf.Variable(1.0, dtype=tf.float64, name="length_scale"),
+            amplitude=self.amplitude,
+            length_scale=self.length_scale,
             feature_ndims=self.observation_index_points.shape[1],
         )
 
-        self.gp_prior = tfd.GaussianProcess(self.kernel, self.observation_index_points)
         self.optimizer = tf.optimizers.Adam()
+
+        self.training_steps = tf.Variable(0, trainable=False, name="training_steps")
+
+        if checkpoint_dir:
+            self.ckpt = tf.train.Checkpoint(
+                step=self.training_steps, amp=self.amplitude, ls=self.length_scale,
+            )
+            self.ckpt_manager = tf.train.CheckpointManager(
+                self.ckpt,
+                checkpoint_dir,
+                max_to_keep=3,
+                step_counter=self.training_steps,
+                checkpoint_interval=10,
+            )
+
+            self.ckpt.restore(self.ckpt_manager.latest_checkpoint)
+            if self.ckpt_manager.latest_checkpoint:
+                print(f"Restored from {self.ckpt_manager.latest_checkpoint}.")
+            else:
+                print("No checkpoints found.")
+
+        else:
+            self.ckpt = None
+            self.ckpt_manager = None
+
+        self.gp_prior = tfd.GaussianProcess(self.kernel, self.observation_index_points)
 
     def get_model(self, index_points: tf.Tensor) -> tfd.GaussianProcessRegressionModel:
         """Get a regression model for a set of index points."""
@@ -61,19 +92,7 @@ class GPTrainer:
             observations=self.observations,
         )
 
-    def train(self, epochs: int = 1000):
-        """Optimize the parameters.
-        
-        Args:
-            epochs (int): The number of training steps to perform. Defaults to 1000.
-
-        """
-        for i in tqdm(range(epochs), "Training epochs"):
-            neg_log_likelihood = self.optimize_cycle()
-
-        print(f"Final NLL after {epochs} steps: {neg_log_likelihood}")
-
-    def train_with_val(
+    def train_model(
         self, val_points: tf.Tensor, val_obs: tf.Tensor, epochs: int = 1000,
     ) -> List:
         """Optimize the parameters and measure MAE of validation predictions at each step."""
@@ -84,7 +103,10 @@ class GPTrainer:
             mae = tf.losses.mae(val_obs, gprm.mean().numpy())
             maes.append(mae.numpy())
 
-        print(f"Final NLL after {epochs} steps: {neg_log_likelihood}")
+            self.training_steps.assign_add(1)
+            if self.ckpt_manager:
+                self.ckpt_manager.save(self.training_steps)
+
         return maes
 
     @tf.function
@@ -96,10 +118,10 @@ class GPTrainer:
 
         """
         with tf.GradientTape() as tape:
-            loss = -self.gp_prior.log_prob(self.observations, name="log_prob")
+            loss = -self.gp_prior.log_prob(self.observations)
 
-        grads = tape.gradient(loss, self.gp_prior.trainable_variables)
-        self.optimizer.apply_gradients(zip(grads, self.gp_prior.trainable_variables))
+        grads = tape.gradient(loss, self.trainable_variables)
+        self.optimizer.apply_gradients(zip(grads, self.trainable_variables))
         return loss
 
 
@@ -130,11 +152,9 @@ if __name__ == "__main__":
     )
 
     # Build cation SSE GP model
-    cat_gp_trainer = GPTrainer(observation_index_points, cat_observations)
-    maes = cat_gp_trainer.train_with_val(index_points, cat_test_vals)
+    cat_gp_trainer = GPTrainer(observation_index_points, cat_observations, "./tf_ckpts")
+    maes = cat_gp_trainer.train_model(index_points, cat_test_vals, 11)
 
-    with open("maes.csv", "w") as f:
-        f.write("\n".join(map(str, maes)))
+    with open("maes1.csv", "a") as f:
+        f.write("\n".join(map(str, maes)) + "\n")
 
-    cat_gp_trainer.kernel.amplitude.numpy().tofile("amplitude.npy")
-    cat_gp_trainer.kernel.length_scale.numpy().tofile("length_scale.npy")
