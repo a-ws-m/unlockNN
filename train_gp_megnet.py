@@ -1,6 +1,6 @@
 """Utilities for training a GP fed from the MEGNet Concatenation layer for a pretrained model."""
 from operator import itemgetter
-from typing import Iterator, List, Optional
+from typing import Iterator, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -116,6 +116,16 @@ class GPTrainer(tf.Module):
             observation_index_points=self.observation_index_points,
             observations=self.observations,
         )
+
+    @tf.function
+    def predict(
+        self, points: tf.Tensor, stds: float = 3.0
+    ) -> Tuple[tf.Tensor, tf.Tensor]:
+        """Predict values for given `points` and the absolute uncertainty as a number of standard deviations."""
+        gprm = self.get_model(points)
+        prediction = gprm.mean()
+        uncertainty = gprm.stddev() * stds
+        return prediction, uncertainty
 
     def train_model(
         self,
