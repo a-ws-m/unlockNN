@@ -117,14 +117,12 @@ class GPTrainer(tf.Module):
             observations=self.observations,
         )
 
-    @tf.function
-    def predict(
-        self, points: tf.Tensor, stds: float = 3.0
-    ) -> Tuple[tf.Tensor, tf.Tensor]:
+    @tf.function(input_signature=[tf.TensorSpec(None, tf.float64)])
+    def predict(self, points: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
         """Predict values for given `points` and the absolute uncertainty as a number of standard deviations."""
         gprm = self.get_model(points)
         prediction = gprm.mean()
-        uncertainty = gprm.stddev() * stds
+        uncertainty = gprm.stddev() * 3.0
         return prediction, uncertainty
 
     def train_model(
@@ -197,7 +195,7 @@ if __name__ == "__main__":
     # Build cation SSE GP model
     cat_gp_trainer = GPTrainer(observation_index_points, cat_observations, "./tf_ckpts")
     maes = list(
-        cat_gp_trainer.train_model(index_points, cat_test_vals, 15, "./saved_gp")
+        cat_gp_trainer.train_model(index_points, cat_test_vals, save_dir="./saved_gp")
     )
 
     with open("maes1.csv", "a") as f:
