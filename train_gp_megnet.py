@@ -84,7 +84,7 @@ class GPTrainer(tf.Module):
             self.ckpt_manager = tf.train.CheckpointManager(
                 self.ckpt,
                 checkpoint_dir,
-                max_to_keep=3,
+                max_to_keep=1,
                 step_counter=self.training_steps,
                 # checkpoint_interval=50,
             )
@@ -130,22 +130,33 @@ class GPTrainer(tf.Module):
         val_points: tf.Tensor,
         val_obs: tf.Tensor,
         epochs: int = 1000,
+        patience: Optional[int] = None,
         save_dir: Optional[str] = None,
     ) -> Iterator[float]:
         """Optimize the parameters and measure MAE of validation predictions at each step."""
         best_mae: float = self.mae.numpy()
+        steps_since_improvement: int = 1
         for i in tqdm(range(epochs), "Training epochs"):
             neg_log_likelihood = self.optimize_cycle()
             self.training_steps.assign_add(1)
             gprm = self.get_model(val_points)
 
             self.mae.assign(tf.losses.mae(val_obs, gprm.mean().numpy()))
+            yield self.mae.numpy()
+
             if self.mae < best_mae:
                 best_mae = self.mae.numpy()
+                steps_since_improvement = 1
                 if self.ckpt_manager:
                     self.ckpt_manager.save(self.training_steps)
-
-            yield self.mae.numpy()
+            else:
+                steps_since_improvement += 1
+                if patience and steps_since_improvement >= patience:
+                    print(
+                        "Patience exceeded: "
+                        f"{steps_since_improvement} steps since MAE improvement."
+                    )
+                    break
 
         if save_dir:
             tf.saved_model.save(self, save_dir)
@@ -195,8 +206,17 @@ if __name__ == "__main__":
     # Build cation SSE GP model
     cat_gp_trainer = GPTrainer(observation_index_points, cat_observations, "./tf_ckpts")
     maes = list(
-        cat_gp_trainer.train_model(index_points, cat_test_vals, save_dir="./saved_gp")
+        cat_gp_trainer.train_model(
+            index_points, cat_test_vals, epochs=2, patience=200, save_dir="./saved_gp",
+        )
     )
 
     with open("maes1.csv", "a") as f:
         f.write("\n".join(map(str, maes)) + "\n")
+
+    # Make some predictions and save to file
+    model = GPTrainer.load_model("./saved_gp")
+    pred, uncert = model.predict(index_points)
+    data = {"actual_value": cat_test_vals, "prediction": pred, "uncertainty": uncert}
+    df = pd.DataFrame(data)
+    df.to_csv("dataframes/cat_gp_predictions.csv")
