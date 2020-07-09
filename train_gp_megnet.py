@@ -2,16 +2,15 @@
 from operator import itemgetter
 from typing import Iterator, List, Optional, Tuple
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import tensorflow as tf
 import tensorflow.python.util.deprecation as deprecation
 import tensorflow_probability as tfp
 from tqdm import tqdm
 
 from data_processing import GPDataParser
+from data_vis import plot_calibration, plot_sharpness
 
 deprecation._PRINT_DEPRECATION_WARNINGS = False
 
@@ -193,57 +192,8 @@ class GPTrainer(tf.Module):
         cal_error = np.sum(np.square(predicted_pi - observed_pi))
 
         if make_plots:
-            figsize = (4, 4)
-            fontsize = 12
-
-            # * Make calibration plot
-            fig_cal = plt.figure(figsize=figsize)
-            ax_ideal = sns.lineplot([0, 1], [0, 1], label="ideal")
-            ax_ideal.lines[0].set_linestyle("--")
-
-            ax_gp = sns.lineplot(predicted_pi, observed_pi)
-            ax_fill = plt.fill_between(
-                predicted_pi,
-                predicted_pi,
-                observed_pi,
-                alpha=0.2,
-                label="miscalibration area",
-            )
-
-            ax_ideal.set_xlabel("Expected cumulative distribution")
-            ax_ideal.set_ylabel("Observed cumulative distribution")
-            ax_ideal.set_xlim([0, 1])
-            ax_ideal.set_ylim([0, 1])
-            plt.savefig("calibration.png")
-
-            # * Make sharpness plot
-            fig_sharp = plt.figure(figsize=figsize)
-            ax_sharp = sns.distplot(stdevs, kde=False, norm_hist=True)
-            ax_sharp.set_xlim(left=0.0)
-            ax_sharp.set_xlabel("Predicted standard deviations (eV)")
-            ax_sharp.set_ylabel("Normalized frequency")
-            ax_sharp.set_yticklabels([])
-            ax_sharp.set_yticks([])
-
-            ax_sharp.axvline(x=sharpness, label="sharpness")
-
-            xlim = ax_sharp.get_xlim()
-            if sharpness < (xlim[0] + xlim[1]) / 2:
-                text = f"\n  Sharpness = {sharpness:.2f} eV\n  C$_v$ = {coeff_var:.2f}"
-                h_align = "left"
-            else:
-                text = f"\nSharpness = {sharpness:.2f} eV  \nC$_v$ = {coeff_var:.2f}  "
-                h_align = "right"
-
-            ax_sharp.text(
-                x=sharpness,
-                y=ax_sharp.get_ylim()[1],
-                s=text,
-                verticalalignment="top",
-                horizontalalignment=h_align,
-                fontsize=fontsize,
-            )
-            plt.savefig("sharpness.png")
+            plot_calibration(predicted_pi, observed_pi, "misc/calibration.pdf")
+            plot_sharpness(stdevs, sharpness, coeff_var, "misc/sharpness.pdf")
 
         return nll, sharpness, coeff_var, cal_error
 
@@ -327,7 +277,7 @@ if __name__ == "__main__":
 
     # Build cation SSE GP model
     cat_gp_trainer = GPTrainer(observation_index_points, cat_observations, "./tf_ckpts")
-    print(cat_gp_trainer.metrics(index_points, cat_test_vals))
+    print(cat_gp_trainer.metrics(index_points, cat_test_vals, True))
     # maes = list(
     #     cat_gp_trainer.train_model(
     #         index_points, cat_test_vals, epochs=2, patience=200, save_dir="./saved_gp",
