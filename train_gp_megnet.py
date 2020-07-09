@@ -2,8 +2,10 @@
 from operator import itemgetter
 from typing import Iterator, List, Optional, Tuple
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import tensorflow as tf
 import tensorflow.python.util.deprecation as deprecation
 import tensorflow_probability as tfp
@@ -119,11 +121,131 @@ class GPTrainer(tf.Module):
 
     @tf.function(input_signature=[tf.TensorSpec(None, tf.float64)])
     def predict(self, points: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
-        """Predict values for given `points` and the absolute uncertainty as a number of standard deviations."""
+        """Predict values for given `points` and the standard deviation of the distribution."""
         gprm = self.get_model(points)
-        prediction = gprm.mean()
-        uncertainty = gprm.stddev() * 3.0
-        return prediction, uncertainty
+        return gprm.mean(), gprm.stddev()
+
+    @staticmethod
+    def calc_pis(residuals: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """Calculate the percentile interval densities of a model.
+        
+        Based on the implementation by `Tran et al.`_. Initially proposed by `Kuleshov et al.`_.
+
+        Args:
+            residuals (:obj:`np.ndarray`): The normalised residuals of the model predictions.
+        
+        Returns:
+            predicted_pi (:obj:`np.ndarray`): The percentiles used.
+            observed_pi (:obj:`np.ndarray`): The density of residuals that fall within each of the
+                `predicted_pi` percentiles.
+
+        .. _Tran et al.:
+            https://arxiv.org/abs/1912.10066
+        .. _Kuleshov et al.:
+            https://arxiv.org/abs/1807.00263
+
+        """
+        norm = tfd.Normal(0, 1)
+
+        predicted_pi = np.linspace(0, 1, 100)
+        bounds = norm.quantile(predicted_pi).numpy()
+
+        observed_pi = np.array(
+            [np.count_nonzero(residuals <= bound) for bound in bounds]
+        )
+        observed_pi = observed_pi / residuals.size
+
+        return predicted_pi, observed_pi
+
+    def metrics(
+        self, val_points: tf.Tensor, val_obs: tf.Tensor, make_plots: bool = False
+    ) -> Tuple[float, float, float, float]:
+        """Calculate model performance metrics.
+
+        Returns:
+            nll (float): Negative log likelihood.
+            sharpness (float): RMS of predicted standard deviations.
+            coeff_var (float): Coefficient of variation. Indicates dispersion of
+                uncertainty estimates.
+            cal_error (float): Calibration error. Indicates how well the true
+                frequency of points in each interval correspond to the predicted
+                fraction of points in that interval (`Kuleshov et al.`_).
+
+        .. _Kuleshov et al.:
+            https://arxiv.org/abs/1807.00263
+
+        """
+        gprm = self.get_model(val_points)
+
+        nll = -gprm.log_prob(val_obs).numpy()
+
+        stdevs = gprm.stddev().numpy()
+
+        sharpness = np.sqrt(np.mean(np.square(stdevs)))
+
+        stdev_mean = np.mean(stdevs)
+        coeff_var = np.sqrt(np.sum(np.square(stdevs - stdev_mean)))
+        coeff_var /= stdev_mean * (len(stdevs) - 1)
+
+        resids = gprm.mean().numpy() - val_obs.numpy()
+        resids /= stdevs  # Normalise residuals
+        predicted_pi, observed_pi = self.calc_pis(resids)
+        cal_error = np.sum(np.square(predicted_pi - observed_pi))
+
+        if make_plots:
+            figsize = (4, 4)
+            fontsize = 12
+
+            # * Make calibration plot
+            fig_cal = plt.figure(figsize=figsize)
+            ax_ideal = sns.lineplot([0, 1], [0, 1], label="ideal")
+            ax_ideal.lines[0].set_linestyle("--")
+
+            ax_gp = sns.lineplot(predicted_pi, observed_pi)
+            ax_fill = plt.fill_between(
+                predicted_pi,
+                predicted_pi,
+                observed_pi,
+                alpha=0.2,
+                label="miscalibration area",
+            )
+
+            ax_ideal.set_xlabel("Expected cumulative distribution")
+            ax_ideal.set_ylabel("Observed cumulative distribution")
+            ax_ideal.set_xlim([0, 1])
+            ax_ideal.set_ylim([0, 1])
+            plt.savefig("calibration.png")
+
+            # * Make sharpness plot
+            fig_sharp = plt.figure(figsize=figsize)
+            ax_sharp = sns.distplot(stdevs, kde=False, norm_hist=True)
+            ax_sharp.set_xlim(left=0.0)
+            ax_sharp.set_xlabel("Predicted standard deviations (eV)")
+            ax_sharp.set_ylabel("Normalized frequency")
+            ax_sharp.set_yticklabels([])
+            ax_sharp.set_yticks([])
+
+            ax_sharp.axvline(x=sharpness, label="sharpness")
+
+            xlim = ax_sharp.get_xlim()
+            if sharpness < (xlim[0] + xlim[1]) / 2:
+                text = f"\n  Sharpness = {sharpness:.2f} eV\n  C$_v$ = {coeff_var:.2f}"
+                h_align = "left"
+            else:
+                text = f"\nSharpness = {sharpness:.2f} eV  \nC$_v$ = {coeff_var:.2f}  "
+                h_align = "right"
+
+            ax_sharp.text(
+                x=sharpness,
+                y=ax_sharp.get_ylim()[1],
+                s=text,
+                verticalalignment="top",
+                horizontalalignment=h_align,
+                fontsize=fontsize,
+            )
+            plt.savefig("sharpness.png")
+
+        return nll, sharpness, coeff_var, cal_error
 
     def train_model(
         self,
@@ -205,18 +327,20 @@ if __name__ == "__main__":
 
     # Build cation SSE GP model
     cat_gp_trainer = GPTrainer(observation_index_points, cat_observations, "./tf_ckpts")
-    maes = list(
-        cat_gp_trainer.train_model(
-            index_points, cat_test_vals, epochs=2, patience=200, save_dir="./saved_gp",
-        )
-    )
+    print(cat_gp_trainer.metrics(index_points, cat_test_vals))
+    # maes = list(
+    #     cat_gp_trainer.train_model(
+    #         index_points, cat_test_vals, epochs=2, patience=200, save_dir="./saved_gp",
+    #     )
+    # )
 
-    with open("maes1.csv", "a") as f:
-        f.write("\n".join(map(str, maes)) + "\n")
+    # with open("maes1.csv", "a") as f:
+    #     f.write("\n".join(map(str, maes)) + "\n")
 
-    # Make some predictions and save to file
-    model = GPTrainer.load_model("./saved_gp")
-    pred, uncert = model.predict(index_points)
-    data = {"actual_value": cat_test_vals, "prediction": pred, "uncertainty": uncert}
-    df = pd.DataFrame(data)
-    df.to_csv("dataframes/cat_gp_predictions.csv")
+    # # Make some predictions and save to file
+    # model = GPTrainer.load_model("./saved_gp")
+    # pred, stdev = model.predict(index_points)
+    # uncert = stdev * 3
+    # data = {"actual_value": cat_test_vals, "prediction": pred, "uncertainty": uncert}
+    # df = pd.DataFrame(data)
+    # df.to_csv("dataframes/cat_gp_predictions.csv")
