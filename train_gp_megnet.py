@@ -9,7 +9,6 @@ import tensorflow.python.util.deprecation as deprecation
 import tensorflow_probability as tfp
 from tqdm import tqdm
 
-from data_processing import GPDataParser
 from data_vis import plot_calibration, plot_sharpness
 
 deprecation._PRINT_DEPRECATION_WARNINGS = False
@@ -73,21 +72,41 @@ class GPTrainer(tf.Module):
             0, dtype=tf.int32, trainable=False, name="training_steps"
         )
 
-        self.mae = tf.Variable(np.inf, dtype=tf.float64, trainable=False, name="MAE")
+        self.val_nll = tf.Variable(
+            np.inf, dtype=tf.float64, trainable=False, name="validation_nll"
+        )
+        self.val_mae = tf.Variable(
+            np.inf, dtype=tf.float64, trainable=False, name="validation_mae"
+        )
+        self.val_sharpness = tf.Variable(
+            np.inf, dtype=tf.float64, trainable=False, name="validation_sharpness"
+        )
+        self.val_coeff_var = tf.Variable(
+            np.inf, dtype=tf.float64, trainable=False, name="validation_coeff_variance"
+        )
+        self.val_cal_err = tf.Variable(
+            np.inf,
+            dtype=tf.float64,
+            trainable=False,
+            name="validation_calibration_error",
+        )
 
         if checkpoint_dir:
             self.ckpt = tf.train.Checkpoint(
                 step=self.training_steps,
                 amp=self.amplitude,
                 ls=self.length_scale,
-                mae=self.mae,
+                val_nll=self.val_nll,
+                val_mae=self.val_mae,
+                val_sharpness=self.val_sharpness,
+                val_coeff_var=self.val_coeff_var,
+                val_cal_err=self.val_cal_err,
             )
             self.ckpt_manager = tf.train.CheckpointManager(
                 self.ckpt,
                 checkpoint_dir,
                 max_to_keep=1,
                 step_counter=self.training_steps,
-                # checkpoint_interval=50,
             )
 
             self.ckpt.restore(self.ckpt_manager.latest_checkpoint)
@@ -158,11 +177,12 @@ class GPTrainer(tf.Module):
 
     def metrics(
         self, val_points: tf.Tensor, val_obs: tf.Tensor, make_plots: bool = False
-    ) -> Tuple[float, float, float, float]:
+    ) -> Tuple[float, float, float, float, float]:
         """Calculate model performance metrics.
 
         Returns:
             nll (float): Negative log likelihood.
+            mae (float): Mean average error.
             sharpness (float): RMS of predicted standard deviations.
             coeff_var (float): Coefficient of variation. Indicates dispersion of
                 uncertainty estimates.
@@ -177,6 +197,8 @@ class GPTrainer(tf.Module):
         gprm = self.get_model(val_points)
 
         nll = -gprm.log_prob(val_obs).numpy()
+
+        mae = tf.losses.mae(val_obs, gprm.mean().numpy()).numpy()
 
         stdevs = gprm.stddev().numpy()
 
@@ -195,7 +217,7 @@ class GPTrainer(tf.Module):
             plot_calibration(predicted_pi, observed_pi, "misc/calibration.pdf")
             plot_sharpness(stdevs, sharpness, coeff_var, "misc/sharpness.pdf")
 
-        return nll, sharpness, coeff_var, cal_error
+        return nll, mae, sharpness, coeff_var, cal_error
 
     def train_model(
         self,
@@ -204,20 +226,31 @@ class GPTrainer(tf.Module):
         epochs: int = 1000,
         patience: Optional[int] = None,
         save_dir: Optional[str] = None,
-    ) -> Iterator[float]:
-        """Optimize the parameters and measure MAE of validation predictions at each step."""
-        best_mae: float = self.mae.numpy()
+    ) -> Iterator[Tuple[float, float, float, float, float]]:
+        """Optimize the parameters and measure validation metrics at each step."""
+        best_nll: float = self.val_nll.numpy()
         steps_since_improvement: int = 1
+
         for i in tqdm(range(epochs), "Training epochs"):
-            neg_log_likelihood = self.optimize_cycle()
+            self.optimize_cycle()
             self.training_steps.assign_add(1)
-            gprm = self.get_model(val_points)
 
-            self.mae.assign(tf.losses.mae(val_obs, gprm.mean().numpy()))
-            yield self.mae.numpy()
+            # * Determine and assign metrics
+            metrics = self.metrics(val_points, val_obs)
+            metric_order = (
+                self.val_nll,
+                self.val_mae,
+                self.val_sharpness,
+                self.val_coeff_var,
+                self.val_cal_err,
+            )
+            for variable, metric in zip(metric_order, metrics):
+                variable.assign(metric)
 
-            if self.mae < best_mae:
-                best_mae = self.mae.numpy()
+            yield metrics
+
+            if self.val_nll < best_nll:
+                best_nll = self.val_nll.numpy()
                 steps_since_improvement = 1
                 if self.ckpt_manager:
                     self.ckpt_manager.save(self.training_steps)
@@ -226,7 +259,7 @@ class GPTrainer(tf.Module):
                 if patience and steps_since_improvement >= patience:
                     print(
                         "Patience exceeded: "
-                        f"{steps_since_improvement} steps since MAE improvement."
+                        f"{steps_since_improvement} steps since NLL improvement."
                     )
                     break
 
@@ -275,17 +308,31 @@ if __name__ == "__main__":
         list(map(itemgetter(1), test_df["sses"])), dtype=tf.float64
     )
 
+    metric_labels = [
+        "val_nll",
+        "val_mae",
+        "val_sharpness",
+        "val_coeff_var",
+        "val_cal_err",
+    ]
+
+    # Load previous metrics
+    metrics_fname = "misc/metrics.csv"
+    try:
+        metrics = pd.read_csv(metrics_fname, index_col=0)
+    except FileNotFoundError:
+        metrics = pd.DataFrame([(np.nan,) * len(metric_labels)], columns=metric_labels)
+
+    model_params = {"epochs": 10000, "patience": 200, "save_dir": "./saved_gp"}
+
     # Build cation SSE GP model
     cat_gp_trainer = GPTrainer(observation_index_points, cat_observations, "./tf_ckpts")
-    print(cat_gp_trainer.metrics(index_points, cat_test_vals, True))
-    # maes = list(
-    #     cat_gp_trainer.train_model(
-    #         index_points, cat_test_vals, epochs=2, patience=200, save_dir="./saved_gp",
-    #     )
-    # )
-
-    # with open("maes1.csv", "a") as f:
-    #     f.write("\n".join(map(str, maes)) + "\n")
+    for metric in cat_gp_trainer.train_model(
+        index_points, cat_test_vals, **model_params
+    ):
+        metric_series = pd.Series(metric, index=metric_labels)
+        metrics = metrics.append(metric_series, ignore_index=True)
+        metrics.to_csv(metrics_fname)
 
     # # Make some predictions and save to file
     # model = GPTrainer.load_model("./saved_gp")
