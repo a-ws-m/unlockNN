@@ -1,6 +1,7 @@
 """Utilities for training a GP fed from the MEGNet Concatenation layer for a pretrained model."""
 from operator import itemgetter
-from typing import Iterator, List, Optional, Tuple
+from pathlib import Path
+from typing import Iterator, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -9,7 +10,7 @@ import tensorflow.python.util.deprecation as deprecation
 import tensorflow_probability as tfp
 from tqdm import tqdm
 
-from data_vis import plot_calibration, plot_sharpness
+from .data_vis import plot_calibration, plot_sharpness
 
 deprecation._PRINT_DEPRECATION_WARNINGS = False
 
@@ -225,7 +226,7 @@ class GPTrainer(tf.Module):
         val_obs: tf.Tensor,
         epochs: int = 1000,
         patience: Optional[int] = None,
-        save_dir: Optional[str] = None,
+        save_dir: Optional[Union[str, Path]] = None,
     ) -> Iterator[Tuple[float, float, float, float, float]]:
         """Optimize the parameters and measure validation metrics at each step."""
         best_nll: float = self.val_nll.numpy()
@@ -280,64 +281,3 @@ class GPTrainer(tf.Module):
         grads = tape.gradient(loss, self.trainable_variables)
         self.optimizer.apply_gradients(zip(grads, self.trainable_variables))
         return loss
-
-
-if __name__ == "__main__":
-    # * Get the data and perform some regression
-    NDIMS = 96
-
-    train_df = pd.read_pickle("dataframes/gp_train_df.pickle")
-    test_df = pd.read_pickle("dataframes/gp_test_df.pickle")
-
-    observation_index_points = np.stack(train_df["layer_out"].values)
-    index_points = np.stack(test_df["layer_out"].values)
-
-    observation_index_points = convert_index_points(observation_index_points)
-    index_points = convert_index_points(index_points)
-
-    cation_sses = list(map(itemgetter(0), train_df["sses"]))
-    anion_sses = list(map(itemgetter(1), train_df["sses"]))
-
-    cat_observations = tf.constant(cation_sses, dtype=tf.float64)
-    an_observations = tf.constant(anion_sses, dtype=tf.float64)
-
-    cat_test_vals = tf.constant(
-        list(map(itemgetter(0), test_df["sses"])), dtype=tf.float64
-    )
-    an_test_vals = tf.constant(
-        list(map(itemgetter(1), test_df["sses"])), dtype=tf.float64
-    )
-
-    metric_labels = [
-        "val_nll",
-        "val_mae",
-        "val_sharpness",
-        "val_coeff_var",
-        "val_cal_err",
-    ]
-
-    # Load previous metrics
-    metrics_fname = "misc/metrics.csv"
-    try:
-        metrics = pd.read_csv(metrics_fname, index_col=0)
-    except FileNotFoundError:
-        metrics = pd.DataFrame([(np.nan,) * len(metric_labels)], columns=metric_labels)
-
-    model_params = {"epochs": 10000, "patience": 200, "save_dir": "./saved_gp"}
-
-    # Build cation SSE GP model
-    cat_gp_trainer = GPTrainer(observation_index_points, cat_observations, "./tf_ckpts")
-    for metric in cat_gp_trainer.train_model(
-        index_points, cat_test_vals, **model_params
-    ):
-        metric_series = pd.Series(metric, index=metric_labels)
-        metrics = metrics.append(metric_series, ignore_index=True)
-        metrics.to_csv(metrics_fname)
-
-    # # Make some predictions and save to file
-    # model = GPTrainer.load_model("./saved_gp")
-    # pred, stdev = model.predict(index_points)
-    # uncert = stdev * 3
-    # data = {"actual_value": cat_test_vals, "prediction": pred, "uncertainty": uncert}
-    # df = pd.DataFrame(data)
-    # df.to_csv("dataframes/cat_gp_predictions.csv")

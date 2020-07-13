@@ -5,7 +5,7 @@ from megnet.data.crystal import CrystalGraph
 from megnet.models import MEGNetModel
 from sklearn.model_selection import train_test_split
 
-from config import *
+from .config import *
 
 nfeat_bond = 10
 r_cutoff = 5

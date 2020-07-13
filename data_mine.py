@@ -8,7 +8,7 @@ import smact.data_loader as smact_data
 from matminer.data_retrieval.retrieve_MP import MPDataRetrieval
 from smact.structure_prediction.structure import SmactStructure
 
-from config import *
+from .config import *
 
 if not MP_API_KEY:
     raise TypeError(
