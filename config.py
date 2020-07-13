@@ -1,9 +1,11 @@
 """Configuration file containing globally useful variables."""
+from pathlib import Path
 import os
 
-DB_DOWN_LOC = "mp_download.pickle"  # Download location for raw MP data
-DB_SMACT_LOC = "smact_db.pickle"  # Location for data with SmactStructures
-SSE_DB_LOC = "sse_db.pickle"  # Location for completely preprocessed data
+DB_DIR = Path("dataframes")
+DB_DOWN_LOC = DB_DIR / "mp_download.pickle"  # Download location for raw MP data
+DB_SMACT_LOC = DB_DIR / "smact_db.pickle"  # Location for data with SmactStructures
+SSE_DB_LOC = DB_DIR / "sse_db.pickle"  # Location for completely preprocessed data
 
 LAST_TO_FIRST = [
     SSE_DB_LOC,
