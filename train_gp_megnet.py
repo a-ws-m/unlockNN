@@ -247,8 +247,10 @@ class GPMetrics:
         self.update_gprm()  # Instantiate GPRM
 
     def update_gprm(self):
-        """Update the GPRM given changes to the GPTrainer."""
+        """Update the GPRM and its predictions given changes to the GPTrainer."""
         self.gprm = self.gp_trainer.get_model(self.val_points)
+        self.mean = self.gprm.mean().numpy()
+        self.stddevs = self.gprm.stddev().numpy()
 
     @property
     def nll(self) -> float:
@@ -282,16 +284,6 @@ class GPMetrics:
         """Calculate the calibration error of the model."""
         predicted_pi, observed_pi = self.pis
         return np.sum(np.square(predicted_pi - observed_pi))
-
-    @property
-    def mean(self) -> np.ndarray:
-        """Calculate the mean values of the predicted distributions."""
-        return self.gprm.mean().numpy()
-
-    @property
-    def stddevs(self) -> np.ndarray:
-        """Calculate the standard deviations of the predicted distributions."""
-        return self.gprm.stddev().numpy()
 
     @property
     def residuals(self) -> np.ndarray:
