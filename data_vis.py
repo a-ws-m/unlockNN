@@ -1,5 +1,6 @@
 """Utilities for data visualisation."""
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,7 +10,9 @@ FIGSIZE = (4, 4)
 FONTSIZE = 12
 
 
-def plot_calibration(predicted_pi, observed_pi, fname: Optional[str] = None):
+def plot_calibration(
+    predicted_pi, observed_pi, fname: Optional[Union[str, Path]] = None
+):
     """Plot miscalibration curve."""
     fig_cal = plt.figure(figsize=FIGSIZE)
     ax_ideal = sns.lineplot([0, 1], [0, 1], label="ideal")
@@ -31,7 +34,9 @@ def plot_calibration(predicted_pi, observed_pi, fname: Optional[str] = None):
         plt.show()
 
 
-def plot_sharpness(stdevs, sharpness, coeff_var, fname: Optional[str] = None):
+def plot_sharpness(
+    stdevs, sharpness, coeff_var, fname: Optional[Union[str, Path]] = None
+):
     """Plot standard deviation distribution and sharpness."""
     fig_sharp = plt.figure(figsize=FIGSIZE)
     ax_sharp = sns.distplot(stdevs, kde=False, norm_hist=True)
