@@ -17,7 +17,7 @@ if not MP_API_KEY:
     )
 
 
-def download_structures(file: Optional[str] = None) -> pd.DataFrame:
+def download_structures(file: Optional[Union[str, Path]] = None) -> pd.DataFrame:
     """Create database of MP IDs and structures.
     
     Queries for binary compounds with experimentally determined crystal structures
@@ -64,7 +64,7 @@ def get_smact_struct(py_struct) -> Union[SmactStructure, None]:
         return None
 
 
-def add_smact_structs(df: pd.DataFrame, file: Optional[str] = None):
+def add_smact_structs(df: pd.DataFrame, file: Optional[Union[str, Path]] = None):
     """Add `SmactStructure`s column to a DataFrame containing pymatgen `Structure`s.
     
     `SmactStructure`s column is entitled 'smact_struct'. Removes rows that cannot be
@@ -146,7 +146,7 @@ def get_cat_an_sse(
     return cation_sse, anion_sse
 
 
-def extract_sse_data(df: pd.DataFrame, file: Optional[str] = None):
+def extract_sse_data(df: pd.DataFrame, file: Optional[Union[str, Path]] = None):
     """Add columns for SSEs to a DataFrame containing `SmactStructure`s.
     
     Cation SSE contained in 'cat_sse', anion sse contained in 'an_sse'.
@@ -171,9 +171,12 @@ def extract_sse_data(df: pd.DataFrame, file: Optional[str] = None):
 
 
 if __name__ == "__main__":
-    DB_DOWN_LOC = "mp_download.pickle"
-    DB_SMACT_LOC = "smact_db.pickle"
-    SSE_DB_LOC = "sse_db.pickle"
+    file_dir = Path(__file__).parent
+    DB_DIR = file_dir / "dataframes"
+
+    DB_DOWN_LOC = DB_DIR / "mp_download.pickle"
+    DB_SMACT_LOC = DB_DIR / "smact_db.pickle"
+    SSE_DB_LOC = DB_DIR / "sse_db.pickle"
 
     LAST_TO_FIRST = [
         SSE_DB_LOC,
