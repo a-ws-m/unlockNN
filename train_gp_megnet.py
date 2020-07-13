@@ -1,7 +1,7 @@
 """Utilities for training a GP fed from the MEGNet Concatenation layer for a pretrained model."""
 from operator import itemgetter
 from pathlib import Path
-from typing import Iterator, List, Optional, Tuple, Union
+from typing import Dict, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -73,35 +73,40 @@ class GPTrainer(tf.Module):
             0, dtype=tf.int32, trainable=False, name="training_steps"
         )
 
-        self.val_nll = tf.Variable(
-            np.inf, dtype=tf.float64, trainable=False, name="validation_nll"
-        )
-        self.val_mae = tf.Variable(
-            np.inf, dtype=tf.float64, trainable=False, name="validation_mae"
-        )
-        self.val_sharpness = tf.Variable(
-            np.inf, dtype=tf.float64, trainable=False, name="validation_sharpness"
-        )
-        self.val_coeff_var = tf.Variable(
-            np.inf, dtype=tf.float64, trainable=False, name="validation_coeff_variance"
-        )
-        self.val_cal_err = tf.Variable(
-            np.inf,
-            dtype=tf.float64,
-            trainable=False,
-            name="validation_calibration_error",
-        )
+        self.metrics = {
+            "nll": tf.Variable(
+                np.inf, dtype=tf.float64, trainable=False, name="validation_nll",
+            ),  # Initialized to inf for cleaner tracking of best validation NLL using <
+            "mae": tf.Variable(
+                None, dtype=tf.float64, trainable=False, name="validation_mae",
+            ),
+            "sharpness": tf.Variable(
+                None, dtype=tf.float64, trainable=False, name="validation_sharpness",
+            ),
+            "variation": tf.Variable(
+                None,
+                dtype=tf.float64,
+                trainable=False,
+                name="validation_coeff_variance",
+            ),
+            "calibration_err": tf.Variable(
+                None,
+                dtype=tf.float64,
+                trainable=False,
+                name="validation_calibration_error",
+            ),
+        }
 
         if checkpoint_dir:
             self.ckpt = tf.train.Checkpoint(
                 step=self.training_steps,
                 amp=self.amplitude,
                 ls=self.length_scale,
-                val_nll=self.val_nll,
-                val_mae=self.val_mae,
-                val_sharpness=self.val_sharpness,
-                val_coeff_var=self.val_coeff_var,
-                val_cal_err=self.val_cal_err,
+                val_nll=self.metrics["nll"],
+                val_mae=self.metrics["mae"],
+                val_sharpness=self.metrics["sharpness"],
+                val_coeff_var=self.metrics["variation"],
+                val_cal_err=self.metrics["calibration_err"],
             )
             self.ckpt_manager = tf.train.CheckpointManager(
                 self.ckpt,
@@ -144,82 +149,6 @@ class GPTrainer(tf.Module):
         gprm = self.get_model(points)
         return gprm.mean(), gprm.stddev()
 
-    @staticmethod
-    def calc_pis(residuals: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """Calculate the percentile interval densities of a model.
-        
-        Based on the implementation by `Tran et al.`_. Initially proposed by `Kuleshov et al.`_.
-
-        Args:
-            residuals (:obj:`np.ndarray`): The normalised residuals of the model predictions.
-        
-        Returns:
-            predicted_pi (:obj:`np.ndarray`): The percentiles used.
-            observed_pi (:obj:`np.ndarray`): The density of residuals that fall within each of the
-                `predicted_pi` percentiles.
-
-        .. _Tran et al.:
-            https://arxiv.org/abs/1912.10066
-        .. _Kuleshov et al.:
-            https://arxiv.org/abs/1807.00263
-
-        """
-        norm = tfd.Normal(0, 1)
-
-        predicted_pi = np.linspace(0, 1, 100)
-        bounds = norm.quantile(predicted_pi).numpy()
-
-        observed_pi = np.array(
-            [np.count_nonzero(residuals <= bound) for bound in bounds]
-        )
-        observed_pi = observed_pi / residuals.size
-
-        return predicted_pi, observed_pi
-
-    def metrics(
-        self, val_points: tf.Tensor, val_obs: tf.Tensor, make_plots: bool = False
-    ) -> Tuple[float, float, float, float, float]:
-        """Calculate model performance metrics.
-
-        Returns:
-            nll (float): Negative log likelihood.
-            mae (float): Mean average error.
-            sharpness (float): RMS of predicted standard deviations.
-            coeff_var (float): Coefficient of variation. Indicates dispersion of
-                uncertainty estimates.
-            cal_error (float): Calibration error. Indicates how well the true
-                frequency of points in each interval correspond to the predicted
-                fraction of points in that interval (`Kuleshov et al.`_).
-
-        .. _Kuleshov et al.:
-            https://arxiv.org/abs/1807.00263
-
-        """
-        gprm = self.get_model(val_points)
-
-        nll = -gprm.log_prob(val_obs).numpy()
-
-        mae = tf.losses.mae(val_obs, gprm.mean().numpy()).numpy()
-
-        stdevs = gprm.stddev().numpy()
-
-        sharpness = np.sqrt(np.mean(np.square(stdevs)))
-
-        stdev_mean = np.mean(stdevs)
-        coeff_var = np.sqrt(np.sum(np.square(stdevs - stdev_mean)))
-        coeff_var /= stdev_mean * (len(stdevs) - 1)
-
-        resids = gprm.mean().numpy() - val_obs.numpy()
-        resids /= stdevs  # Normalise residuals
-        predicted_pi, observed_pi = self.calc_pis(resids)
-        cal_error = np.sum(np.square(predicted_pi - observed_pi))
-
-        if make_plots:
-            plot_calibration(predicted_pi, observed_pi, "misc/calibration.pdf")
-            plot_sharpness(stdevs, sharpness, coeff_var, "misc/sharpness.pdf")
-
-        return nll, mae, sharpness, coeff_var, cal_error
-
     def train_model(
         self,
         val_points: tf.Tensor,
@@ -227,31 +156,38 @@ class GPTrainer(tf.Module):
         epochs: int = 1000,
         patience: Optional[int] = None,
         save_dir: Optional[Union[str, Path]] = None,
-    ) -> Iterator[Tuple[float, float, float, float, float]]:
-        """Optimize the parameters and measure validation metrics at each step."""
-        best_nll: float = self.val_nll.numpy()
+        metrics: Optional[List[str]] = None,
+    ) -> Iterator[Dict[str, float]]:
+        """Optimize model parameters."""
+        best_nll: float = self.metrics["nll"].numpy()
         steps_since_improvement: int = 1
+        gp_metrics = GPMetrics(val_points, val_obs, self)
+
+        # Add NLL to metrics, if it's not already there
+        if metrics is None:
+            metrics = ["nll"]
+        elif "nll" not in metrics:
+            metrics.append("nll")
 
         for i in tqdm(range(epochs), "Training epochs"):
             self.optimize_cycle()
             self.training_steps.assign_add(1)
 
             # * Determine and assign metrics
-            metrics = self.metrics(val_points, val_obs)
-            metric_order = (
-                self.val_nll,
-                self.val_mae,
-                self.val_sharpness,
-                self.val_coeff_var,
-                self.val_cal_err,
-            )
-            for variable, metric in zip(metric_order, metrics):
-                variable.assign(metric)
+            try:
+                metric_dict: Dict[str, float] = {
+                    metric: getattr(gp_metrics, metric) for metric in metrics
+                }
+            except AttributeError as e:
+                raise ValueError(f"Invalid metric: {e}")
 
-            yield metrics
+            for metric, value in metric_dict.items():
+                self.metrics[metric].assign(value)
 
-            if self.val_nll < best_nll:
-                best_nll = self.val_nll.numpy()
+            yield metric_dict
+
+            if self.metrics["nll"] < best_nll:
+                best_nll = self.metrics["nll"].numpy()
                 steps_since_improvement = 1
                 if self.ckpt_manager:
                     self.ckpt_manager.save(self.training_steps)
@@ -281,3 +217,125 @@ class GPTrainer(tf.Module):
         grads = tape.gradient(loss, self.trainable_variables)
         self.optimizer.apply_gradients(zip(grads, self.trainable_variables))
         return loss
+
+
+class GPMetrics:
+    """Handler for GP metric calculations.
+
+    Many of the metrics herein are based upon implementations by `Train et al.`_,
+    for metrics proposed by `Kuleshov et al.`_.
+
+    .. _Tran et al.:
+        https://arxiv.org/abs/1912.10066
+    .. _Kuleshov et al.:
+        https://arxiv.org/abs/1807.00263
+
+    """
+
+    def __init__(
+        self, val_points: tf.Tensor, val_obs: tf.Tensor, gp_trainer: GPTrainer
+    ):
+        """Initialize validation points and observations and the wrapped `GPTrainer`."""
+        self.val_points = val_points
+        self.val_obs = val_obs
+        self.gp_trainer = gp_trainer
+
+    @property
+    def gprm(self) -> tfp.python.distributions.GaussianProcessRegressionModel:
+        """Get the GP regression model for the observation indexes."""
+        return self.gp_trainer.get_model(self.val_points)
+
+    @property
+    def nll(self) -> float:
+        """Calculate the negative log likelihood of observed true values."""
+        return -self.gprm.log_prob(self.val_obs).numpy()
+
+    @property
+    def mae(self) -> float:
+        """Calculate the mean average error of predicted values."""
+        return tf.losses.mae(self.val_obs, self.mean).numpy()
+
+    @property
+    def sharpness(self):
+        """Calculate the root-mean-squared of predicted standard deviations."""
+        return np.sqrt(np.mean(np.square(self.stddevs)))
+
+    @property
+    def variation(self) -> float:
+        """Calculate the coefficient of variation of the regression model.
+
+        Indicates dispersion of uncertainty estimates.
+
+        """
+        stdev_mean = self.stddevs.mean()
+        coeff_var = np.sqrt(np.sum(np.square(self.stddevs - stdev_mean)))
+        coeff_var /= stdev_mean * (len(self.stddevs) - 1)
+        return coeff_var
+
+    @property
+    def calibration_err(self):
+        """Calculate the calibration error of the model."""
+        predicted_pi, observed_pi = self.pis
+        return np.sum(np.square(predicted_pi - observed_pi))
+
+    @property
+    def mean(self) -> np.ndarray:
+        """Calculate the mean values of the predicted distributions."""
+        return self.gprm.mean().numpy()
+
+    @property
+    def stddevs(self) -> np.ndarray:
+        """Calculate the standard deviations of the predicted distributions."""
+        return self.gprm.stddev().numpy()
+
+    @property
+    def residuals(self) -> np.ndarray:
+        """Calculate the residuals."""
+        return self.mean - self.val_obs.numpy()
+
+    def sharpness_plot(self, fname: Union[str, Path]):
+        """Plot the distribution of standard deviations and the sharpness."""
+        plot_sharpness(self.stddevs, self.sharpness, self.variation, fname)
+
+    def calibration_plot(self, fname: Union[str, Path]):
+        """Plot the distribution of residuals relative to the expected distribution."""
+        predicted_pi, observed_pi = self.pis
+        plot_calibration(predicted_pi, observed_pi, fname)
+
+    @property
+    def pis(self) -> Tuple[np.ndarray, np.ndarray]:
+        """Calculate the percentile interval densities of a model.
+
+        Based on the implementation by `Tran et al.`_. Initially proposed by `Kuleshov et al.`_.
+
+        Args:
+            residuals (:obj:`np.ndarray`): The normalised residuals of the model predictions.
+
+        Returns:
+            predicted_pi (:obj:`np.ndarray`): The percentiles used.
+            observed_pi (:obj:`np.ndarray`): The density of residuals that fall within each of the
+                `predicted_pi` percentiles.
+
+        .. _Tran et al.:
+            https://arxiv.org/abs/1912.10066
+        .. _Kuleshov et al.:
+            https://arxiv.org/abs/1807.00263
+
+        """
+        norm_resids = self.residuals / self.stddevs  # Normalise residuals
+
+        norm = tfd.Normal(0, 1)  # Standard normal distribution
+
+        predicted_pi = np.linspace(0, 1, 100)
+        bounds = norm.quantile(
+            predicted_pi
+        ).numpy()  # Find the upper bounds for each percentile
+
+        observed_pi = np.array(
+            [np.count_nonzero(norm_resids <= bound) for bound in bounds]
+        )  # The number of residuals that fall within each percentile
+        observed_pi = (
+            observed_pi / norm_resids.size
+        )  # The fraction (density) of residuals that fall within each percentile
+
+        return predicted_pi, observed_pi
