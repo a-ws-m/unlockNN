@@ -178,6 +178,7 @@ class GPTrainer(tf.Module):
             self.training_steps.assign_add(1)
 
             # * Determine and assign metrics
+            gp_metrics.update_gprm()
             try:
                 metric_dict: Dict[str, float] = {
                     metric: getattr(gp_metrics, metric) for metric in metrics
@@ -243,11 +244,11 @@ class GPMetrics:
         self.val_points = val_points
         self.val_obs = val_obs
         self.gp_trainer = gp_trainer
+        self.update_gprm()  # Instantiate GPRM
 
-    @property
-    def gprm(self) -> tfp.python.distributions.GaussianProcessRegressionModel:
-        """Get the GP regression model for the observation indexes."""
-        return self.gp_trainer.get_model(self.val_points)
+    def update_gprm(self):
+        """Update the GPRM given changes to the GPTrainer."""
+        self.gprm = self.gp_trainer.get_model(self.val_points)
 
     @property
     def nll(self) -> float:
