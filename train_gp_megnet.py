@@ -160,7 +160,7 @@ class GPTrainer(tf.Module):
     ) -> Iterator[Dict[str, float]]:
         """Optimize model parameters."""
         best_nll: float = self.metrics["nll"].numpy()
-        if best_nll is np.nan:
+        if np.isnan(best_nll):
             # Set to infinity so < logic works
             best_nll = np.inf
 
