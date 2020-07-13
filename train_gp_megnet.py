@@ -44,7 +44,7 @@ class GPTrainer(tf.Module):
         self,
         observation_index_points: tf.Tensor,
         observations: tf.Tensor,
-        checkpoint_dir: Optional[str] = None,
+        checkpoint_dir: Optional[Union[str, Path]] = None,
     ):
         """Initialze attributes, kernel, optimizer and checkpoint manager."""
         self.observation_index_points = tf.Variable(
@@ -75,22 +75,22 @@ class GPTrainer(tf.Module):
 
         self.metrics = {
             "nll": tf.Variable(
-                np.inf, dtype=tf.float64, trainable=False, name="validation_nll",
-            ),  # Initialized to inf for cleaner tracking of best validation NLL using <
+                np.nan, dtype=tf.float64, trainable=False, name="validation_nll",
+            ),
             "mae": tf.Variable(
-                None, dtype=tf.float64, trainable=False, name="validation_mae",
+                np.nan, dtype=tf.float64, trainable=False, name="validation_mae",
             ),
             "sharpness": tf.Variable(
-                None, dtype=tf.float64, trainable=False, name="validation_sharpness",
+                np.nan, dtype=tf.float64, trainable=False, name="validation_sharpness",
             ),
             "variation": tf.Variable(
-                None,
+                np.nan,
                 dtype=tf.float64,
                 trainable=False,
                 name="validation_coeff_variance",
             ),
             "calibration_err": tf.Variable(
-                None,
+                np.nan,
                 dtype=tf.float64,
                 trainable=False,
                 name="validation_calibration_error",
@@ -160,6 +160,10 @@ class GPTrainer(tf.Module):
     ) -> Iterator[Dict[str, float]]:
         """Optimize model parameters."""
         best_nll: float = self.metrics["nll"].numpy()
+        if best_nll is np.nan:
+            # Set to infinity so < logic works
+            best_nll = np.inf
+
         steps_since_improvement: int = 1
         gp_metrics = GPMetrics(val_points, val_obs, self)
 
@@ -293,11 +297,11 @@ class GPMetrics:
         """Calculate the residuals."""
         return self.mean - self.val_obs.numpy()
 
-    def sharpness_plot(self, fname: Union[str, Path]):
+    def sharpness_plot(self, fname: Optional[Union[str, Path]] = None):
         """Plot the distribution of standard deviations and the sharpness."""
         plot_sharpness(self.stddevs, self.sharpness, self.variation, fname)
 
-    def calibration_plot(self, fname: Union[str, Path]):
+    def calibration_plot(self, fname: Optional[Union[str, Path]] = None):
         """Plot the distribution of residuals relative to the expected distribution."""
         predicted_pi, observed_pi = self.pis
         plot_calibration(predicted_pi, observed_pi, fname)
