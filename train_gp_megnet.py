@@ -178,7 +178,7 @@ class GPTrainer(tf.Module):
             self.training_steps.assign_add(1)
 
             # * Determine and assign metrics
-            gp_metrics.update_gprm()
+            gp_metrics.update_pred()
             try:
                 metric_dict: Dict[str, float] = {
                     metric: getattr(gp_metrics, metric) for metric in metrics
@@ -244,11 +244,15 @@ class GPMetrics:
         self.val_points = val_points
         self.val_obs = val_obs
         self.gp_trainer = gp_trainer
-        self.update_gprm()  # Instantiate GPRM
+        self.gprm = gp_trainer.get_model(val_points)  # Instantiate GPRM
+        self.update_pred()
 
-    def update_gprm(self):
-        """Update the GPRM and its predictions given changes to the GPTrainer."""
-        self.gprm = self.gp_trainer.get_model(self.val_points)
+    def update_pred(self):
+        """Update the GPRM predictions.
+
+        Must be called whenever kernel parameters are updated.
+
+        """
         self.mean = self.gprm.mean().numpy()
         self.stddevs = self.gprm.stddev().numpy()
 
