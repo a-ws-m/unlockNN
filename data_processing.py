@@ -61,6 +61,21 @@ class ConcatExtractor:
         input = self._convert_struct_to_inp(structure)
         return self.conc_layer_eval([input])[0]
 
+    def get_concat_output_graph(self, graph: List) -> np.ndarray:
+        """Get the concatenation layer output for the model for a graph.
+
+        Args:
+            graph (list):
+                MEGNet compatible graph to calculate the layer output for.
+
+        Returns:
+            np.ndarray: The output of the concatenation layer,
+                with shape (1, 1, 96).
+
+        """
+        input = self.model.graph_converter.graph_to_input(graph)
+        return self.conc_layer_eval([input])[0]
+
 
 class GPDataParser:
     """Class for creating GP training data and preprocessing thereof."""
