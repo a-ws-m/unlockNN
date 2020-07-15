@@ -155,31 +155,3 @@ class GPDataParser:
         # so there's no zero division errors
         sf[sf == 0.0] = 1.0
         return sf
-
-
-if __name__ == "__main__":
-    # * Calculate concatenation layers for all the SSE data and save to disk
-
-    print("Loading data...")
-    train_df = pd.read_pickle("dataframes/train_df.pickle")
-    test_df = pd.read_pickle("dataframes/test_df.pickle")
-
-    print("Loading MEGNet model...")
-    model = MEGNetModel.from_file("megnet_model/val_mae_00996_0.014805.hdf5")
-
-    print("Instantiating GP data parser...")
-    processor = GPDataParser(model, training_df=train_df)
-
-    # Save scaling factor to file
-    np.savetxt("megnet_model/sf.txt", processor.sf)
-
-    # Save training data (with calculated outputs) to file
-    assert processor.training_data is not None
-    processor.training_data.to_pickle("dataframes/gp_train_df.pickle")
-
-    # Compute test data values
-    print("Computing test data layer outputs...")
-    test_df["layer_out"] = processor.structures_to_input(test_df["structure"])
-
-    # And save to file
-    test_df.to_pickle("dataframes/gp_test_df.pickle")
