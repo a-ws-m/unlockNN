@@ -106,7 +106,7 @@ class GPTrainer(tf.Module):
                 step=self.training_steps,
                 amp=self.amplitude,
                 ls=self.length_scale,
-                loss=self.nll,
+                loss=self.loss,
                 val_nll=self.metrics["nll"],
                 val_mae=self.metrics["mae"],
                 val_sharpness=self.metrics["sharpness"],
