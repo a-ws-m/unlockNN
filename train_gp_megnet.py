@@ -73,6 +73,10 @@ class GPTrainer(tf.Module):
             0, dtype=tf.int32, trainable=False, name="training_steps"
         )
 
+        self.loss = tf.Variable(
+            np.nan, dtype=tf.float64, trainable=False, name="training_nll",
+        )
+
         self.metrics = {
             "nll": tf.Variable(
                 np.nan, dtype=tf.float64, trainable=False, name="validation_nll",
@@ -102,6 +106,7 @@ class GPTrainer(tf.Module):
                 step=self.training_steps,
                 amp=self.amplitude,
                 ls=self.length_scale,
+                loss=self.nll,
                 val_nll=self.metrics["nll"],
                 val_mae=self.metrics["mae"],
                 val_sharpness=self.metrics["sharpness"],
@@ -156,25 +161,23 @@ class GPTrainer(tf.Module):
         epochs: int = 1000,
         patience: Optional[int] = None,
         save_dir: Optional[Union[str, Path]] = None,
-        metrics: Optional[List[str]] = None,
+        metrics: List[str] = [],
     ) -> Iterator[Dict[str, float]]:
         """Optimize model parameters."""
-        best_nll: float = self.metrics["nll"].numpy()
-        if np.isnan(best_nll):
+        best_val_nll: float = self.metrics["nll"].numpy()
+        if np.isnan(best_val_nll):
             # Set to infinity so < logic works
-            best_nll = np.inf
+            best_val_nll = np.inf
+
+        if (self.ckpt_manager or patience) and "nll" not in metrics:
+            # We need to track NLL for these to work
+            metrics.append("nll")
 
         steps_since_improvement: int = 1
         gp_metrics = GPMetrics(val_points, val_obs, self)
 
-        # Add NLL to metrics, if it's not already there
-        if metrics is None:
-            metrics = ["nll"]
-        elif "nll" not in metrics:
-            metrics.append("nll")
-
         for i in tqdm(range(epochs), "Training epochs"):
-            self.optimize_cycle()
+            self.loss.assign(self.optimize_cycle())
             self.training_steps.assign_add(1)
 
             # * Determine and assign metrics
@@ -189,21 +192,23 @@ class GPTrainer(tf.Module):
             for metric, value in metric_dict.items():
                 self.metrics[metric].assign(value)
 
+            metric_dict["loss"] = self.loss.numpy()
             yield metric_dict
 
-            if self.metrics["nll"] < best_nll:
-                best_nll = self.metrics["nll"].numpy()
-                steps_since_improvement = 1
-                if self.ckpt_manager:
-                    self.ckpt_manager.save(self.training_steps)
-            else:
-                steps_since_improvement += 1
-                if patience and steps_since_improvement >= patience:
-                    print(
-                        "Patience exceeded: "
-                        f"{steps_since_improvement} steps since NLL improvement."
-                    )
-                    break
+            if patience or self.ckpt_manager:
+                if self.metrics["nll"] < best_val_nll:
+                    best_val_nll = self.metrics["nll"].numpy()
+                    steps_since_improvement = 1
+                    if self.ckpt_manager:
+                        self.ckpt_manager.save(self.training_steps)
+                else:
+                    steps_since_improvement += 1
+                    if patience and steps_since_improvement >= patience:
+                        print(
+                            "Patience exceeded: "
+                            f"{steps_since_improvement} steps since NLL improvement."
+                        )
+                        break
 
         if save_dir:
             tf.saved_model.save(self, save_dir)
