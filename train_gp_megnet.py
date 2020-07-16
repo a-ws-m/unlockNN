@@ -181,7 +181,11 @@ class GPTrainer(tf.Module):
             self.training_steps.assign_add(1)
 
             # * Determine and assign metrics
-            gp_metrics.update_pred()
+            if gp_metrics.REQUIRES_MEAN.intersection(metrics):
+                gp_metrics.update_mean()
+            if gp_metrics.REQUIRES_STDDEV.intersection(metrics):
+                gp_metrics.update_stddevs()
+
             try:
                 metric_dict: Dict[str, float] = {
                     metric: getattr(gp_metrics, metric) for metric in metrics
@@ -242,6 +246,10 @@ class GPMetrics:
 
     """
 
+    # Set of which properties need the mean and standard deviation to be updated
+    REQUIRES_MEAN = {"mae", "calibration_err", "residuals", "pis"}
+    REQUIRES_STDDEV = {"sharpness", "variation"}
+
     def __init__(
         self, val_points: tf.Tensor, val_obs: tf.Tensor, gp_trainer: GPTrainer
     ):
@@ -250,15 +258,15 @@ class GPMetrics:
         self.val_obs = val_obs
         self.gp_trainer = gp_trainer
         self.gprm = gp_trainer.get_model(val_points)  # Instantiate GPRM
-        self.update_pred()
+        self.update_mean()
+        self.update_stddevs()
 
-    def update_pred(self):
-        """Update the GPRM predictions.
-
-        Must be called whenever kernel parameters are updated.
-
-        """
+    def update_mean(self):
+        """Update the GPRM mean predictions."""
         self.mean = self.gprm.mean().numpy()
+
+    def update_stddevs(self):
+        """Update the GPRM standard deviation predictions."""
         self.stddevs = self.gprm.stddev().numpy()
 
     @property
