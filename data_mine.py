@@ -171,13 +171,6 @@ def extract_sse_data(df: pd.DataFrame, file: Optional[Union[str, Path]] = None):
 
 
 if __name__ == "__main__":
-    file_dir = Path(__file__).parent
-    DB_DIR = file_dir / "dataframes"
-
-    DB_DOWN_LOC = DB_DIR / "mp_download.pickle"
-    DB_SMACT_LOC = DB_DIR / "smact_db.pickle"
-    SSE_DB_LOC = DB_DIR / "sse_db.pickle"
-
     LAST_TO_FIRST = [
         SSE_DB_LOC,
         DB_SMACT_LOC,
