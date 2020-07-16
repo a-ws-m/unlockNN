@@ -24,11 +24,11 @@ def download_structures(file: Optional[Union[str, Path]] = None) -> pd.DataFrame
     
     Queries for binary compounds with experimentally determined crystal structures
     that have been reported to the ICSD.
-    Optionally, writes a database of their `material_id`s and their structures as a pickle
+    Optionally, writes a database of their `material_id`s and their structures as a feather
     to the specified file.
     
     Args:
-        file (str, optional): The path to the file, to which to write the pickled data.
+        file (str, optional): The path to the file, to which to write the feathered data.
             If omitted (None), does not write to a file.
 
     Returns:
@@ -79,7 +79,7 @@ def add_smact_structs(
     Args:
         df (:obj:`pd.DataFrame`): A DataFrame containing pymatgen structures in a
             column entitled 'structure'.
-        file (str, optional): The path to a file, to which to write the pickled data.
+        file (str, optional): The path to a file, to which to write the feathered data.
             If omitted (None), does not write to a file.
 
     """
@@ -169,7 +169,7 @@ def extract_sse_data(
     Args:
         df (:obj:`pd.DataFrame`): A DataFrame containing `SmactStructure`s in a
             column entitled 'smact_struct'.
-        file (str, optional): The path to a file, to which to write the pickled data.
+        file (str, optional): The path to a file, to which to write the feathered data.
             If omitted (None), does not write to a file.
 
     """
