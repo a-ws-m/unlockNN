@@ -1,9 +1,11 @@
 """Tools to scrape relevant compound data from Materials Project and label their ions' SSEs appropriately."""
 from multiprocessing import Pool
 from operator import itemgetter
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import pandas as pd
+import pyarrow.feather as feather
+import pymatgen
 import smact.data_loader as smact_data
 from matminer.data_retrieval.retrieve_MP import MPDataRetrieval
 from smact.structure_prediction.structure import SmactStructure
@@ -37,10 +39,12 @@ def download_structures(file: Optional[Union[str, Path]] = None) -> pd.DataFrame
     df_mp = MPDataRetrieval(MP_API_KEY).get_dataframe(
         criteria={"icsd_ids.0": {"$exists": True}, "nelements": 2},
         properties=["material_id", "structure"],
+        index_mpid=False,  # Index isn't preserved when writing to file
     )
 
+    df_mp["structure"] = [structure.to("json") for structure in df_mp["structure"]]
     if file is not None:
-        df_mp.to_pickle(file)
+        feather.write_feather(df_mp, file)
 
     return df_mp
 
@@ -64,10 +68,12 @@ def get_smact_struct(py_struct) -> Union[SmactStructure, None]:
         return None
 
 
-def add_smact_structs(df: pd.DataFrame, file: Optional[Union[str, Path]] = None):
-    """Add `SmactStructure`s column to a DataFrame containing pymatgen `Structure`s.
+def add_smact_structs(
+    df: pd.DataFrame, file: Optional[Union[str, Path]] = None
+) -> pd.DataFrame:
+    """Add species columns to a DataFrame containing pymatgen `Structure`s.
     
-    `SmactStructure`s column is entitled 'smact_struct'. Removes rows that cannot be
+    Species column is entitled 'species'. Removes rows that cannot be
     converted due to ambiguous bond valency. Optionally outputs the new DataFrame to a file.
     
     Args:
@@ -77,13 +83,19 @@ def add_smact_structs(df: pd.DataFrame, file: Optional[Union[str, Path]] = None)
             If omitted (None), does not write to a file.
 
     """
+    structures = (
+        pymatgen.Structure.from_str(struct, "json") for struct in df["structure"]
+    )
     with Pool() as pool:
-        df["smact_struct"] = pool.map(get_smact_struct, df["structure"])
+        df["smact_struct"] = pool.map(get_smact_struct, structures)
 
     df.dropna(inplace=True)
+    df["smact_struct"] = [struct.as_poscar() for struct in df["smact_struct"]]
 
     if file is not None:
-        df.to_pickle(file)
+        feather.write_feather(df, file)
+
+    return df
 
 
 def lookup_sse(symbol: str, charge: int) -> Optional[float]:
@@ -146,7 +158,9 @@ def get_cat_an_sse(
     return cation_sse, anion_sse
 
 
-def extract_sse_data(df: pd.DataFrame, file: Optional[Union[str, Path]] = None):
+def extract_sse_data(
+    df: pd.DataFrame, file: Optional[Union[str, Path]] = None
+) -> pd.DataFrame:
     """Add columns for SSEs to a DataFrame containing `SmactStructure`s.
     
     Cation SSE contained in 'cat_sse', anion sse contained in 'an_sse'.
@@ -159,7 +173,8 @@ def extract_sse_data(df: pd.DataFrame, file: Optional[Union[str, Path]] = None):
             If omitted (None), does not write to a file.
 
     """
-    cat_an_sses = list(map(get_cat_an_sse, df["smact_struct"]))
+    smact_structs = map(SmactStructure.from_poscar, df["smact_struct"])
+    cat_an_sses = list(map(get_cat_an_sse, smact_structs))
 
     df["cat_sse"] = list(map(itemgetter(0), cat_an_sses))
     df["an_sse"] = list(map(itemgetter(1), cat_an_sses))
@@ -167,27 +182,23 @@ def extract_sse_data(df: pd.DataFrame, file: Optional[Union[str, Path]] = None):
     df.dropna(inplace=True)
 
     if file is not None:
-        df.to_pickle(file)
+        feather.write_feather(df, file)
+
+    return df
 
 
 if __name__ == "__main__":
-    LAST_TO_FIRST = [
-        SSE_DB_LOC,
-        DB_SMACT_LOC,
-        DB_DOWN_LOC,
-    ]  # List of files in reverse processing order
-
     working_db = None  # Which, if any, is the most complete database in the filesystem
     for DB in LAST_TO_FIRST:
         try:
-            df = pd.read_pickle(DB)
+            df = feather.read_feather(DB)
 
             if not df.empty:  # Got a working DB
                 working_db = DB
                 print(f"Found already processed database: {working_db}")
                 break
 
-        except FileNotFoundError:  # DB doesn't exist yet
+        except:  # DB doesn't exist yet
             continue
 
     if working_db is None:
@@ -197,12 +208,12 @@ if __name__ == "__main__":
 
     if working_db == DB_DOWN_LOC:
         print("Converting to SMACT structures...")
-        add_smact_structs(df, DB_SMACT_LOC)
+        df = add_smact_structs(df, DB_SMACT_LOC)
         working_db = DB_SMACT_LOC
 
     if working_db == DB_SMACT_LOC:
         print("Adding SSE columns...")
-        extract_sse_data(df, SSE_DB_LOC)
+        df = extract_sse_data(df, SSE_DB_LOC)
         working_db = SSE_DB_LOC
 
     if working_db == SSE_DB_LOC:
