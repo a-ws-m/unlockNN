@@ -6,6 +6,7 @@ DB_DIR = Path(__file__).parent / "dataframes"
 DB_DOWN_LOC = DB_DIR / "mp_download.fthr"  # Download location for raw MP data
 DB_SMACT_LOC = DB_DIR / "smact_db.fthr"  # Location for data with SmactStructures
 SSE_DB_LOC = DB_DIR / "sse_db.fthr"  # Location for completely preprocessed data
+MODELS_DIR = Path(__file__).parent / "models"
 
 LAST_TO_FIRST = [
     SSE_DB_LOC,
