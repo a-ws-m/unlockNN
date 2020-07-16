@@ -24,6 +24,7 @@ model = MEGNetModel(
     centers=gaussian_centers,
     width=gaussian_width,
     ntarget=2,
+    metrics=["mse", "mape"],
 )
 
 # * Get structure data
@@ -51,7 +52,7 @@ train_structs, test_structs, train_sses, test_sses = train_test_split(
 # Here, `structures` is a list of pymatgen Structure objects.
 # `targets` is a corresponding list of properties.
 with mlflow.start_run(run_name="laptop_test"):
-    mlflow.tensorflow.autolog(every_n_iter=5)
-    model.train(train_structs, train_sses, test_structs, test_sses, epochs=100)
+    mlflow.tensorflow.autolog(every_n_iter=1)
+    model.train(train_structs, train_sses, test_structs, test_sses, epochs=10)
 
 # model.save_model("megnet_model_v1")
