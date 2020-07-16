@@ -1,6 +1,8 @@
 """Train model to determine SSEs using MEGNet."""
 import numpy as np
 import pandas as pd
+import pyarrow.feather as feather
+import pymatgen
 from megnet.data.crystal import CrystalGraph
 from megnet.models import MEGNetModel
 from sklearn.model_selection import train_test_split
@@ -20,9 +22,11 @@ model = MEGNetModel(
 )
 
 # * Get structure data
-data = pd.read_pickle(SSE_DB_LOC)
+data = feather.read_feather(SSE_DB_LOC)
 
-structures = data["structure"].values.tolist()
+structures = [
+    pymatgen.Structure.from_str(struct, "json") for struct in data["structure"]
+]
 sse_tuples = list(zip(data["cat_sse"].values, data["an_sse"].values))
 train_structs, test_structs, train_sses, test_sses = train_test_split(
     structures, sse_tuples, random_state=2020
