@@ -105,8 +105,11 @@ class GPDataParser:
             self.training_data = training_df.copy()
 
             # Calculate layer outputs
-            layer_outs = self._calc_layer_outs(list(self.training_data["structure"]))
-            self.training_data["layer_out"] = layer_outs
+            structures = [
+                pymatgen.Structure.from_str(struct, "json")
+                for struct in self.training_data["structure"]
+            ]
+            self.training_data["layer_out"] = self._calc_layer_outs(structures)
 
             # Calculate scaling factor
             self.sf = self._calc_scaling_factor()

@@ -32,9 +32,19 @@ train_structs, test_structs, train_sses, test_sses = train_test_split(
     structures, sse_tuples, random_state=2020
 )
 
+# Save the split we train with for use in the GP
+train_struc_strs = [struct.to("json") for struct in train_structs]
+test_struc_strs = [struct.to("json") for struct in test_structs]
+
+train_df = data.loc[data["structure"].isin(train_struc_strs)]
+test_df = data.loc[data["structure"].isin(test_struc_strs)]
+
+feather.write_feather(train_df, DB_DIR / "train_df.fthr")
+feather.write_feather(test_df, DB_DIR / "test_df.fthr")
+
 # Model training
 # Here, `structures` is a list of pymatgen Structure objects.
 # `targets` is a corresponding list of properties.
-model.train(train_structs, train_sses, test_structs, test_sses, epochs=100)
+# model.train(train_structs, train_sses, test_structs, test_sses, epochs=100)
 
-model.save_model("megnet_model_v1")
+# model.save_model("megnet_model_v1")
