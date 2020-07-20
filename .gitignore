@@ -174,3 +174,6 @@ saved_gp/*
 
 ### Dev utilities ###
 misc/*
+
+### Trained models ###
+models/*
