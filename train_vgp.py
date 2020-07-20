@@ -106,15 +106,17 @@ class SingleLayerVGP:
         self, observations, validation_data: Optional[Tuple] = None, epochs: int = 1000
     ):
         """Train the model."""
-        checkpoint_path = str(MODELS_DIR / "vgp_ckpts")
+        checkpoint_path = str(MODELS_DIR / "vgp_ckpts.{epoch:02d}-{val_loss:.4f}.h5")
         try:
             self.model.load_weights(checkpoint_path)
         except:
             pass  # No checkpoints
+
         checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
             checkpoint_path, save_best_only=True, save_weights_only=True,
         )
         early_stop_callback = tf.keras.callbacks.EarlyStopping(patience=500)
+
         self.model.fit(
             self.observation_indices,
             observations,
