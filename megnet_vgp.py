@@ -1,5 +1,6 @@
 """MEGNet model employing a VGP as an output."""
 import os
+from operator import itemgetter
 from typing import Callable, Dict, List, Optional, Tuple
 
 import mlflow
@@ -184,7 +185,9 @@ class ProbabilisticMEGNetModel:
 
         self.graph_converter = graph_converter
 
-    def structs_to_input(self, structs: List[pymatgen.Structure]) -> List[np.ndarray]:
+    def structs_to_input(
+        self, structs: List[pymatgen.Structure]
+    ) -> List[List[np.ndarray]]:
         """Convert structures to a tensor of input vectors."""
         return list(map(self.graph_converter.get_input, structs))
 
@@ -214,16 +217,16 @@ class ProbabilisticMEGNetModel:
         input_gen = GraphSequence(input_list, targets, self.batch_size)
 
         val_input_list = self.structs_to_input(val_structs)
-        val_input_gen = GraphSequence(val_input_list, val_targets, self.batch_size)
+        val_gen = GraphSequence(val_input_list, val_targets, self.batch_size)
 
-        steps_per_epoch = int(np.ceil(len(input_list) / self.batch_size))
-        validation_steps = int(np.ceil(len(val_input_list) / self.batch_size))
+        steps_per_epoch = len(input_list) // self.batch_size
+        validation_steps = len(val_input_list) // self.batch_size
 
         self.model.fit(
             x=input_gen,
             batch_size=self.batch_size,
             epochs=epochs,
-            validation_data=val_input_gen,
+            validation_data=val_gen,
             steps_per_epoch=steps_per_epoch,
             validation_steps=validation_steps,
             callbacks=[checkpoint_callback, early_stop_callback],
@@ -238,30 +241,39 @@ class GraphSequence(Sequence):
         self.graphs, self.targets = graphs, targets
         self.batch_size = batch_size
 
+        self.indices = np.arange(len(self.graphs))
+
         if self.batch_size > len(self.graphs):
             raise ValueError(
                 f"Batch size ({self.batch_size}) is larger than "
                 f"training data length ({len(self.graphs)})."
             )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Get the Sequence's length."""
         return int(np.ceil(len(self.graphs) / self.batch_size))
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx) -> Tuple[List[List[np.ndarray]], List[np.ndarray]]:
         """Get a tuple of batches from the Sequence."""
-        start_idx = (idx * self.batch_size) % len(self.graphs)
-        end_idx = (start_idx + self.batch_size) % len(self.graphs)
+        start_idx = (idx * self.batch_size) % len(self.indices)
+        end_idx = (start_idx + self.batch_size) % len(self.indices)
 
         if end_idx <= start_idx:
-            batch_x = self.graphs[start_idx:] + self.graphs[:end_idx]
-            batch_y = self.targets[start_idx:] + self.targets[:end_idx]
-
+            inds = np.concatenate(
+                (self.indices[start_idx:], self.indices[:end_idx]), axis=None
+            )
         else:
-            batch_x = self.graphs[start_idx:end_idx]
-            batch_y = self.targets[start_idx:end_idx]
+            inds = self.indices[start_idx:end_idx]
+
+        ig = itemgetter(*inds)
+        batch_x = list(ig(self.graphs))
+        batch_y = list(ig(self.targets))
 
         return batch_x, batch_y
+
+    def on_epoch_end(self):
+        """Shuffle indices."""
+        np.random.shuffle(self.indices)
 
 
 def make_pred_megnet_model(
