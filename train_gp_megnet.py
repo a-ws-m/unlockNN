@@ -36,7 +36,38 @@ def convert_index_points(array: np.ndarray) -> tf.Tensor:
 
 
 class GPTrainer(tf.Module):
-    """Class for training hyperparameters for GP kernels."""
+    """Class for training hyperparameters for GP kernels.
+
+    Args:
+        observation_index_points (:obj:`tf.Tensor`): The observed index points (_x_ values).
+        observations (:obj:`tf.Tensor`): The observed samples (_y_ values).
+        checkpoint_dir (str or :obj:`Path`, optional): The directory to check for
+            checkpoints and to save checkpoints to.
+
+    Attributes:
+        observation_index_points (:obj:`tf.Tensor`): The observed index points (_x_ values).
+        observations (:obj:`tf.Tensor`): The observed samples (_y_ values).
+        checkpoint_dir (str or :obj:`Path`, optional): The directory to check for
+            checkpoints and to save checkpoints to.
+        amplitude (:obj:`tf.Tensor`): The amplitude of the kernel.
+        length_scale (:obj:`tf.Tensor`): The length scale of the kernel.
+        kernel (:obj:`tf.Tensor`): The kernel to use for the Gaussian process.
+        optimizer (:obj:`Optimizer`): The optimizer to use for determining
+            :attr:`amplitude` and :attr:`length_scale`.
+        training_steps (:obj:tf.Tensor): The current number of training epochs executed.
+        loss (:obj:`tf.Tensor`): The current loss on the training data
+            (A negative log likelihood).
+        metrics (dict): Contains metric names and values.
+            Default to `np.nan` when uncalculated.
+        ckpt (:obj:`Checkpoint`, optional): A tensorflow training checkpoint.
+            Defaults to `None` if `checkpoint_dir` is not passed.
+        ckpt_manager (:obj:`CheckpointManager`, optional): A checkpoint manager, used to save
+            :attr:`ckpt` to file.
+            Defaults to `None` if `checkpoint_dir` is not passed.
+        gp_prior (:obj:`GaussianProcess`): A Gaussian process using :attr:`kernel` and
+            using :attr:`observation_index_points` as indices.
+
+    """
 
     def __init__(
         self,
@@ -132,13 +163,30 @@ class GPTrainer(tf.Module):
 
     @staticmethod
     def load_model(model_dir: str):
-        """Load a `GPTrainer` model from a file."""
+        """Load a `GPTrainer` model from a file.
+
+        Args:
+            model_dir (str): The directory to import the model from.
+
+        Returns:
+            The model as a TensorFlow AutoTrackable object.
+
+        """
         return tf.saved_model.load(model_dir)
 
     def get_model(
         self, index_points: tf.Tensor
     ) -> tfp.python.distributions.GaussianProcessRegressionModel:
-        """Get a regression model for a set of index points."""
+        """Get a regression model for a set of index points.
+
+        Args:
+            index_points (:obj:`tf.Tensor`): The index points to fit
+                regression model.
+
+        Returns:
+            gprm (:obj:`GaussianProcessRegressionModel`): The regression model.
+
+        """
         return tfd.GaussianProcessRegressionModel(
             kernel=self.kernel,
             index_points=index_points,
@@ -148,7 +196,17 @@ class GPTrainer(tf.Module):
 
     @tf.function(input_signature=[tf.TensorSpec(None, tf.float64)])
     def predict(self, points: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
-        """Predict values for given `points` and the standard deviation of the distribution."""
+        """Predict targets and the standard deviation of the distribution.
+
+        Args:
+            points (:obj:`tf.Tensor`): The points (_x_ values) to make predictions with.
+
+        Returns:
+            mean (:obj:`tf.Tensor`): The mean of the distribution at each point.
+            stddev (:obj:`tf.Tensor`): The standard deviation of the distribution
+                at each point.
+
+        """
         gprm = self.get_model(points)
         return gprm.mean(), gprm.stddev()
 
@@ -161,7 +219,24 @@ class GPTrainer(tf.Module):
         save_dir: Optional[Union[str, Path]] = None,
         metrics: List[str] = [],
     ) -> Iterator[Dict[str, float]]:
-        """Optimize model parameters."""
+        """Optimize model parameters.
+
+        Args:
+            val_points (:obj:`tf.Tensor`): The validation points.
+            val_obs (:obj:`tf.Tensor`): The validation targets.
+            epochs (int): The number of training epochs.
+            patience (int, optional): The number of epochs after which to
+                stop training if no improvement is seen on the loss of the
+                validation data.
+            save_dir (str or :obj:`Path`, optional): Where to save the model.
+            metrics (list of str): A list of valid metrics to calculate.
+                Possible valid metrics are given in :class:`GPMetrics`.
+
+        Yields:
+            metrics (dict of str: float): A dictionary of the metrics after the
+                last training epoch.
+
+        """
         best_val_nll: float = self.metrics["nll"].numpy()
         if np.isnan(best_val_nll):
             # Set to infinity so < logic works
@@ -237,6 +312,20 @@ class GPMetrics:
     Many of the metrics herein are based upon implementations by `Train et al.`_,
     for metrics proposed by `Kuleshov et al.`_.
 
+    Args:
+        val_points (:obj:`tf.Tensor`): The validation indices.
+        val_obs (:obj:`np.ndarray`): The validation observed true values.
+        gp_trainer (:obj:`GPTrainer`): The :obj:`GPTrainer` instance to
+            analyse.
+
+    Attributes:
+        val_points (:obj:`tf.Tensor`): The validation indices.
+        val_obs (:obj:`np.ndarray`): The validation observed true values.
+        gp_trainer (:obj:`GPTrainer`): The :obj:`GPTrainer` instance to
+            analyse.
+        gprm (:obj:`GaussianProcessRegressionModel`): A regression model from
+            `gp_trainer` fit to the `val_points`.
+
     .. _Tran et al.:
         https://arxiv.org/abs/1912.10066
     .. _Kuleshov et al.:
@@ -269,17 +358,32 @@ class GPMetrics:
 
     @property
     def nll(self) -> float:
-        """Calculate the negative log likelihood of observed true values."""
+        """Calculate the negative log likelihood of observed true values.
+
+        Returns:
+            nll (float)
+
+        """
         return -self.gprm.log_prob(self.val_obs).numpy()
 
     @property
     def mae(self) -> float:
-        """Calculate the mean average error of predicted values."""
+        """Calculate the mean average error of predicted values.
+
+        Returns:
+            mean (float)
+
+        """
         return tf.losses.mae(self.val_obs, self.mean).numpy()
 
     @property
-    def sharpness(self):
-        """Calculate the root-mean-squared of predicted standard deviations."""
+    def sharpness(self) -> float:
+        """Calculate the root-mean-squared of predicted standard deviations.
+
+        Returns:
+            sharpness (float)
+
+        """
         return np.sqrt(np.mean(np.square(self.stddevs)))
 
     @property
@@ -288,6 +392,9 @@ class GPMetrics:
 
         Indicates dispersion of uncertainty estimates.
 
+        Returns:
+            coeff_var (float)
+
         """
         stdev_mean = self.stddevs.mean()
         coeff_var = np.sqrt(np.sum(np.square(self.stddevs - stdev_mean)))
@@ -295,22 +402,47 @@ class GPMetrics:
         return coeff_var
 
     @property
-    def calibration_err(self):
-        """Calculate the calibration error of the model."""
+    def calibration_err(self) -> float:
+        """Calculate the calibration error of the model.
+
+        Calls :meth:`pis`, which is relatively slow.
+
+        Returns:
+            calibration_error (float)
+
+        """
         predicted_pi, observed_pi = self.pis
         return np.sum(np.square(predicted_pi - observed_pi))
 
     @property
     def residuals(self) -> np.ndarray:
-        """Calculate the residuals."""
+        """Calculate the residuals.
+
+        Returns:
+            residuals (:obj:`np.ndarray`): The difference between the means
+                of the predicted distributions and the true values.
+
+        """
         return self.mean - self.val_obs.numpy()
 
     def sharpness_plot(self, fname: Optional[Union[str, Path]] = None):
-        """Plot the distribution of standard deviations and the sharpness."""
+        """Plot the distribution of standard deviations and the sharpness.
+
+        Args:
+            fname (str or :obj:`Path`, optional): The name of the file to save to.
+                If omitted, will show the plot after completion.
+
+        """
         plot_sharpness(self.stddevs, self.sharpness, self.variation, fname)
 
     def calibration_plot(self, fname: Optional[Union[str, Path]] = None):
-        """Plot the distribution of residuals relative to the expected distribution."""
+        """Plot the distribution of residuals relative to the expected distribution.
+
+        Args:
+            fname (str or :obj:`Path`, optional): The name of the file to save to.
+                If omitted, will show the plot after completion.
+
+        """
         predicted_pi, observed_pi = self.pis
         plot_calibration(predicted_pi, observed_pi, fname)
 
