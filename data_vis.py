@@ -11,15 +11,17 @@ FONTSIZE = 12
 
 
 def plot_calibration(
-    predicted_pi, observed_pi, fname: Optional[Union[str, Path]] = None
+    predicted_pi: np.ndarray,
+    observed_pi: np.ndarray,
+    fname: Optional[Union[str, Path]] = None,
 ):
     """Plot miscalibration curve."""
-    fig_cal = plt.figure(figsize=FIGSIZE)
+    plt.figure(figsize=FIGSIZE)
     ax_ideal = sns.lineplot([0, 1], [0, 1], label="ideal")
     ax_ideal.lines[0].set_linestyle("--")
 
-    ax_gp = sns.lineplot(predicted_pi, observed_pi)
-    ax_fill = plt.fill_between(
+    sns.lineplot(predicted_pi, observed_pi)
+    plt.fill_between(
         predicted_pi, predicted_pi, observed_pi, alpha=0.2, label="miscalibration area",
     )
 
@@ -35,10 +37,13 @@ def plot_calibration(
 
 
 def plot_sharpness(
-    stdevs, sharpness, coeff_var, fname: Optional[Union[str, Path]] = None
+    stdevs: np.ndarray,
+    sharpness: float,
+    coeff_var: float,
+    fname: Optional[Union[str, Path]] = None,
 ):
     """Plot standard deviation distribution and sharpness."""
-    fig_sharp = plt.figure(figsize=FIGSIZE)
+    plt.figure(figsize=FIGSIZE)
     ax_sharp = sns.distplot(stdevs, kde=False, norm_hist=True)
     ax_sharp.set_xlim(left=0.0)
     ax_sharp.set_xlabel("Predicted standard deviations (eV)")
