@@ -13,7 +13,13 @@ from .config import DB_DIR, MODELS_DIR
 
 
 class RBFKernelFn(tf.keras.layers.Layer):
-    """A radial basis function implementation that works with keras."""
+    """A radial basis function implementation that works with keras.
+
+    Attributes:
+        _amplitude (tf.Tensor): The amplitude of the kernel.
+        _length_scale (tf.Tensor): The length scale of the kernel.
+
+    """
 
     def __init__(self, **kwargs):
         """Initialize layer and parameters."""
@@ -35,7 +41,7 @@ class RBFKernelFn(tf.keras.layers.Layer):
         return x
 
     @property
-    def kernel(self):
+    def kernel(self) -> tfp.math.psd_kernels.PositiveSemidefiniteKernel:
         """Get a callable kernel."""
         return tfp.math.psd_kernels.ExponentiatedQuadratic(
             amplitude=tf.nn.softplus(0.1 * self._amplitude),
@@ -109,7 +115,10 @@ class SingleLayerVGP:
         return self.model(*args, **kwargs)
 
     def train_model(
-        self, observations: tf.Tensor, validation_data: Optional[Tuple] = None, epochs: int = 1000
+        self,
+        observations: tf.Tensor,
+        validation_data: Optional[Tuple] = None,
+        epochs: int = 1000,
     ):
         """Train the model.
 
