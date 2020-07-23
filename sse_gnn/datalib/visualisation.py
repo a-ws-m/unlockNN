@@ -16,7 +16,7 @@ def plot_calibration(
     fname: Optional[Union[str, Path]] = None,
 ):
     """Plot miscalibration curve.
-    
+
     predicted_pi (:obj:`np.ndarray`): The predicted percentile intervals.
     observed_pi  (:obj:`np.ndarray`): The observed percentile intervals.
         fname (str or :obj:`Path`, optional): The file to save the plot.
@@ -50,7 +50,7 @@ def plot_sharpness(
     fname: Optional[Union[str, Path]] = None,
 ):
     """Plot standard deviation distribution and sharpness.
-    
+
     Args:
         stdevs (:obj:`np.ndarray`): An array of the standard deviations.
         sharpness (float): The root mean squared of the standard deviations.

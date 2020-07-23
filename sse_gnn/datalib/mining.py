@@ -11,23 +11,10 @@ import smact.data_loader as smact_data
 from matminer.data_retrieval.retrieve_MP import MPDataRetrieval
 from smact.structure_prediction.structure import SmactStructure
 
-from .config import (
-    DB_DOWN_LOC,
-    DB_SMACT_LOC,
-    LAST_TO_FIRST,
-    MP_API_KEY,
-    MP_API_VAR,
-    SSE_DB_LOC,
-)
 
-if not MP_API_KEY:
-    raise TypeError(
-        f"Environment variable {MP_API_VAR} not set. "
-        "Please set it to your Materials Project API key."
-    )
-
-
-def download_structures(file: Optional[Union[str, Path]] = None) -> pd.DataFrame:
+def download_structures(
+    mp_api_key: str, file: Optional[Union[str, Path]] = None
+) -> pd.DataFrame:
     """Create database of MP IDs and structures.
 
     Queries for binary compounds with experimentally determined crystal structures
@@ -36,6 +23,7 @@ def download_structures(file: Optional[Union[str, Path]] = None) -> pd.DataFrame
     to the specified file.
 
     Args:
+        mp_api_key (str): The `Materials Project`_ API key to use.
         file (str, optional): The path to the file, to which to write the feathered data.
             If omitted (None), does not write to a file.
 
@@ -43,8 +31,11 @@ def download_structures(file: Optional[Union[str, Path]] = None) -> pd.DataFrame
         :obj:`pd.DataFrame`: A dataframe containting the materials IDs and structures
             of the compounds.
 
+    .. _Materials Project:
+        https://materialsproject.org/open
+
     """
-    df_mp = MPDataRetrieval(MP_API_KEY).get_dataframe(
+    df_mp = MPDataRetrieval(mp_api_key).get_dataframe(
         criteria={"icsd_ids.0": {"$exists": True}, "nelements": 2},
         properties=["material_id", "structure"],
         index_mpid=False,  # Index isn't preserved when writing to file
@@ -199,37 +190,3 @@ def extract_sse_data(
         feather.write_feather(df, file)
 
     return df
-
-
-if __name__ == "__main__":
-    working_db = None  # Which, if any, is the most complete database in the filesystem
-    for DB in LAST_TO_FIRST:
-        try:
-            df = feather.read_feather(DB)
-
-            if not df.empty:  # Got a working DB
-                working_db = DB
-                print(f"Found already processed database: {working_db}")
-                break
-
-        except Exception as e:  # DB doesn't exist yet
-            print(f"Can't import {DB}: {e}")
-            continue
-
-    if working_db is None:
-        print("Downloading structures.")
-        df = download_structures(DB_DOWN_LOC)
-        working_db = DB_DOWN_LOC
-
-    if working_db == DB_DOWN_LOC:
-        print("Converting to SMACT structures...")
-        df = add_smact_structs(df, DB_SMACT_LOC)
-        working_db = DB_SMACT_LOC
-
-    if working_db == DB_SMACT_LOC:
-        print("Adding SSE columns...")
-        df = extract_sse_data(df, SSE_DB_LOC)
-        working_db = SSE_DB_LOC
-
-    if working_db == SSE_DB_LOC:
-        print(f"Database found/created in {working_db}")
