@@ -100,12 +100,16 @@ def add_smact_structs(
     return df
 
 
-def lookup_sse(symbol: str, charge: int) -> Optional[float]:
+def lookup_sse(
+    symbol: str, charge: int, pauling_fallback: bool = True
+) -> Optional[float]:
     """Lookup the SSE of an ion, given its symbol and charge.
 
     Args:
         symbol (str): The elemental symbol of the species.
         charge (int): The oxidation state of the ion.
+        pauling_fallback (bool): Whether to load estimate from the Pauling database
+            if data does not exist in the calculated SSE database.
 
     Returns:
         SSE (float or None): The SSE of the ion, or `None` if it
@@ -120,13 +124,12 @@ def lookup_sse(symbol: str, charge: int) -> Optional[float]:
     except TypeError:
         pass  # Got `None` from sse2015 lookup
 
-    data_pauli = smact_data.lookup_element_sse_pauling_data(symbol)
-    try:
-        for data in data_pauli:
-            if data["OxidationState"] == charge:
-                return data["SolidStateEnergy2015"]
-    except TypeError:
-        pass  # Got `None` from sse_pauli lookup
+    if pauling_fallback:
+        data_pauli = smact_data.lookup_element_sse_pauling_data(symbol)
+        try:
+            return data_pauli["SolidStateEnergyPauling"]
+        except TypeError:
+            pass  # Got `None` from sse_pauli lookup
 
     return None
 
