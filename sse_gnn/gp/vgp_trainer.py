@@ -1,15 +1,10 @@
 """VariationalGaussianProcess single layer model."""
 from typing import Optional, Tuple
 
-import mlflow
-import mlflow.tensorflow
 import numpy as np
-import pandas as pd
 import tensorflow as tf
 import tensorflow_probability as tfp
 from tensorflow.python.keras.utils import losses_utils
-
-from .config import DB_DIR, MODELS_DIR
 
 
 class RBFKernelFn(tf.keras.layers.Layer):
@@ -119,6 +114,7 @@ class SingleLayerVGP:
         observations: tf.Tensor,
         validation_data: Optional[Tuple] = None,
         epochs: int = 1000,
+        checkpoint_path: Optional[str] = None,
     ):
         """Train the model.
 
@@ -127,18 +123,25 @@ class SingleLayerVGP:
             validation_data (tuple of :obj:`tf.Tensor`, optional): The validation data
                 as a tuple of (validation_x, validation_y).
             epochs (int): The number of training epochs.
+            checkpoint_path (str, optional): The path to look for checkpoints and to
+                save new checkpoints to.
 
         """
-        checkpoint_path = str(MODELS_DIR / "vgp_ckpts.{epoch:02d}-{val_loss:.4f}.h5")
-        try:
-            self.model.load_weights(checkpoint_path)
-        except Exception as e:
-            print(f"Couldn't load any checkpoints: {e}")
+        callbacks = []
 
-        checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-            checkpoint_path, save_best_only=True, save_weights_only=True,
-        )
+        if checkpoint_path:
+            try:
+                self.model.load_weights(checkpoint_path)
+            except Exception as e:
+                print(f"Couldn't load any checkpoints: {e}")
+
+            checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+                checkpoint_path, save_best_only=True, save_weights_only=True,
+            )
+            callbacks.append(checkpoint_callback)
+
         early_stop_callback = tf.keras.callbacks.EarlyStopping(patience=500)
+        callbacks.append(early_stop_callback)
 
         self.model.fit(
             self.observation_indices,
@@ -146,28 +149,5 @@ class SingleLayerVGP:
             batch_size=self.batch_size,
             epochs=epochs,
             validation_data=validation_data,
-            callbacks=[checkpoint_callback, early_stop_callback],
+            callbacks=callbacks,
         )
-
-
-if __name__ == "__main__":
-    mlflow.set_tracking_uri("databricks")
-    mlflow.set_experiment("/Users/awm1017@ic.ac.uk/VGP SSE Model")
-
-    dtype = tf.float64
-    train_df = pd.read_pickle(DB_DIR / "gp_train_df.pickle")
-    test_df = pd.read_pickle(DB_DIR / "gp_test_df.pickle")
-
-    observation_index_points = tf.constant(
-        np.stack(train_df["layer_out"].values), dtype=dtype
-    )
-    index_points = tf.constant(np.stack(test_df["layer_out"].values), dtype=dtype)
-
-    train_sses = tf.constant(np.array(list(train_df["sses"].values)), dtype=dtype)
-    test_sses = tf.constant(np.array(list(test_df["sses"].values)), dtype=dtype)
-
-    vgp = SingleLayerVGP(observation_index_points, ntargets=2)
-    with mlflow.start_run(run_name="laptop_loading_test"):
-        mlflow.tensorflow.autolog(1)
-        vgp.train_model(train_sses, (index_points, test_sses), epochs=1)
-    # vgp.model.save_weights(str(MODELS_DIR / "vgp_v1.h5"))

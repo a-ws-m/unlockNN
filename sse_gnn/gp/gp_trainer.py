@@ -8,7 +8,7 @@ import tensorflow.python.util.deprecation as deprecation
 import tensorflow_probability as tfp
 from tqdm import tqdm
 
-from .data_vis import plot_calibration, plot_sharpness
+from ..datalib.visualisation import plot_calibration, plot_sharpness
 
 deprecation._PRINT_DEPRECATION_WARNINGS = False
 
