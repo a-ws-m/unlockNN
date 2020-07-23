@@ -66,7 +66,7 @@ def get_smact_struct(py_struct) -> Union[SmactStructure, None]:
         py_struct (:obj:`pymatgen.Structure`): The structure to convert.
 
     Returns:
-        :obj:`SmactStructure` or `None`: The SmactStructure object, or `None`
+        :obj:`SmactStructure`, optional: The SmactStructure object, or `None`
             if the bond valency could not be determined.
 
     """
@@ -89,6 +89,9 @@ def add_smact_structs(
             column entitled 'structure'.
         file (str, optional): The path to a file, to which to write the feathered data.
             If omitted (None), does not write to a file.
+
+    Returns:
+        df (:obj:`pd.DataFrame`): The DataFrame with added species columns.
 
     """
     structures = (
@@ -179,6 +182,9 @@ def extract_sse_data(
             column entitled 'smact_struct'.
         file (str, optional): The path to a file, to which to write the feathered data.
             If omitted (None), does not write to a file.
+
+    Returns:
+        df (:obj:`pd.DataFrame`): The DataFrame with added `SmactStructure`s.
 
     """
     smact_structs = map(SmactStructure.from_poscar, df["smact_struct"])
