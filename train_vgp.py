@@ -67,7 +67,7 @@ class SingleLayerVGP:
         batch_size: int = 32,
     ):
         """Initialize and compile model.
-        
+
         Args:
             observation_indices (:obj:`tf.Tensor`): The (training) observation index points (x data).
             ntargets (int): The number of parameters to be modelled.
@@ -109,8 +109,8 @@ class SingleLayerVGP:
         checkpoint_path = str(MODELS_DIR / "vgp_ckpts.{epoch:02d}-{val_loss:.4f}.h5")
         try:
             self.model.load_weights(checkpoint_path)
-        except:
-            pass  # No checkpoints
+        except Exception as e:
+            print(f"Couldn't load any checkpoints: {e}")
 
         checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
             checkpoint_path, save_best_only=True, save_weights_only=True,
