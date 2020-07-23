@@ -1,6 +1,6 @@
 """MEGNet model employing a VGP as an output."""
 from operator import itemgetter
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import pymatgen
@@ -17,8 +17,6 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.utils import Sequence
 from tensorflow.python.keras.utils import losses_utils
-
-from .config import MODELS_DIR
 
 
 class RBFKernelFn(tf.keras.layers.Layer):
@@ -190,20 +188,23 @@ class ProbabilisticMEGNetModel:
         val_structs: List[pymatgen.Structure],
         val_targets: List[np.ndarray],
         epochs: int = 1000,
+        checkpoint_path: Optional[str] = None,
     ):
         """Train from a list of structures and targets."""
-        checkpoint_path = str(
-            MODELS_DIR / "meg_vgp_ckpts.{epoch:02d}-{val_loss:.4f}.h5"
-        )
-        try:
-            self.model.load_weights(checkpoint_path)
-        except Exception as e:
-            print(f"Couldn't load checkpoints: {e}")
+        callbacks = []
+        if checkpoint_path:
+            try:
+                self.model.load_weights(checkpoint_path)
+            except Exception as e:
+                print(f"Couldn't load checkpoints: {e}")
 
-        checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-            checkpoint_path, save_best_only=True, save_weights_only=True
-        )
+            checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+                checkpoint_path, save_best_only=True, save_weights_only=True
+            )
+            callbacks.append(checkpoint_callback)
+
         early_stop_callback = tf.keras.callbacks.EarlyStopping(patience=500)
+        callbacks.append(early_stop_callback)
 
         input_list = self.structs_to_input(structs)
         input_gen = GraphSequence(input_list, targets, self.batch_size)
@@ -221,7 +222,7 @@ class ProbabilisticMEGNetModel:
             validation_data=val_gen,
             steps_per_epoch=steps_per_epoch,
             validation_steps=validation_steps,
-            callbacks=[checkpoint_callback, early_stop_callback],
+            callbacks=callbacks,
         )
 
 
