@@ -2,14 +2,13 @@
 import mlflow
 import mlflow.tensorflow
 import numpy as np
-import pandas as pd
 import pyarrow.feather as feather
 import pymatgen
 from megnet.data.crystal import CrystalGraph
 from megnet.models import MEGNetModel
 from sklearn.model_selection import train_test_split
 
-from .config import *
+from .config import SSE_DB_LOC
 
 mlflow.set_tracking_uri("databricks")
 mlflow.set_experiment("/Users/awm1017@ic.ac.uk/MEGNet SSE Model")

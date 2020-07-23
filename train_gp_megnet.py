@@ -1,10 +1,8 @@
 """Utilities for training a GP fed from the MEGNet Concatenation layer for a pretrained model."""
-from operator import itemgetter
 from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
-import pandas as pd
 import tensorflow as tf
 import tensorflow.python.util.deprecation as deprecation
 import tensorflow_probability as tfp

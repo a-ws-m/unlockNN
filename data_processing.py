@@ -1,5 +1,4 @@
 """Tools for processing the SSE data for the Gaussian Process."""
-from pathlib import Path
 from typing import List, Optional
 
 import numpy as np

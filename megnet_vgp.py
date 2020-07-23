@@ -197,8 +197,8 @@ class ProbabilisticMEGNetModel:
         )
         try:
             self.model.load_weights(checkpoint_path)
-        except:
-            pass  # No checkpoints
+        except Exception as e:
+            print(f"Couldn't load checkpoints: {e}")
 
         checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
             checkpoint_path, save_best_only=True, save_weights_only=True
