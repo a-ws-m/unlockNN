@@ -15,7 +15,14 @@ def plot_calibration(
     observed_pi: np.ndarray,
     fname: Optional[Union[str, Path]] = None,
 ):
-    """Plot miscalibration curve."""
+    """Plot miscalibration curve.
+    
+    predicted_pi (:obj:`np.ndarray`): The predicted percentile intervals.
+    observed_pi  (:obj:`np.ndarray`): The observed percentile intervals.
+        fname (str or :obj:`Path`, optional): The file to save the plot.
+            Defaults to `None`, which shows the plot but does not save it.
+
+    """
     plt.figure(figsize=FIGSIZE)
     ax_ideal = sns.lineplot([0, 1], [0, 1], label="ideal")
     ax_ideal.lines[0].set_linestyle("--")
@@ -42,7 +49,16 @@ def plot_sharpness(
     coeff_var: float,
     fname: Optional[Union[str, Path]] = None,
 ):
-    """Plot standard deviation distribution and sharpness."""
+    """Plot standard deviation distribution and sharpness.
+    
+    Args:
+        stdevs (:obj:`np.ndarray`): An array of the standard deviations.
+        sharpness (float): The root mean squared of the standard deviations.
+        coeff_var (float): The coefficient of variation of the standard deviations.
+        fname (str or :obj:`Path`, optional): The file to save the plot.
+            Defaults to `None`, which shows the plot but does not save it.
+
+    """
     plt.figure(figsize=FIGSIZE)
     ax_sharp = sns.distplot(stdevs, kde=False, norm_hist=True)
     ax_sharp.set_xlim(left=0.0)
