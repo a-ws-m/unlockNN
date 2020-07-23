@@ -1,24 +1,16 @@
 """MEGNet model employing a VGP as an output."""
-import os
 from operator import itemgetter
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Tuple
 
-import mlflow
-import mlflow.tensorflow
 import numpy as np
-import pandas as pd
 import pymatgen
 import tensorflow as tf
 import tensorflow_probability as tfp
 from megnet.activations import softplus2
-from megnet.callbacks import ManualStop, ModelCheckpointMAE, ReduceLRUponNan
 from megnet.config import DataType
 from megnet.data.crystal import CrystalGraph
 from megnet.data.graph import GaussianDistance, StructureGraph
 from megnet.layers import GaussianExpansion, MEGNetLayer, Set2Set
-from megnet.models import GraphModel
-from megnet.utils.preprocessing import DummyScaler, Scaler
-from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.layers import Add, Concatenate, Dense, Dropout, Embedding, Input
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
@@ -26,7 +18,7 @@ from tensorflow.keras.regularizers import l2
 from tensorflow.keras.utils import Sequence
 from tensorflow.python.keras.utils import losses_utils
 
-from .config import DB_DIR, MODELS_DIR
+from .config import MODELS_DIR
 
 
 class RBFKernelFn(tf.keras.layers.Layer):
