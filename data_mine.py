@@ -1,7 +1,8 @@
 """Tools to scrape relevant compound data from Materials Project and label their ions' SSEs appropriately."""
 from multiprocessing import Pool
 from operator import itemgetter
-from typing import List, Optional, Tuple, Union
+from pathlib import Path
+from typing import Optional, Tuple, Union
 
 import pandas as pd
 import pyarrow.feather as feather
@@ -10,7 +11,14 @@ import smact.data_loader as smact_data
 from matminer.data_retrieval.retrieve_MP import MPDataRetrieval
 from smact.structure_prediction.structure import SmactStructure
 
-from .config import *
+from .config import (
+    DB_DOWN_LOC,
+    DB_SMACT_LOC,
+    LAST_TO_FIRST,
+    MP_API_KEY,
+    MP_API_VAR,
+    SSE_DB_LOC,
+)
 
 if not MP_API_KEY:
     raise TypeError(
@@ -21,12 +29,12 @@ if not MP_API_KEY:
 
 def download_structures(file: Optional[Union[str, Path]] = None) -> pd.DataFrame:
     """Create database of MP IDs and structures.
-    
+
     Queries for binary compounds with experimentally determined crystal structures
     that have been reported to the ICSD.
     Optionally, writes a database of their `material_id`s and their structures as a feather
     to the specified file.
-    
+
     Args:
         file (str, optional): The path to the file, to which to write the feathered data.
             If omitted (None), does not write to a file.
@@ -56,7 +64,7 @@ def get_smact_struct(py_struct) -> Union[SmactStructure, None]:
 
     Args:
         py_struct (:obj:`pymatgen.Structure`): The structure to convert.
-    
+
     Returns:
         :obj:`SmactStructure` or `None`: The SmactStructure object, or `None`
             if the bond valency could not be determined.
@@ -72,10 +80,10 @@ def add_smact_structs(
     df: pd.DataFrame, file: Optional[Union[str, Path]] = None
 ) -> pd.DataFrame:
     """Add species columns to a DataFrame containing pymatgen `Structure`s.
-    
+
     Species column is entitled 'species'. Removes rows that cannot be
     converted due to ambiguous bond valency. Optionally outputs the new DataFrame to a file.
-    
+
     Args:
         df (:obj:`pd.DataFrame`): A DataFrame containing pymatgen structures in a
             column entitled 'structure'.
@@ -104,7 +112,7 @@ def lookup_sse(symbol: str, charge: int) -> Optional[float]:
     Args:
         symbol (str): The elemental symbol of the species.
         charge (int): The oxidation state of the ion.
-    
+
     Returns:
         SSE (float or None): The SSE of the ion, or `None` if it
             is not in the SMACT database.
@@ -162,10 +170,10 @@ def extract_sse_data(
     df: pd.DataFrame, file: Optional[Union[str, Path]] = None
 ) -> pd.DataFrame:
     """Add columns for SSEs to a DataFrame containing `SmactStructure`s.
-    
+
     Cation SSE contained in 'cat_sse', anion sse contained in 'an_sse'.
     Optionally outputs the new DataFrame to a file.
-    
+
     Args:
         df (:obj:`pd.DataFrame`): A DataFrame containing `SmactStructure`s in a
             column entitled 'smact_struct'.
@@ -198,7 +206,8 @@ if __name__ == "__main__":
                 print(f"Found already processed database: {working_db}")
                 break
 
-        except:  # DB doesn't exist yet
+        except Exception as e:  # DB doesn't exist yet
+            print(f"Can't import {DB}: {e}")
             continue
 
     if working_db is None:
