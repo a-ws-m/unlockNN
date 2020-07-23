@@ -57,7 +57,20 @@ class VariationalLoss(tf.keras.losses.Loss):
 
 
 class SingleLayerVGP:
-    """A network with an input and a VGP."""
+    """A network with an input and a VGP.
+
+    Args:
+        observation_indices (:obj:`tf.Tensor`): The (training) observation index points (x data).
+        ntargets (int): The number of parameters to be modelled.
+        num_inducing_points (int): The number of inducing points for the :obj:`VariationalGaussianProcess`.
+        batch_size (int): The training batch size.
+
+    Attributes:
+        observation_indices (:obj:`tf.Tensor`): The (training) observation index points (x data).
+        batch_size (int): The training batch size.
+        model (:obj:`Model`): The Keras model containing the obj:`VariationalGaussianProcess`.
+
+    """
 
     def __init__(
         self,
@@ -66,19 +79,12 @@ class SingleLayerVGP:
         num_inducing_points: int = 96,
         batch_size: int = 32,
     ):
-        """Initialize and compile model.
-
-        Args:
-            observation_indices (:obj:`tf.Tensor`): The (training) observation index points (x data).
-            ntargets (int): The number of parameters to be modelled.
-            num_inducing_points (int): The number of inducing points for the :obj:`VariationalGaussianProcess`.
-            batch_size (int): The training batch size.
-
-        """
+        """Initialize and compile model."""
         self.observation_indices = observation_indices
         self.batch_size = batch_size
 
         # * Set up model
+        # TODO: Generalise input shape
         inputs = tf.keras.layers.Input(shape=(96,))
         output = tfp.layers.VariationalGaussianProcess(
             num_inducing_points,
@@ -99,13 +105,21 @@ class SingleLayerVGP:
         self.model = model
 
     def __call__(self, *args, **kwargs):
-        """Call the embedded keras model."""
+        """Call the embedded Keras model."""
         return self.model(*args, **kwargs)
 
     def train_model(
-        self, observations, validation_data: Optional[Tuple] = None, epochs: int = 1000
+        self, observations: tf.Tensor, validation_data: Optional[Tuple] = None, epochs: int = 1000
     ):
-        """Train the model."""
+        """Train the model.
+
+        Args:
+            observations (:obj:`tf.Tensor`): The observed true _y_ values.
+            validation_data (tuple of :obj:`tf.Tensor`, optional): The validation data
+                as a tuple of (validation_x, validation_y).
+            epochs (int): The number of training epochs.
+
+        """
         checkpoint_path = str(MODELS_DIR / "vgp_ckpts.{epoch:02d}-{val_loss:.4f}.h5")
         try:
             self.model.load_weights(checkpoint_path)
