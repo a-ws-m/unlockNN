@@ -11,7 +11,11 @@ from tensorflow.keras import backend as K
 class ConcatExtractor:
     """Wrapper for MEGNet Models to extract concatenation layer output.
 
-    Params:
+    Args:
+        model (:obj:`MEGNetModel`): The MEGNet model to perform extraction
+            upon.
+
+    Attributes:
         model (:obj:`MEGNetModel`): The MEGNet model to perform extraction
             upon.
         conc_layer_output (:obj:`Tensor`): The concatenation layer's
@@ -77,7 +81,33 @@ class ConcatExtractor:
 
 
 class GPDataParser:
-    """Class for creating GP training data and preprocessing thereof."""
+    """Class for creating GP training data and preprocessing thereof.
+
+    A `GPDataParser` must be initialized with either training data or a
+    precalculated scaling factor, if one has already been calculated.
+    See :meth:`_calc_scaling_factor` for the procedure for calculating the
+    scaling factor.
+
+    Args:
+        model (:obj:`MEGNetModel`): The MEGNet model to perform extraction
+            upon.
+        sf (:obj:`np.ndarray`, optional): The scaling factor. Must be passed if
+            `training_data` is not passed.
+        training_data (:obj:`pd.DataFrame`, optional): The training dataframe to
+            use.
+
+    Attributes:
+        model (:obj:`MEGNetModel`): The MEGNet model to perform extraction
+            upon.
+        sf (:obj:`np.ndarray`, optional): The scaling factor. Either calculated from
+            `training_data` (if passed) or passed as a parameter during initialization.
+        training_data (:obj:`pd.DataFrame`, optional): The training dataframe, from which
+            the `sf` is calculated.
+
+    Raises:
+        ValueError: If both `training_data` and `sf`, or neither of them, are supplied.
+
+    """
 
     def __init__(
         self,
@@ -121,11 +151,28 @@ class GPDataParser:
     def structures_to_input(
         self, structures: List[pymatgen.Structure]
     ) -> List[np.ndarray]:
-        """Convert structures to a scaled input feature vector."""
+        """Convert structures to a scaled input feature vector.
+
+        Args:
+            structures (list of :obj:`pymatgen.Structure`): The structures to convert.
+
+        Returns:
+            list of :obj:`np.ndarray`: The scaled feature vectors.
+
+        """
         return [out / self.sf for out in self._calc_layer_outs(structures)]
 
     def _calc_layer_outs(self, data: List[pymatgen.Structure]) -> List[np.ndarray]:
-        """Calculate the layer outputs for all structures in a list."""
+        """Calculate the layer outputs for all structures in a list.
+
+        Args:
+            data (list of :obj:`pymatgen.Structure`): The structures to calculate
+                the layer output for.
+
+        Returns:
+            layer_outs (list of :obj:`np.ndarray`): The layer outputs.
+
+        """
         layer_outs = map(self.extractor.get_concat_output, data)
         # Squeeze each value to a nicer shape
         return list(map(np.squeeze, layer_outs))
