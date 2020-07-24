@@ -1,12 +1,13 @@
 """Train model to determine SSEs using MEGNet."""
 import mlflow
-import mlflow.tensorflow
 import numpy as np
 import pyarrow.feather as feather
 import pymatgen
 from megnet.data.crystal import CrystalGraph
 from megnet.models import MEGNetModel
 from sklearn.model_selection import train_test_split
+
+from sse_gnn.utilities import MLFlowMetricsLogger
 
 from .config import SSE_DB_LOC
 
@@ -51,7 +52,13 @@ train_structs, test_structs, train_sses, test_sses = train_test_split(
 # Here, `structures` is a list of pymatgen Structure objects.
 # `targets` is a corresponding list of properties.
 with mlflow.start_run(run_name="laptop_test"):
-    mlflow.tensorflow.autolog(every_n_iter=1)
-    model.train(train_structs, train_sses, test_structs, test_sses, epochs=10)
+    model.train(
+        train_structs,
+        train_sses,
+        test_structs,
+        test_sses,
+        epochs=10,
+        callbacks=[MLFlowMetricsLogger()],
+    )
 
 # model.save_model("megnet_model_v1")
