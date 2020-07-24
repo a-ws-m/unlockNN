@@ -4,7 +4,7 @@ import pyarrow.feather as feather
 import pymatgen
 from megnet import MEGNetModel
 
-from sse_gnn.datalib.preprocessing import GPDataParser
+from sse_gnn.datalib.preprocessing import LayerScaler
 
 from .config import DB_DIR, MODELS_DIR
 
@@ -19,7 +19,7 @@ print("Loading MEGNet model...")
 model = MEGNetModel.from_file(MIN_LOSS_FILE)
 
 print("Instantiating GP data parser...")
-processor = GPDataParser(model, training_df=train_df)
+processor = LayerScaler(model, training_df=train_df)
 
 # Save scaling factor to file
 np.savetxt("megnet_model/sf.txt", processor.sf)

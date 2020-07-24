@@ -8,28 +8,26 @@ from megnet.models import MEGNetModel
 from tensorflow.keras import backend as K
 
 
-class ConcatExtractor:
-    """Wrapper for MEGNet Models to extract concatenation layer output.
+class LayerExtractor:
+    """Wrapper for MEGNet Models to extract layer output.
 
     Args:
         model (:obj:`MEGNetModel`): The MEGNet model to perform extraction
             upon.
+        layer_index (int): The index of the layer within the model to extract.
 
     Attributes:
         model (:obj:`MEGNetModel`): The MEGNet model to perform extraction
             upon.
-        conc_layer_output (:obj:`Tensor`): The concatenation layer's
-            unevaluated output.
-        conc_layer_eval: A Keras function for evaluating the concatenation
-            layer.
+        conc_layer_output (:obj:`Tensor`): The layer's unevaluated output.
+        conc_layer_eval: A Keras function for evaluating the layer.
 
     """
 
-    def __init__(self, model: MEGNetModel):
+    def __init__(self, model: MEGNetModel, layer_index: int):
         """Initialize extractor."""
         self.model = model
-        # -4 is the index of the concatenation layer
-        self.conc_layer_output = model.layers[-4].output
+        self.conc_layer_output = model.layers[layer_index].output
         self.conc_layer_eval = K.function([model.input], [self.conc_layer_output])
 
     def _convert_struct_to_inp(self, structure: pymatgen.Structure) -> List:
@@ -49,41 +47,47 @@ class ConcatExtractor:
         graph = self.model.graph_converter.convert(structure)
         return self.model.graph_converter.graph_to_input(graph)
 
-    def get_concat_output(self, structure: pymatgen.Structure) -> np.ndarray:
-        """Get the concatenation layer output for the model.
+    def get_layer_output(self, structure: pymatgen.Structure) -> np.ndarray:
+        """Get the layer output for the model.
 
         Args:
             structure (:obj:`pymatgen.Structure`):
                 Pymatgen structure to calculate the layer output for.
 
         Returns:
-            np.ndarray: The output of the concatenation layer,
-                with shape (1, 1, 96).
+            np.ndarray: The output of the layer.
 
         """
         input = self._convert_struct_to_inp(structure)
         return self.conc_layer_eval([input])[0]
 
-    def get_concat_output_graph(self, graph: List) -> np.ndarray:
-        """Get the concatenation layer output for the model for a graph.
+    def get_layer_output_graph(self, graph: List) -> np.ndarray:
+        """Get the layer output of the model for a graph.
 
         Args:
             graph (list):
                 MEGNet compatible graph to calculate the layer output for.
 
         Returns:
-            np.ndarray: The output of the concatenation layer,
-                with shape (1, 1, 96).
+            np.ndarray: The output of the layer.
 
         """
         input = self.model.graph_converter.graph_to_input(graph)
         return self.conc_layer_eval([input])[0]
 
 
-class GPDataParser:
+class ConcatExtractor(LayerExtractor):
+    """Wrapper for a `LayerExtractor` that acquires the concatenation layer output."""
+
+    def __init__(self, model: MEGNetModel):
+        """Initialize LayerExtractor with concatenation layer index."""
+        super().__init__(model, layer_index=-4)
+
+
+class LayerScaler:
     """Class for creating GP training data and preprocessing thereof.
 
-    A `GPDataParser` must be initialized with either training data or a
+    A `LayerScaler` must be initialized with either training data or a
     precalculated scaling factor, if one has already been calculated.
     See :meth:`_calc_scaling_factor` for the procedure for calculating the
     scaling factor.
@@ -93,16 +97,21 @@ class GPDataParser:
             upon.
         sf (:obj:`np.ndarray`, optional): The scaling factor. Must be passed if
             `training_data` is not passed.
-        training_data (:obj:`pd.DataFrame`, optional): The training dataframe to
+        training_df (:obj:`pd.DataFrame`, optional): The training dataframe to
             use.
+        layer_index (int, optional): The index of the layer of the model to extract.
+            If unassigned, defaults to extracting from the concatenation layer.
 
     Attributes:
+        extractor (:obj:`LayerExtractor`): The extractor object used for acquiring layer
+            outputs for the model.
         model (:obj:`MEGNetModel`): The MEGNet model to perform extraction
             upon.
-        sf (:obj:`np.ndarray`, optional): The scaling factor. Either calculated from
+        sf (:obj:`np.ndarray`): The scaling factor. Either calculated from
             `training_data` (if passed) or passed as a parameter during initialization.
         training_data (:obj:`pd.DataFrame`, optional): The training dataframe, from which
             the `sf` is calculated.
+
 
     Raises:
         ValueError: If both `training_data` and `sf`, or neither of them, are supplied.
@@ -114,21 +123,24 @@ class GPDataParser:
         model: MEGNetModel,
         sf: Optional[np.ndarray] = None,
         training_df: Optional[pd.DataFrame] = None,
+        layer_index: Optional[int] = None,
     ):
         """Initialize class attributes."""
-        self.extractor = ConcatExtractor(model)
+        self.extractor: LayerExtractor = (
+            ConcatExtractor(model)
+            if layer_index is None
+            else LayerExtractor(model, layer_index)
+        )
 
         if training_df is None:
-            self.training_data = None
-
+            self.training_data: Optional[pd.DataFrame] = None
             if sf is None:
                 raise ValueError(
                     "Must supply a scaling factor if training data is not supplied."
                 )
-            self.sf = sf
+            self.sf: np.ndarray = sf
 
         else:
-
             if sf is not None:
                 raise ValueError("Supply only one of training data and scaling factor.")
             self.training_data = training_df.copy()
@@ -173,7 +185,7 @@ class GPDataParser:
             layer_outs (list of :obj:`np.ndarray`): The layer outputs.
 
         """
-        layer_outs = map(self.extractor.get_concat_output, data)
+        layer_outs = map(self.extractor.get_layer_output, data)
         # Squeeze each value to a nicer shape
         return list(map(np.squeeze, layer_outs))
 
@@ -193,14 +205,33 @@ class GPDataParser:
                 " to calculate a scaling factor."
             )
 
-        abs_values = map(np.abs, self.training_data["layer_out"])
-
-        layer_shape = self.training_data["layer_out"][0].shape
-        sf = np.zeros(layer_shape)
-        for array in abs_values:
-            sf = np.maximum(sf, array)
+        abs_values = list(map(np.abs, self.training_data["layer_out"]))
+        sf = get_max_elements(abs_values)
 
         # Replace zeros with a scaling factor of 1
         # so there's no zero division errors
         sf[sf == 0.0] = 1.0
         return sf
+
+
+def get_max_elements(arrays: List[np.ndarray]) -> np.ndarray:
+    """Get the elementwise greatest value across all arrays.
+
+    Input arrays must all have the same shape.
+
+    Args:
+        arrays (list of :obj:`np.ndarray`): The arrays to perform the calculation with.
+
+    Returns:
+        max_array (:obj:np.ndarray): An array of the elementwise max values.
+
+    Raises:
+        ValueError: If input arrays do not all have the same shape.
+
+    """
+    shapes = set(map(np.shape, arrays))
+    if len(shapes) != 1:
+        raise ValueError("Input arrays must have uniform shape.")
+
+    stack = np.stack(arrays)
+    return np.amax(stack, axis=0)
