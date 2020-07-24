@@ -41,7 +41,7 @@ def download_structures(
         index_mpid=False,  # Index isn't preserved when writing to file
     )
 
-    df_mp["structure"] = [structure.to("json") for structure in df_mp["structure"]]
+    df_mp["structure"] = [structure.to_json() for structure in df_mp["structure"]]
     if file is not None:
         feather.write_feather(df_mp, file)
 
