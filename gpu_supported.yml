@@ -1,0 +1,21 @@
+name: sse_gnn
+channels:
+  - defaults
+dependencies:
+  - matplotlib
+  - numpy
+  - pandas
+  - pip
+  - pyarrow
+  - pymatgen
+  - python=3.8
+  - seaborn
+  - tensorflow-gpu=2.2
+  - pip:
+      - matminer
+      - megnet
+      - mlflow
+      - smact
+      - tensorflow-probability
+      - tqdm
+prefix: /home/alex/miniconda3/envs/sse_gnn
