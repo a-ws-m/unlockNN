@@ -20,7 +20,7 @@ class LayerExtractor:
         model (:obj:`MEGNetModel`): The MEGNet model to perform extraction
             upon.
         conc_layer_output (:obj:`Tensor`): The layer's unevaluated output.
-        conc_layer_eval: A Keras function for evaluating the layer.
+        layer_eval: A Keras function for evaluating the layer.
 
     """
 
@@ -28,7 +28,7 @@ class LayerExtractor:
         """Initialize extractor."""
         self.model = model
         self.conc_layer_output = model.layers[layer_index].output
-        self.conc_layer_eval = K.function([model.input], [self.conc_layer_output])
+        self.layer_eval = K.function([model.input], [self.conc_layer_output])
 
     def _convert_struct_to_inp(self, structure: pymatgen.Structure) -> List:
         """Convert a pymatgen structure to an appropriate input for the model.
@@ -40,8 +40,8 @@ class LayerExtractor:
                 to convert to an input.
 
         Returns:
-            input (list): The processed input, ready for feeding into the
-                model.
+            input (list of :obj:`np.ndarray`): The processed input, ready for
+                feeding into the model.
 
         """
         graph = self.model.graph_converter.convert(structure)
@@ -59,7 +59,7 @@ class LayerExtractor:
 
         """
         input = self._convert_struct_to_inp(structure)
-        return self.conc_layer_eval([input])[0]
+        return self.layer_eval([input])[0]
 
     def get_layer_output_graph(self, graph: List) -> np.ndarray:
         """Get the layer output of the model for a graph.
@@ -73,7 +73,7 @@ class LayerExtractor:
 
         """
         input = self.model.graph_converter.graph_to_input(graph)
-        return self.conc_layer_eval([input])[0]
+        return self.layer_eval([input])[0]
 
 
 class ConcatExtractor(LayerExtractor):
