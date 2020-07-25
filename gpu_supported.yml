@@ -2,6 +2,7 @@ name: sse_gnn
 channels:
   - defaults
 dependencies:
+  - cloudpickle=1.4.1
   - matplotlib
   - numpy
   - pandas
