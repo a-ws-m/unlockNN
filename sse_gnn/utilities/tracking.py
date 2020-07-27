@@ -1,6 +1,7 @@
-"""Utility code snippets."""
-import mlflow
+"""Utilities for easier tracking of metrics."""
+
 from tensorflow.keras.callbacks import Callback
+import mlflow
 
 
 class MLFlowMetricsLogger(Callback):
