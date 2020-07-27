@@ -29,14 +29,14 @@ index_points = np.stack(test_df["layer_out"].apply(deserialize_array))
 observation_index_points = convert_index_points(observation_index_points)
 index_points = convert_index_points(index_points)
 
-cation_sses = train_df["cat_sse"].apply(deserialize_array)
-# anion_sses = train_df["an_sse"].apply(deserialize_array)
+cation_sses = train_df["cat_sse"]
+# anion_sses = train_df["an_sse"]
 
 cat_observations = tf.constant(cation_sses, dtype=tf.float64)
 # an_observations = tf.constant(anion_sses, dtype=tf.float64)
 
-cat_test_vals = tf.constant(test_df["cat_sse"].apply(deserialize_array))
-# an_test_vals = tf.constant(test_df["an_sse"].apply(deserialize_array))
+cat_test_vals = tf.constant(list(map(itemgetter(0), test_df["sses"])), dtype=tf.float64)
+# an_test_vals = tf.constant(list(map(itemgetter(1), test_df["sses"])), dtype=tf.float64)
 
 metric_labels = [
     "nll",

@@ -34,9 +34,7 @@ index_points = tf.constant(val_layers, dtype=dtype)
 
 def get_sses(df: pd.DataFrame) -> np.ndarray:
     """Get stacked SSE values."""
-    cat_sses = df["cat_sse"].apply(deserialize_array)
-    an_sses = df["an_sse"].apply(deserialize_array)
-    return np.column_stack((cat_sses, an_sses))
+    return np.column_stack((df["cat_sse"], df["an_sse"]))
 
 
 train_sses = tf.constant(get_sses(train_df), dtype=dtype)
