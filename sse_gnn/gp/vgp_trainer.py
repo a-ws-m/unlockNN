@@ -116,6 +116,7 @@ class SingleLayerVGP:
         validation_data: Optional[Tuple] = None,
         epochs: int = 1000,
         checkpoint_path: Optional[str] = None,
+        patience: int = 500,
         callbacks: List[Callback] = [],
     ):
         """Train the model.
@@ -140,7 +141,7 @@ class SingleLayerVGP:
             )
             callbacks.append(checkpoint_callback)
 
-        early_stop_callback = tf.keras.callbacks.EarlyStopping(patience=500)
+        early_stop_callback = tf.keras.callbacks.EarlyStopping(patience=patience)
         callbacks.append(early_stop_callback)
 
         self.model.fit(
