@@ -10,6 +10,7 @@ from sse_gnn.utilities import serialize_array
 from .config import DB_DIR, MODELS_DIR
 
 MIN_LOSS_FILE = MODELS_DIR / "megnet" / "*.hdf5"
+SF_FILE = MODELS_DIR / "sf.txt"
 
 # * Calculate concatenation layers for all the SSE data and save to disk
 print("Loading data...")
@@ -23,7 +24,7 @@ print("Instantiating GP data parser...")
 processor = LayerScaler(model, training_df=train_df)
 
 # Save scaling factor to file
-np.savetxt("megnet_model/sf.txt", processor.sf)
+np.savetxt(SF_FILE, processor.sf)
 
 # Save training data (with calculated outputs) to file
 assert processor.training_data is not None
