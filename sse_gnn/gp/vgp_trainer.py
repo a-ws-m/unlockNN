@@ -1,9 +1,10 @@
 """VariationalGaussianProcess single layer model."""
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
+from tensorflow.keras.callbacks import Callback
 from tensorflow.python.keras.utils import losses_utils
 
 
@@ -115,6 +116,7 @@ class SingleLayerVGP:
         validation_data: Optional[Tuple] = None,
         epochs: int = 1000,
         checkpoint_path: Optional[str] = None,
+        callbacks: List[Callback] = [],
     ):
         """Train the model.
 
@@ -127,8 +129,6 @@ class SingleLayerVGP:
                 save new checkpoints to.
 
         """
-        callbacks = []
-
         if checkpoint_path:
             try:
                 self.model.load_weights(checkpoint_path)
