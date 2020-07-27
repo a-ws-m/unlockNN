@@ -2,7 +2,7 @@
 import numpy as np
 import pyarrow.feather as feather
 import pymatgen
-from megnet import MEGNetModel
+from megnet.models import MEGNetModel
 
 from sse_gnn.datalib.preprocessing import LayerScaler
 from sse_gnn.utilities import serialize_array
