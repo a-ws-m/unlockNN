@@ -14,6 +14,7 @@ import pyarrow.feather as feather
 import tensorflow as tf
 
 from sse_gnn.gp.gp_trainer import GPMetrics, GPTrainer, convert_index_points
+from sse_gnn.utilities import deserialize_array
 
 from .config import DB_DIR, MODELS_DIR
 
@@ -22,20 +23,20 @@ from .config import DB_DIR, MODELS_DIR
 train_df = feather.read_feather(DB_DIR / "gp_train_df.fthr")
 test_df = feather.read_feather(DB_DIR / "gp_test_df.fthr")
 
-observation_index_points = np.stack(train_df["layer_out"].values)
-index_points = np.stack(test_df["layer_out"].values)
+observation_index_points = np.stack(train_df["layer_out"].apply(deserialize_array))
+index_points = np.stack(test_df["layer_out"].apply(deserialize_array))
 
 observation_index_points = convert_index_points(observation_index_points)
 index_points = convert_index_points(index_points)
 
-cation_sses = list(map(itemgetter(0), train_df["sses"]))
-# anion_sses = list(map(itemgetter(1), train_df["sses"]))
+cation_sses = train_df["cat_sse"].apply(deserialize_array)
+# anion_sses = train_df["an_sse"].apply(deserialize_array)
 
 cat_observations = tf.constant(cation_sses, dtype=tf.float64)
 # an_observations = tf.constant(anion_sses, dtype=tf.float64)
 
-cat_test_vals = tf.constant(list(map(itemgetter(0), test_df["sses"])), dtype=tf.float64)
-# an_test_vals = tf.constant(list(map(itemgetter(1), test_df["sses"])), dtype=tf.float64)
+cat_test_vals = tf.constant(test_df["cat_sse"].apply(deserialize_array))
+# an_test_vals = tf.constant(test_df["an_sse"].apply(deserialize_array))
 
 metric_labels = [
     "nll",
