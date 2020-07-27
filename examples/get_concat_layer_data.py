@@ -5,6 +5,7 @@ import pymatgen
 from megnet import MEGNetModel
 
 from sse_gnn.datalib.preprocessing import LayerScaler
+from sse_gnn.utilities import serialize_array
 
 from .config import DB_DIR, MODELS_DIR
 
@@ -26,7 +27,11 @@ np.savetxt("megnet_model/sf.txt", processor.sf)
 
 # Save training data (with calculated outputs) to file
 assert processor.training_data is not None
-feather.write_feather(processor.training_data, DB_DIR / "gp_train_df.fthr")
+
+writable_train_dat = processor.training_data
+writable_train_dat["layer_out"] = writable_train_dat["layer_out"].apply(serialize_array)
+
+feather.write_feather(writable_train_dat, DB_DIR / "gp_train_df.fthr")
 
 # Compute test data values
 print("Computing test data layer outputs...")
@@ -34,6 +39,7 @@ test_structures = [
     pymatgen.Structure.from_str(struct, "json") for struct in test_df["structure"]
 ]
 test_df["layer_out"] = processor.structures_to_input(test_structures)
+test_df["layer_out"] = test_df["layer_out"].apply(serialize_array)
 
 # And save to file
 feather.write_feather(test_df, DB_DIR / "gp_test_df.fthr")
