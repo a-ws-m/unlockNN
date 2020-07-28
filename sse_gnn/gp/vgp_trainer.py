@@ -116,6 +116,7 @@ class SingleLayerVGP:
         validation_data: Optional[Tuple] = None,
         epochs: int = 1000,
         checkpoint_path: Optional[str] = None,
+        prev_model: Optional[str] = None,
         patience: int = 500,
         callbacks: List[Callback] = [],
     ):
@@ -126,15 +127,24 @@ class SingleLayerVGP:
             validation_data (tuple of :obj:`tf.Tensor`, optional): The validation data
                 as a tuple of (validation_x, validation_y).
             epochs (int): The number of training epochs.
-            checkpoint_path (str, optional): The path to look for checkpoints and to
-                save new checkpoints to.
+            checkpoint_path (str, optional): The path to save new checkpoints to.
+                If `prev_model` is not set, will try to load checkpoints from
+                this path as well.
+            prev_model (str, optional): The path to a previously saved model.
+            patience (int): The number of iterations to continue training without
+                validation loss improvement before stopping training early.
+            callbacks (list of :obj:`Callback`): A list of additional `Callback`s.
 
         """
+        if prev_model:
+            self.model.load_weights(prev_model)
+
         if checkpoint_path:
-            try:
-                self.model.load_weights(checkpoint_path)
-            except Exception as e:
-                print(f"Couldn't load any checkpoints: {e}")
+            if not prev_model:
+                try:
+                    self.model.load_weights(checkpoint_path)
+                except Exception as e:
+                    print(f"Couldn't load any checkpoints: {e}")
 
             checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
                 checkpoint_path, save_best_only=True, save_weights_only=True,
