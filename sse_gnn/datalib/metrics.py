@@ -26,6 +26,10 @@ class MetricAnalyser:
         val_obs (:obj:`np.ndarray`): The validation observed true values.
         dist (:obj:`Distribution`): The :obj:`Distribution` instance to
             analyse.
+        calc_mean_on_init (bool): Whether to calculate the :attr:`dist`'s
+            means on initialization.
+        calc_stddev_on_init (bool): Whether to calculate the :attr:`dist`'s
+            stddevs on initialization.
 
     Attributes:
         val_points (:obj:`tf.Tensor`): The validation indices.
@@ -50,21 +54,25 @@ class MetricAnalyser:
 
     # Set of which properties need the mean and standard deviation to be updated
     REQUIRES_MEAN = {"mae", "calibration_err", "residuals", "pis"}
-    REQUIRES_STDDEV = {"sharpness", "variation"}
+    REQUIRES_STDDEV = {"sharpness", "variation", "calibration_err"}
 
     def __init__(
         self,
         val_points: tf.Tensor,
         val_obs: tf.Tensor,
         dist: tfp.python.distributions.Distribution,
+        calc_mean_on_init: bool = True,
+        calc_stddev_on_init: bool = True,
     ):
         """Initialize attributes and mean + stddev predictions."""
         self.val_points = val_points
         self.val_obs = val_obs
         self.dist = dist
 
-        self.update_mean()
-        self.update_stddevs()
+        if calc_mean_on_init:
+            self.update_mean()
+        if calc_stddev_on_init:
+            self.update_stddevs()
 
     def update_mean(self):
         """Update the mean predictions."""
