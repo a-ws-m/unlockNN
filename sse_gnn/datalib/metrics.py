@@ -5,6 +5,7 @@ from typing import Optional, Union, Tuple
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
+from sklearn.metrics import mean_absolute_error
 
 from .visualisation import plot_calibration, plot_sharpness
 
@@ -100,7 +101,7 @@ class MetricAnalyser:
             mean (float)
 
         """
-        return tf.losses.mae(self.val_obs, self.mean).numpy()
+        return mean_absolute_error(self.val_obs, self.mean)
 
     @property
     def sharpness(self) -> float:
