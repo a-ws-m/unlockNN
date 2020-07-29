@@ -1,6 +1,4 @@
 """Train GP from MEGNet output data."""
-from operator import itemgetter
-
 try:
     import mlflow
 
@@ -13,10 +11,14 @@ import numpy as np
 import pyarrow.feather as feather
 import tensorflow as tf
 
-from sse_gnn.gp.gp_trainer import GPMetrics, GPTrainer, convert_index_points
+from sse_gnn.datalib.metrics import MetricAnalyser
+from sse_gnn.gp.gp_trainer import GPTrainer, convert_index_points
 from sse_gnn.utilities import deserialize_array
 
 from .config import DB_DIR, MODELS_DIR
+
+SHARPNESS_FILE = "gp_sharpness.png"
+CALIBRATION_FILE = "gp_calibration.png"
 
 # * Get the data and perform some regression
 
@@ -29,43 +31,42 @@ index_points = np.stack(test_df["layer_out"].apply(deserialize_array))
 observation_index_points = convert_index_points(observation_index_points)
 index_points = convert_index_points(index_points)
 
-cation_sses = train_df["cat_sse"]
-# anion_sses = train_df["an_sse"]
+cat_observations = tf.constant(train_df["cat_sse"], dtype=tf.float64)
+# an_observations = tf.constant(train_df["an_sse"], dtype=tf.float64)
 
-cat_observations = tf.constant(cation_sses, dtype=tf.float64)
-# an_observations = tf.constant(anion_sses, dtype=tf.float64)
-
-cat_test_vals = tf.constant(list(map(itemgetter(0), test_df["sses"])), dtype=tf.float64)
-# an_test_vals = tf.constant(list(map(itemgetter(1), test_df["sses"])), dtype=tf.float64)
+cat_test_vals = tf.constant(test_df["cat_sse"], dtype=tf.float64)
+# an_test_vals = tf.constant(test_df["an_sse"], dtype=tf.float64)
 
 metric_labels = [
     "nll",
     "mae",
     "sharpness",
     "variation",
-    # "calibration_err",
+    "calibration_err",
 ]
 
 model_params = {
     "epochs": 200,
     "patience": 200,
     "metrics": metric_labels,
-    "save_dir": str(MODELS_DIR / "saved_gp"),
+    "save_dir": str(MODELS_DIR / "post_gp" / "post_gp_v2"),
 }
 
 # * Build cation SSE GP model
 cat_gp_trainer = GPTrainer(
-    observation_index_points, cat_observations, str(MODELS_DIR / "tf_ckpts")
+    observation_index_points, cat_observations, str(MODELS_DIR / "post_gp" / "ckpts")
 )
 
 # * Get current model metrics
-gp_metrics = GPMetrics(index_points, cat_test_vals, cat_gp_trainer)
+gp_metrics = MetricAnalyser(
+    index_points, cat_test_vals, cat_gp_trainer.get_model(index_points)
+)
 for metric in metric_labels:
     print(f"{metric}: {getattr(gp_metrics, metric)}")
 
 # * Plot sharpness and calibration error
-gp_metrics.sharpness_plot()
-gp_metrics.calibration_plot()
+gp_metrics.sharpness_plot(SHARPNESS_FILE)
+gp_metrics.calibration_plot(CALIBRATION_FILE)
 
 # * Train model
 if track:
