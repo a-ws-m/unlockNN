@@ -66,11 +66,13 @@ class SingleLayerVGP:
         ntargets (int): The number of parameters to be modelled.
         num_inducing_points (int): The number of inducing points for the :obj:`VariationalGaussianProcess`.
         batch_size (int): The training batch size.
+        prev_model (str, optional): The path to a previously saved model.
 
     Attributes:
         observation_indices (:obj:`tf.Tensor`): The (training) observation index points (x data).
         batch_size (int): The training batch size.
         model (:obj:`Model`): The Keras model containing the obj:`VariationalGaussianProcess`.
+        loaded_modl (bool): Whether a previously trained model was loaded.
 
     """
 
@@ -80,6 +82,7 @@ class SingleLayerVGP:
         ntargets: int = 1,
         num_inducing_points: int = 96,
         batch_size: int = 32,
+        prev_model: Optional[str] = None,
     ):
         """Initialize and compile model."""
         self.observation_indices = observation_indices
@@ -106,6 +109,11 @@ class SingleLayerVGP:
 
         self.model = model
 
+        self.loaded_model = False
+        if prev_model:
+            self.model.load_weights(prev_model)
+            self.loaded_model = True
+
     def __call__(self, *args, **kwargs):
         """Call the embedded Keras model."""
         return self.model(*args, **kwargs)
@@ -116,7 +124,6 @@ class SingleLayerVGP:
         validation_data: Optional[Tuple] = None,
         epochs: int = 1000,
         checkpoint_path: Optional[str] = None,
-        prev_model: Optional[str] = None,
         patience: int = 500,
         callbacks: List[Callback] = [],
     ):
@@ -128,19 +135,15 @@ class SingleLayerVGP:
                 as a tuple of (validation_x, validation_y).
             epochs (int): The number of training epochs.
             checkpoint_path (str, optional): The path to save new checkpoints to.
-                If `prev_model` is not set, will try to load checkpoints from
+                If :attr:`loaded_model` is `False`, will try to load checkpoints from
                 this path as well.
-            prev_model (str, optional): The path to a previously saved model.
             patience (int): The number of iterations to continue training without
                 validation loss improvement before stopping training early.
             callbacks (list of :obj:`Callback`): A list of additional `Callback`s.
 
         """
-        if prev_model:
-            self.model.load_weights(prev_model)
-
         if checkpoint_path:
-            if not prev_model:
+            if not self.loaded_model:
                 try:
                     self.model.load_weights(checkpoint_path)
                 except Exception as e:
