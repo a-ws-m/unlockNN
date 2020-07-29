@@ -8,7 +8,7 @@ import tensorflow.python.util.deprecation as deprecation
 import tensorflow_probability as tfp
 from tqdm import tqdm
 
-from ..datalib.metrics import GPMetrics
+from ..datalib.metrics import MetricAnalyser
 
 deprecation._PRINT_DEPRECATION_WARNINGS = False
 
@@ -247,7 +247,7 @@ class GPTrainer(tf.Module):
             metrics.append("nll")
 
         steps_since_improvement: int = 1
-        gp_metrics = GPMetrics(val_points, val_obs, self)
+        gp_metrics = MetricAnalyser(val_points, val_obs, self.get_model(val_points))
 
         for i in tqdm(range(epochs), "Training epochs"):
             self.loss.assign(self.optimize_cycle())

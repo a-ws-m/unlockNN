@@ -6,31 +6,40 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-from ..gp.gp_trainer import GPTrainer
 from .visualisation import plot_calibration, plot_sharpness
 
 tfd = tfp.distributions
 
 
-class GPMetrics:
-    """Handler for GP metric calculations.
+class MetricAnalyser:
+    """Handler for metric calculations.
 
     Many of the metrics herein are based upon implementations by `Train et al.`_,
     for metrics proposed by `Kuleshov et al.`_.
+    The values of :attr:`mean` and :attr:`stddevs` are not automatically updated when
+    :attr:`dist` is updated, in order to save computing time.
+    :meth:`update_mean` and :meth:`update_stddevs` must be called in order to update
+    them when current values are needed.
 
     Args:
         val_points (:obj:`tf.Tensor`): The validation indices.
         val_obs (:obj:`np.ndarray`): The validation observed true values.
-        gp_trainer (:obj:`GPTrainer`): The :obj:`GPTrainer` instance to
+        dist (:obj:`Distribution`): The :obj:`Distribution` instance to
             analyse.
 
     Attributes:
         val_points (:obj:`tf.Tensor`): The validation indices.
         val_obs (:obj:`np.ndarray`): The validation observed true values.
-        gp_trainer (:obj:`GPTrainer`): The :obj:`GPTrainer` instance to
+        dist (:obj:`Distribution`): The :obj:`Distribution` instance to
             analyse.
-        gprm (:obj:`GaussianProcessRegressionModel`): A regression model from
-            `gp_trainer` fit to the `val_points`.
+        mean (:obj:`np.ndarray`): The means of the predicted distributions around
+            `val_points`.
+        stddevs (:obj:`np.ndarray`): The standard deviations of the predicted
+            distributions around :attr:`val_points`.
+        REQUIRES_MEAN (set of str): The metrics that require :attr:`mean` in order
+            to calculate.
+        REQUIRES_STDDEV (set of str): The metrics that require :attr:`stddev` in
+            order to calculate.
 
     .. _Tran et al.:
         https://arxiv.org/abs/1912.10066
@@ -44,23 +53,26 @@ class GPMetrics:
     REQUIRES_STDDEV = {"sharpness", "variation"}
 
     def __init__(
-        self, val_points: tf.Tensor, val_obs: tf.Tensor, gp_trainer: GPTrainer
+        self,
+        val_points: tf.Tensor,
+        val_obs: tf.Tensor,
+        dist: tfp.python.distributions.Distribution,
     ):
-        """Initialize validation points and observations and the wrapped `GPTrainer`."""
+        """Initialize attributes and mean + stddev predictions."""
         self.val_points = val_points
         self.val_obs = val_obs
-        self.gp_trainer = gp_trainer
-        self.gprm = gp_trainer.get_model(val_points)  # Instantiate GPRM
+        self.dist = dist
+
         self.update_mean()
         self.update_stddevs()
 
     def update_mean(self):
-        """Update the GPRM mean predictions."""
-        self.mean = self.gprm.mean().numpy()
+        """Update the mean predictions."""
+        self.mean: np.ndarray = self.dist.mean().numpy()
 
     def update_stddevs(self):
-        """Update the GPRM standard deviation predictions."""
-        self.stddevs = self.gprm.stddev().numpy()
+        """Update the standard deviation predictions."""
+        self.stddevs: np.ndarray = self.dist.stddev().numpy()
 
     @property
     def nll(self) -> float:
@@ -70,7 +82,7 @@ class GPMetrics:
             nll (float)
 
         """
-        return -self.gprm.log_prob(self.val_obs).numpy()
+        return -self.dist.log_prob(self.val_obs).numpy()
 
     @property
     def mae(self) -> float:
