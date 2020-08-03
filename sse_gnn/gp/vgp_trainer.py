@@ -63,8 +63,8 @@ class SingleLayerVGP:
 
     Args:
         observation_indices (:obj:`tf.Tensor`): The (training) observation index points (x data).
-        ntargets (int): The number of parameters to be modelled.
         num_inducing_points (int): The number of inducing points for the :obj:`VariationalGaussianProcess`.
+        ntargets (int): The number of parameters to be modelled.
         batch_size (int): The training batch size.
         prev_model (str, optional): The path to a previously saved model.
 
