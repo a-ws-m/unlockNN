@@ -193,6 +193,7 @@ class ProbabilisticMEGNetModel:
         val_targets: List[np.ndarray],
         epochs: int = 1000,
         checkpoint_path: Optional[str] = None,
+        patience: int = 500,
     ):
         """Train from a list of structures and targets."""
         callbacks = []
@@ -207,7 +208,7 @@ class ProbabilisticMEGNetModel:
             )
             callbacks.append(checkpoint_callback)
 
-        early_stop_callback = tf.keras.callbacks.EarlyStopping(patience=500)
+        early_stop_callback = tf.keras.callbacks.EarlyStopping(patience=patience)
         callbacks.append(early_stop_callback)
 
         input_list = self.structs_to_input(structs)
