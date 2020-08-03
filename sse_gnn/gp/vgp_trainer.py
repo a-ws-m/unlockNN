@@ -79,8 +79,8 @@ class SingleLayerVGP:
     def __init__(
         self,
         observation_indices: tf.Tensor,
+        num_inducing_points: int,
         ntargets: int = 1,
-        num_inducing_points: int = 96,
         batch_size: int = 32,
         prev_model: Optional[str] = None,
     ):
@@ -89,8 +89,8 @@ class SingleLayerVGP:
         self.batch_size = batch_size
 
         # * Set up model
-        # TODO: Generalise input shape
-        inputs = tf.keras.layers.Input(shape=(96,))
+        input_shape = observation_indices.shape[1:]
+        inputs = tf.keras.layers.Input(shape=input_shape)
         output = tfp.layers.VariationalGaussianProcess(
             num_inducing_points,
             RBFKernelFn(dtype=tf.float64),
