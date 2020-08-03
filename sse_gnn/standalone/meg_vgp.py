@@ -68,6 +68,7 @@ class ProbabilisticMEGNetModel:
 
     def __init__(
         self,
+        gp_num_inducing_points: int,
         nfeat_edge: int = None,
         nfeat_global: int = None,
         nfeat_node: int = None,
@@ -98,6 +99,8 @@ class ProbabilisticMEGNetModel:
         """Initialize model.
 
         Args:
+            gp_num_inducing_points (int): The number of inducing points for the variable
+                Gaussian process.
             nfeat_edge: (int) number of bond features
             nfeat_global: (int) number of state features
             nfeat_node: (int) number of atom features
@@ -134,6 +137,7 @@ class ProbabilisticMEGNetModel:
         """
         # Build the MEG Model
         self.model = make_pred_megnet_model(
+            gp_num_inducing_points,
             nfeat_edge=nfeat_edge,
             nfeat_global=nfeat_global,
             nfeat_node=nfeat_node,
@@ -270,6 +274,7 @@ class GraphSequence(Sequence):
 
 
 def make_pred_megnet_model(
+    gp_num_inducing_points: int,
     nfeat_edge: int = None,
     nfeat_global: int = None,
     nfeat_node: int = None,
@@ -289,12 +294,13 @@ def make_pred_megnet_model(
     l2_coef: float = None,
     dropout: float = None,
     dropout_on_predict: bool = False,
-    gp_num_inducing_points: int = 40,
     **kwargs,
 ) -> Model:
     """Make a MEGNet Model.
 
     Args:
+        gp_num_inducing_points (int): The number of inducing points for the variable
+            Gaussian process.
         nfeat_edge: (int) number of bond features
         nfeat_global: (int) number of state features
         nfeat_node: (int) number of atom features
@@ -314,8 +320,6 @@ def make_pred_megnet_model(
         l2_coef: (float or None) l2 regularization parameter
         dropout: (float) dropout rate
         dropout_on_predict (bool): Whether to use dropout during prediction and training
-        gp_num_inducing_points (int): The number of inducing points for the variable
-            Gaussian process.
         kwargs (dict): in the case where bond inputs are pure distances (not the expanded
                 distances nor integers for embedding, i.e., nfeat_edge=None and bond_embedding_dim=None),
                 kwargs can take additional inputs for expand the distance using Gaussian basis.
