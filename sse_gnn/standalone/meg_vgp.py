@@ -11,6 +11,7 @@ from megnet.config import DataType
 from megnet.data.crystal import CrystalGraph
 from megnet.data.graph import GaussianDistance, StructureGraph
 from megnet.layers import GaussianExpansion, MEGNetLayer, Set2Set
+from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.layers import Add, Concatenate, Dense, Dropout, Embedding, Input
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
@@ -194,9 +195,9 @@ class ProbabilisticMEGNetModel:
         epochs: int = 1000,
         checkpoint_path: Optional[str] = None,
         patience: int = 500,
+        callbacks: List[Callback] = [],
     ):
         """Train from a list of structures and targets."""
-        callbacks = []
         if checkpoint_path:
             try:
                 self.model.load_weights(checkpoint_path)
