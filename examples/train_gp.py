@@ -15,7 +15,15 @@ from sse_gnn.datalib.metrics import MetricAnalyser
 from sse_gnn.gp.gp_trainer import GPTrainer, convert_index_points
 from sse_gnn.utilities import deserialize_array
 
-from .config import DB_DIR, MODELS_DIR
+from .config import (
+    CKPT_PATH,
+    DB_DIR,
+    MODELS_DIR,
+    N_EPOCHS,
+    NEW_MODEL,
+    PATIENCE,
+    RUN_NAME,
+)
 
 SHARPNESS_FILE = "gp_sharpness.png"
 CALIBRATION_FILE = "gp_calibration.png"
@@ -46,15 +54,17 @@ metric_labels = [
 ]
 
 model_params = {
-    "epochs": 200,
-    "patience": 200,
+    "epochs": N_EPOCHS,
+    "patience": PATIENCE,
     "metrics": metric_labels,
-    "save_dir": str(MODELS_DIR / "post_gp" / "post_gp_v2"),
+    "save_dir": str(MODELS_DIR / "post_gp" / NEW_MODEL),
 }
 
 # * Build cation SSE GP model
 cat_gp_trainer = GPTrainer(
-    observation_index_points, cat_observations, str(MODELS_DIR / "post_gp" / "ckpts")
+    observation_index_points,
+    cat_observations,
+    str(MODELS_DIR / "post_gp" / CKPT_PATH) if CKPT_PATH else None,
 )
 
 # * Get current model metrics
@@ -70,7 +80,7 @@ gp_metrics.calibration_plot(CALIBRATION_FILE)
 
 # * Train model
 if track:
-    with mlflow.start_run(run_name="laptop_test") as run:
+    with mlflow.start_run(run_name=RUN_NAME) as run:
         for step, metric_dict in enumerate(
             cat_gp_trainer.train_model(index_points, cat_test_vals, **model_params)  # type: ignore
         ):

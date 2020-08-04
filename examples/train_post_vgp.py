@@ -1,5 +1,23 @@
 """Train a VGP on pre-existing MEGNet layer outputs."""
-import typing
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from pyarrow import feather
+
+from sse_gnn.gp.vgp_trainer import SingleLayerVGP
+from sse_gnn.utilities import deserialize_array, MLFlowMetricsLogger
+
+from .config import (
+    CKPT_PATH,
+    DB_DIR,
+    MODELS_DIR,
+    N_EPOCHS,
+    NEW_MODEL,
+    NUM_INDUCING,
+    PATIENCE,
+    PREV_MODEL,
+    RUN_NAME,
+)
 
 try:
     import mlflow
@@ -9,17 +27,10 @@ except ImportError:
     # No mlflow tracking
     track = False
 
-import numpy as np
-import pandas as pd
-import tensorflow as tf
-from pyarrow import feather
 
-from sse_gnn.gp.vgp_trainer import SingleLayerVGP
-from sse_gnn.utilities import deserialize_array
+assert NUM_INDUCING is not None
 
-from .config import DB_DIR, MODELS_DIR
-
-checkpoint_path = str(MODELS_DIR / "vgp_ckpts.{epoch:02d}-{val_loss:.4f}.h5")
+checkpoint_path = str(MODELS_DIR / "post_vgp" / CKPT_PATH) if CKPT_PATH else None
 
 dtype = tf.float64
 train_df = feather.read_feather(DB_DIR / "gp_train_df.fthr")
@@ -40,24 +51,28 @@ def get_sses(df: pd.DataFrame) -> np.ndarray:
 train_sses = tf.constant(get_sses(train_df), dtype=dtype)
 test_sses = tf.constant(get_sses(test_df), dtype=dtype)
 
-vgp = SingleLayerVGP(observation_index_points, ntargets=2)
+vgp = SingleLayerVGP(
+    observation_index_points, NUM_INDUCING, ntargets=2, prev_model=PREV_MODEL
+)
 
 
-def model_train():
+def model_train(callbacks=[]):
     """Run the training sequence."""
     vgp.train_model(
         train_sses,
         (index_points, test_sses),
-        epochs=100,
+        epochs=N_EPOCHS,
+        patience=PATIENCE,
         checkpoint_path=checkpoint_path,
+        callbacks=callbacks,
     )
 
 
 if track:
-    with mlflow.start_run():
-        mlflow.tensorflow.autolog(1)
-        model_train()
+    callbacks = [MLFlowMetricsLogger()]
+    with mlflow.start_run(run_name=RUN_NAME):
+        model_train(callbacks)
 else:
     model_train()
 
-vgp.model.save_weights(str(MODELS_DIR / "vgp_v1.h5"))
+vgp.model.save_weights(str(MODELS_DIR / NEW_MODEL))

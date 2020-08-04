@@ -18,6 +18,7 @@ from sse_gnn.utilities import MLFlowMetricsLogger
 
 from .config import (
     CKPT_PATH,
+    MODELS_DIR,
     N_EPOCHS,
     NEW_MODEL,
     NUM_INDUCING,
@@ -67,7 +68,9 @@ def model_train(callbacks=[]):
         val_structs,
         val_sses,
         epochs=N_EPOCHS,
-        checkpoint_path=CKPT_PATH,
+        checkpoint_path=str(MODELS_DIR / "standalone" / CKPT_PATH)
+        if CKPT_PATH
+        else None,
         patience=PATIENCE,
         callbacks=callbacks,
     )

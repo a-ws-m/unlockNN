@@ -9,7 +9,14 @@ from sklearn.model_selection import train_test_split
 
 from sse_gnn.utilities import MLFlowMetricsLogger
 
-from .config import SSE_DB_LOC
+from .config import (
+    SSE_DB_LOC,
+    MODELS_DIR,
+    NEW_MODEL,
+    N_EPOCHS,
+    PATIENCE,
+    PREV_MODEL,
+)
 
 mlflow.set_tracking_uri("databricks")
 mlflow.set_experiment("/Users/awm1017@ic.ac.uk/MEGNet SSE Model")
@@ -57,8 +64,10 @@ with mlflow.start_run(run_name="laptop_test"):
         train_sses,
         test_structs,
         test_sses,
-        epochs=10,
+        epochs=N_EPOCHS,
+        patience=PATIENCE,
+        prev_model=PREV_MODEL,
         callbacks=[MLFlowMetricsLogger()],
     )
 
-# model.save_model("megnet_model_v1")
+model.save_model(MODELS_DIR / "base_megnet" / NEW_MODEL)
