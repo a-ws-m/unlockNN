@@ -14,8 +14,19 @@ from megnet.data.crystal import CrystalGraph
 from sklearn.model_selection import train_test_split
 
 from sse_gnn.standalone import ProbabilisticMEGNetModel
+from sse_gnn.utilities import MLFlowMetricsLogger
 
-from .config import DB_DIR, SSE_DB_LOC
+from .config import (
+    CKPT_PATH,
+    N_EPOCHS,
+    NEW_MODEL,
+    NUM_INDUCING,
+    PATIENCE,
+    RUN_NAME,
+    SSE_DB_LOC,
+)
+
+assert NUM_INDUCING is not None
 
 nfeat_bond = 10
 r_cutoff = 5
@@ -23,6 +34,7 @@ gaussian_centers = np.linspace(0, r_cutoff + 1, nfeat_bond)
 gaussian_width = 0.5
 graph_converter = CrystalGraph(cutoff=r_cutoff)
 prob_model = ProbabilisticMEGNetModel(
+    NUM_INDUCING,
     graph_converter=graph_converter,
     centers=gaussian_centers,
     width=gaussian_width,
@@ -44,33 +56,28 @@ train_structs, val_structs, train_sses, val_sses = train_test_split(
     structures, sse_vectors, random_state=2020
 )
 
-# * Save the split we train with for use in the GP
-train_struc_strs = [struct.to("json") for struct in train_structs]
-test_struc_strs = [struct.to("json") for struct in val_structs]
-
-train_df = data.loc[data["structure"].isin(train_struc_strs)]
-test_df = data.loc[data["structure"].isin(test_struc_strs)]
-
-feather.write_feather(train_df, DB_DIR / "train_df.fthr")
-feather.write_feather(test_df, DB_DIR / "test_df.fthr")
-
 # * Model training
 
 
-def model_train():
+def model_train(callbacks=[]):
     """Train the model."""
-    # Here, `structures` is a list of pymatgen Structure objects.
-    # `targets` is a corresponding list of properties.
     prob_model.train_from_structs(
-        train_structs, train_sses, val_structs, val_sses, epochs=10
+        train_structs,
+        train_sses,
+        val_structs,
+        val_sses,
+        epochs=N_EPOCHS,
+        checkpoint_path=CKPT_PATH,
+        patience=PATIENCE,
+        callbacks=callbacks,
     )
 
 
 if track:
-    with mlflow.start_run(run_name="laptop_test_sequence"):
-        mlflow.tensorflow.autolog(every_n_iter=1)
-        model_train()
+    callbacks = [MLFlowMetricsLogger()]
+    with mlflow.start_run(run_name=RUN_NAME):
+        model_train(callbacks)
 else:
     model_train()
 
-prob_model.model.save_model("megnet_model_v1")
+prob_model.model.save_model(NEW_MODEL)
