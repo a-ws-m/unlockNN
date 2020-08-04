@@ -1,5 +1,5 @@
 """Tools for processing the SSE data for the Gaussian Process."""
-from typing import List, Optional
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -101,6 +101,8 @@ class LayerScaler:
             use.
         layer_index (int, optional): The index of the layer of the model to extract.
             If unassigned, defaults to extracting from the concatenation layer.
+        use_structs (bool): Whether to use structures from the `training_df`. If `False`,
+            uses graph inputs.
 
     Attributes:
         extractor (:obj:`LayerExtractor`): The extractor object used for acquiring layer
@@ -110,7 +112,7 @@ class LayerScaler:
         sf (:obj:`np.ndarray`): The scaling factor. Either calculated from
             `training_data` (if passed) or passed as a parameter during initialization.
         training_data (:obj:`pd.DataFrame`, optional): The training dataframe, from which
-            the `sf` is calculated.
+            the :attr:`sf` is calculated.
 
 
     Raises:
@@ -124,6 +126,7 @@ class LayerScaler:
         sf: Optional[np.ndarray] = None,
         training_df: Optional[pd.DataFrame] = None,
         layer_index: Optional[int] = None,
+        use_structs: bool = True,
     ):
         """Initialize class attributes."""
         self.extractor: LayerExtractor = (
@@ -146,11 +149,20 @@ class LayerScaler:
             self.training_data = training_df.copy()
 
             # Calculate layer outputs
-            structures = [
-                pymatgen.Structure.from_str(struct, "json")
-                for struct in self.training_data["structure"]
-            ]
-            self.training_data["layer_out"] = self._calc_layer_outs(structures)
+            if use_structs:
+                structures = [
+                    pymatgen.Structure.from_str(struct, "json")
+                    for struct in self.training_data["structure"]
+                ]
+                self.training_data["layer_out"] = self._calc_layer_outs(structures)
+            else:
+                # Column labels of array data
+                array_cols = ["index1", "index2", "atom", "bond", "state"]
+                graphs = [
+                    {col: series[col] for col in array_cols}
+                    for _, series in self.training_data.iterrows()
+                ]
+                self.training_data["layer_out"] = self._calc_layer_outs(graphs)
 
             # Calculate scaling factor
             self.sf = self._calc_scaling_factor()
@@ -174,18 +186,26 @@ class LayerScaler:
         """
         return [out / self.sf for out in self._calc_layer_outs(structures)]
 
-    def _calc_layer_outs(self, data: List[pymatgen.Structure]) -> List[np.ndarray]:
+    def _calc_layer_outs(
+        self,
+        data: List[Union[pymatgen.Structure, Dict[str, np.ndarray]]],
+        use_structs: bool = True,
+    ) -> List[np.ndarray]:
         """Calculate the layer outputs for all structures in a list.
 
         Args:
-            data (list of :obj:`pymatgen.Structure`): The structures to calculate
+            data (list of :obj:`pymatgen.Structure` or list of dict): The inputs to calculate
                 the layer output for.
+            use_structs (bool): Whether `data` are structures (`True`) or graphs (`False`).
 
         Returns:
             layer_outs (list of :obj:`np.ndarray`): The layer outputs.
 
         """
-        layer_outs = map(self.extractor.get_layer_output, data)
+        if use_structs:
+            layer_outs = map(self.extractor.get_layer_output, data)
+        else:
+            layer_outs = map(self.extractor.get_layer_output_graph, data)
         # Squeeze each value to a nicer shape
         return list(map(np.squeeze, layer_outs))
 
