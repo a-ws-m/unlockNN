@@ -4,7 +4,7 @@ from pyarrow import feather
 from sklearn.model_selection import train_test_split
 
 from sse_gnn.datalib.preprocessing import LayerScaler, convert_graph_df
-from sse_gnn.utils import serialize_array
+from sse_gnn.utilities import serialize_array
 
 from .config import DB_DIR
 
