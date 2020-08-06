@@ -32,8 +32,8 @@ with open(DB_DIR / "github_data_sf", "wb") as f:
 train = scaler.training_data
 test["layer_out"] = scaler.graphs_to_input(convert_graph_df(test))
 
-train["layer_out"] = train["layer_out"].apply(serialize_array)
-test["layer_out"] = test["layer_out"].apply(serialize_array)
+train.loc[:, "layer_out"] = train["layer_out"].apply(serialize_array)
+test.loc[:, "layer_out"] = test["layer_out"].apply(serialize_array)
 
 feather.write_feather(train, TRAIN_OUT)
 feather.write_feather(test, TEST_OUT)
