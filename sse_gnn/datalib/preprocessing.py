@@ -6,6 +6,7 @@ import pandas as pd
 import pymatgen
 from megnet.models import MEGNetModel
 from tensorflow.keras import backend as K
+from tqdm.contrib import tmap
 
 from sse_gnn.utilities import deserialize_array
 
@@ -221,11 +222,11 @@ class LayerScaler:
         if use_structs:
             if not all(isinstance(d, pymatgen.Structure) for d in data):
                 raise TypeError("`data` must be a list of structures")
-            layer_outs = map(self.extractor.get_layer_output, data)
+            layer_outs = tmap(self.extractor.get_layer_output, data)
         else:
             if not all(isinstance(d, dict) for d in data):
                 raise TypeError("`data` must be a list of dictionaries")
-            layer_outs = map(self.extractor.get_layer_output_graph, data)
+            layer_outs = tmap(self.extractor.get_layer_output_graph, data)
 
         # Squeeze each value to a nicer shape
         return list(map(np.squeeze, layer_outs))
