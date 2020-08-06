@@ -7,6 +7,8 @@ import pymatgen
 from megnet.models import MEGNetModel
 from tensorflow.keras import backend as K
 
+from sse_gnn.utilities import deserialize_array
+
 
 class LayerExtractor:
     """Wrapper for MEGNet Models to extract layer output.
@@ -61,7 +63,7 @@ class LayerExtractor:
         input = self._convert_struct_to_inp(structure)
         return self.layer_eval([input])[0]
 
-    def get_layer_output_graph(self, graph: List) -> np.ndarray:
+    def get_layer_output_graph(self, graph: Dict[str, np.ndarray]) -> np.ndarray:
         """Get the layer output of the model for a graph.
 
         Args:
@@ -156,13 +158,10 @@ class LayerScaler:
                 ]
                 self.training_data["layer_out"] = self._calc_layer_outs(structures)
             else:
-                # Column labels of array data
-                array_cols = ["index1", "index2", "atom", "bond", "state"]
-                graphs = [
-                    {col: series[col] for col in array_cols}
-                    for _, series in self.training_data.iterrows()
-                ]
-                self.training_data["layer_out"] = self._calc_layer_outs(graphs)
+                graphs = convert_graph_df(self.training_data)
+                self.training_data["layer_out"] = self._calc_layer_outs(
+                    graphs, use_structs=False
+                )
 
             # Calculate scaling factor
             self.sf = self._calc_scaling_factor()
@@ -186,6 +185,20 @@ class LayerScaler:
         """
         return [out / self.sf for out in self._calc_layer_outs(structures)]
 
+    def graphs_to_input(self, graphs: List[Dict[str, np.ndarray]]) -> List[np.ndarray]:
+        """Convert graphs to a scaled input feature vector.
+
+        Args:
+            structures (list of dict): The graphs to convert.
+
+        Returns:
+            list of :obj:`np.ndarray`: The scaled feature vectors.
+
+        """
+        return [
+            out / self.sf for out in self._calc_layer_outs(graphs, use_structs=False)
+        ]
+
     def _calc_layer_outs(
         self,
         data: List[Union[pymatgen.Structure, Dict[str, np.ndarray]]],
@@ -201,11 +214,19 @@ class LayerScaler:
         Returns:
             layer_outs (list of :obj:`np.ndarray`): The layer outputs.
 
+        Raises:
+            TypeError: If `data` contains incompatible types.
+
         """
         if use_structs:
+            if not all(isinstance(d, pymatgen.Structure) for d in data):
+                raise TypeError("`data` must be a list of structures")
             layer_outs = map(self.extractor.get_layer_output, data)
         else:
+            if not all(isinstance(d, dict) for d in data):
+                raise TypeError("`data` must be a list of dictionaries")
             layer_outs = map(self.extractor.get_layer_output_graph, data)
+
         # Squeeze each value to a nicer shape
         return list(map(np.squeeze, layer_outs))
 
@@ -255,3 +276,19 @@ def get_max_elements(arrays: List[np.ndarray]) -> np.ndarray:
 
     stack = np.stack(arrays)
     return np.amax(stack, axis=0)
+
+
+def convert_graph_df(df: pd.DataFrame) -> List[Dict[str, np.ndarray]]:
+    """Convert graph input columns in a DataFrame to a list format.
+
+    DataFrame columns are expected to contain serialized data.
+
+    """
+    # Column labels of array data
+    array_cols = ["index1", "index2", "atom", "bond", "state"]
+    graphs = [
+        {col: deserialize_array(series[col]) for col in array_cols}
+        for _, series in df.iterrows()
+    ]
+    print(f"{graphs[0]=}")
+    return graphs
