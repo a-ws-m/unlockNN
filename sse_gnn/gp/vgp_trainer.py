@@ -116,7 +116,7 @@ class SingleLayerVGP:
 
     def __call__(self, *args, **kwargs):
         """Call the embedded Keras model."""
-        return self.model(*args, **kwargs)
+        return self.model.call(*args, **kwargs).distribution
 
     def train_model(
         self,
