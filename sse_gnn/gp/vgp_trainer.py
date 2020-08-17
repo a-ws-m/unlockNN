@@ -130,16 +130,16 @@ class SingleLayerVGP:
         """Train the model.
 
         Args:
-            observations (:obj:`tf.Tensor`): The observed true _y_ values.
+            observations (:obj:`tf.Tensor`): The observed true `y` values.
             validation_data (tuple of :obj:`tf.Tensor`, optional): The validation data
-                as a tuple of (validation_x, validation_y).
+                as a tuple of ``(validation_x, validation_y)``.
             epochs (int): The number of training epochs.
             checkpoint_path (str, optional): The path to save new checkpoints to.
                 If :attr:`loaded_model` is `False`, will try to load checkpoints from
                 this path as well.
             patience (int): The number of iterations to continue training without
                 validation loss improvement before stopping training early.
-            callbacks (list of :obj:`Callback`): A list of additional `Callback`s.
+            callbacks (list of :obj:`Callback`): A list of additional callbacks.
 
         """
         if checkpoint_path:

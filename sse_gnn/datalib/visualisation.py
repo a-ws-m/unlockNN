@@ -17,8 +17,9 @@ def plot_calibration(
 ):
     """Plot miscalibration curve.
 
-    predicted_pi (:obj:`np.ndarray`): The predicted percentile intervals.
-    observed_pi  (:obj:`np.ndarray`): The observed percentile intervals.
+    Args:
+        predicted_pi (:obj:`np.ndarray`): The predicted percentile intervals.
+        observed_pi  (:obj:`np.ndarray`): The observed percentile intervals.
         fname (str or :obj:`Path`, optional): The file to save the plot.
             Defaults to `None`, which shows the plot but does not save it.
 
