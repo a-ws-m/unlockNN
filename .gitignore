@@ -177,3 +177,6 @@ misc/*
 
 ### Trained models ###
 models/*
+
+### Built docs ###
+_build/*
