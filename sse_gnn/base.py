@@ -81,6 +81,10 @@ class MEGNetProbModel:
         if save_dir:
             self.meg_model.save_model(str(save_dir))
 
+    def get_index_points(self):
+        """Determine and preprocess index points for GP training."""
+        pass
+
     def train_uq(self, *args, **kwargs):
         """Train the uncertainty quantifier.
 
