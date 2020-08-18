@@ -1,4 +1,6 @@
 """Tools for processing the SSE data for the Gaussian Process."""
+from __future__ import annotations
+
 from typing import Dict, List, Optional, Union
 
 import numpy as np
@@ -8,7 +10,7 @@ from megnet.models import MEGNetModel
 from tensorflow.keras import backend as K
 from tqdm.contrib import tmap
 
-from sse_gnn.utilities import deserialize_array
+from ..utilities import deserialize_array
 
 
 class LayerExtractor:
@@ -96,81 +98,84 @@ class LayerScaler:
     scaling factor.
 
     Args:
-        model (:obj:`MEGNetModel`): The MEGNet model to perform extraction
+        model: The MEGNet model to perform extraction
             upon.
-        sf (:obj:`np.ndarray`, optional): The scaling factor. Must be passed if
-            `training_data` is not passed.
-        training_df (:obj:`pd.DataFrame`, optional): The training dataframe to
-            use.
-        layer_index (int, optional): The index of the layer of the model to extract.
-            If unassigned, defaults to extracting from the concatenation layer.
-        use_structs (bool): Whether to use structures from the `training_df`. If `False`,
-            uses graph inputs.
+        sf: The scaling factor.
+        layer_index: The index of the layer of the model to extract.
+            Unused if extractor is passed. Defaults to the concatenation layer.
+        extractor: The :obj:`LayerExtractor` to use for extraction.
 
     Attributes:
-        extractor (:obj:`LayerExtractor`): The extractor object used for acquiring layer
-            outputs for the model.
-        model (:obj:`MEGNetModel`): The MEGNet model to perform extraction
+        model: The MEGNet model to perform extraction
             upon.
-        sf (:obj:`np.ndarray`): The scaling factor. Either calculated from
-            `training_data` (if passed) or passed as a parameter during initialization.
-        training_data (:obj:`pd.DataFrame`, optional): The training dataframe, from which
-            the :attr:`sf` is calculated.
-
-
-    Raises:
-        ValueError: If both `training_data` and `sf`, or neither of them, are supplied.
+        sf: The scaling factor.
+        extractor: The extractor object used for acquiring layer
+            outputs for the model.
 
     """
 
     def __init__(
         self,
         model: MEGNetModel,
-        sf: Optional[np.ndarray] = None,
-        training_df: Optional[pd.DataFrame] = None,
+        sf: np.ndarray,
         layer_index: Optional[int] = None,
-        use_structs: bool = True,
+        extractor: Optional[LayerExtractor] = None,
     ):
         """Initialize class attributes."""
-        self.extractor: LayerExtractor = (
+        if extractor:
+            self.extractor: LayerExtractor = extractor
+        else:
+            self.extractor = (
+                ConcatExtractor(model)
+                if layer_index is None
+                else LayerExtractor(model, layer_index)
+            )
+
+        self.sf = sf
+
+    @staticmethod
+    def from_train_data(
+        model: MEGNetModel,
+        train_structs: Optional[List[pymatgen.Structure]] = None,
+        train_graphs: Optional[List[Dict[str, np.ndarray]]] = None,
+        layer_index: Optional[int] = None,
+    ) -> LayerScaler:
+        """Create a LayerScaler instance with a scaling factor based on training data.
+
+        Args:
+            train_structs: Training data as structures.
+            train_graphs: Training data as graphs.
+            layer_index: The index of the layer to extract from.
+                Defaults to extraction from the concatenation layer.
+
+        Returns:
+            A :obj:`LayerScaler` object.
+
+        Raises:
+            ValueError: If neither or both of `train_structs` and `train_graphs` are
+                provided.
+
+        """
+        if train_structs and train_graphs:
+            raise ValueError("May only pass one of `train_structs` and `train_graphs`")
+
+        extractor = (
             ConcatExtractor(model)
             if layer_index is None
             else LayerExtractor(model, layer_index)
         )
 
-        if training_df is None:
-            self.training_data: Optional[pd.DataFrame] = None
-            if sf is None:
-                raise ValueError(
-                    "Must supply a scaling factor if training data is not supplied."
-                )
-            self.sf: np.ndarray = sf
-
-        else:
-            if sf is not None:
-                raise ValueError("Supply only one of training data and scaling factor.")
-            self.training_data = training_df.copy()
-
-            # Calculate layer outputs
-            if use_structs:
-                structures = [
-                    pymatgen.Structure.from_str(struct, "json")
-                    for struct in self.training_data["structure"]
-                ]
-                self.training_data["layer_out"] = self._calc_layer_outs(structures)
-            else:
-                graphs = convert_graph_df(self.training_data)
-                self.training_data["layer_out"] = self._calc_layer_outs(
-                    graphs, use_structs=False
-                )
-
-            # Calculate scaling factor
-            self.sf = self._calc_scaling_factor()
-
-            # Scale by the factor
-            self.training_data["layer_out"] = self.training_data["layer_out"].apply(
-                lambda x: x / self.sf
+        if train_structs:
+            layer_outs = LayerScaler._calc_layer_outs(train_structs, extractor)
+        elif train_graphs:
+            layer_outs = LayerScaler._calc_layer_outs(
+                train_graphs, extractor, use_structs=False
             )
+        else:
+            raise ValueError("Must pass one of `train_structs` or `train_graphs`")
+
+        sf = LayerScaler._calc_scaling_factor(layer_outs)
+        return LayerScaler(model, sf, extractor=extractor)
 
     def structures_to_input(
         self, structures: List[pymatgen.Structure]
@@ -184,7 +189,9 @@ class LayerScaler:
             list of :obj:`np.ndarray`: The scaled feature vectors.
 
         """
-        return [out / self.sf for out in self._calc_layer_outs(structures)]
+        return [
+            out / self.sf for out in self._calc_layer_outs(structures, self.extractor)
+        ]
 
     def graphs_to_input(self, graphs: List[Dict[str, np.ndarray]]) -> List[np.ndarray]:
         """Convert graphs to a scaled input feature vector.
@@ -197,12 +204,14 @@ class LayerScaler:
 
         """
         return [
-            out / self.sf for out in self._calc_layer_outs(graphs, use_structs=False)
+            out / self.sf
+            for out in self._calc_layer_outs(graphs, self.extractor, use_structs=False)
         ]
 
+    @staticmethod
     def _calc_layer_outs(
-        self,
         data: List[Union[pymatgen.Structure, Dict[str, np.ndarray]]],
+        extractor: LayerExtractor,
         use_structs: bool = True,
     ) -> List[np.ndarray]:
         """Calculate the layer outputs for all structures in a list.
@@ -222,32 +231,30 @@ class LayerScaler:
         if use_structs:
             if not all(isinstance(d, pymatgen.Structure) for d in data):
                 raise TypeError("`data` must be a list of structures")
-            layer_outs = tmap(self.extractor.get_layer_output, data)
+            layer_outs = tmap(extractor.get_layer_output, data)
         else:
             if not all(isinstance(d, dict) for d in data):
                 raise TypeError("`data` must be a list of dictionaries")
-            layer_outs = tmap(self.extractor.get_layer_output_graph, data)
+            layer_outs = tmap(extractor.get_layer_output_graph, data)
 
         # Squeeze each value to a nicer shape
         return list(map(np.squeeze, layer_outs))
 
-    def _calc_scaling_factor(self) -> np.ndarray:
+    @staticmethod
+    def _calc_scaling_factor(layer_outs: List[np.ndarray]) -> np.ndarray:
         """Calculate the scaling factor to use.
 
         Scaling factor is the elementwise greatest value across
         all of the `layer_out` vectors.
 
+        Args:
+            layer_outs: The layer outputs.
+
         Returns:
             sf (:obj:`np.ndarray`): The scaling factor.
 
         """
-        if self.training_data is None:
-            raise AttributeError(
-                "GPDataParser must have training data assigned"
-                " to calculate a scaling factor."
-            )
-
-        abs_values = list(map(np.abs, self.training_data["layer_out"]))
+        abs_values = list(map(np.abs, layer_outs))
         sf = get_max_elements(abs_values)
 
         # Replace zeros with a scaling factor of 1
