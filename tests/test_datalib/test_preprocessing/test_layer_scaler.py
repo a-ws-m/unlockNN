@@ -1,4 +1,10 @@
-"""Test layer scaling functionality."""
+"""Test layer scaling functionality.
+
+Todo:
+    * Write :class:`LayerScaler` testing code using mocks,
+        or a benchmarking :class:`MEGNetModel`.
+
+"""
 import numpy as np
 import pandas as pd
 import pytest
