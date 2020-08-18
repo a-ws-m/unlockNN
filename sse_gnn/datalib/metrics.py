@@ -15,7 +15,7 @@ tfd = tfp.distributions
 class MetricAnalyser:
     """Handler for metric calculations.
 
-    Many of the metrics herein are based upon implementations by `Train et al.`_,
+    Many of the metrics herein are based upon implementations by `Tran et al.`_,
     for metrics proposed by `Kuleshov et al.`_.
     The values of :attr:`mean` and :attr:`stddevs` are not automatically updated when
     :attr:`dist` is updated, in order to save computing time.

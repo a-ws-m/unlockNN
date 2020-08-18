@@ -20,7 +20,7 @@ tfk = tfp.math.psd_kernels
 def convert_index_points(array: np.ndarray) -> tf.Tensor:
     """Reshape an array into a tensor appropriate for GP index points.
 
-    Extends the amount of dimensions by `array.shape[-1] - 1` and converts
+    Extends the amount of dimensions by ``array.shape[-1] - 1`` and converts
     to a `Tensor` with `dtype=tf.float64`.
 
     Args:
@@ -43,14 +43,14 @@ class GPTrainer(tf.Module):
     """Class for training hyperparameters for GP kernels.
 
     Args:
-        observation_index_points (:obj:`tf.Tensor`): The observed index points (_x_ values).
-        observations (:obj:`tf.Tensor`): The observed samples (_y_ values).
+        observation_index_points (:obj:`tf.Tensor`): The observed index points (`x` values).
+        observations (:obj:`tf.Tensor`): The observed samples (`y` values).
         checkpoint_dir (str or :obj:`Path`, optional): The directory to check for
             checkpoints and to save checkpoints to.
 
     Attributes:
-        observation_index_points (:obj:`tf.Tensor`): The observed index points (_x_ values).
-        observations (:obj:`tf.Tensor`): The observed samples (_y_ values).
+        observation_index_points (:obj:`tf.Tensor`): The observed index points (`x` values).
+        observations (:obj:`tf.Tensor`): The observed samples (`y` values).
         checkpoint_dir (str or :obj:`Path`, optional): The directory to check for
             checkpoints and to save checkpoints to.
         amplitude (:obj:`tf.Tensor`): The amplitude of the kernel.
@@ -58,7 +58,7 @@ class GPTrainer(tf.Module):
         kernel (:obj:`tf.Tensor`): The kernel to use for the Gaussian process.
         optimizer (:obj:`Optimizer`): The optimizer to use for determining
             :attr:`amplitude` and :attr:`length_scale`.
-        training_steps (:obj:tf.Tensor): The current number of training epochs executed.
+        training_steps (:obj:`tf.Tensor`): The current number of training epochs executed.
         loss (:obj:`tf.Tensor`): The current loss on the training data
             (A negative log likelihood).
         metrics (dict): Contains metric names and values.
@@ -203,12 +203,12 @@ class GPTrainer(tf.Module):
         """Predict targets and the standard deviation of the distribution.
 
         Args:
-            points (:obj:`tf.Tensor`): The points (_x_ values) to make predictions with.
+            points (:obj:`tf.Tensor`): The points (`x` values) to make predictions with.
 
         Returns:
             mean (:obj:`tf.Tensor`): The mean of the distribution at each point.
             stddev (:obj:`tf.Tensor`): The standard deviation of the distribution
-                at each point.
+            at each point.
 
         """
         gprm = self.get_model(points)
