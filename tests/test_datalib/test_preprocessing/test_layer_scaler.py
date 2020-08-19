@@ -132,3 +132,12 @@ def test_ls_with_sf_no_ex(mock_layer_scaler, mock_structure, mock_model, sf, exp
 
     assert len(scaled) == 1
     assert np.array_equal(scaled[0], expected)
+
+
+@pytest.mark.parametrize(
+    "mock_structure,exp_sf", [(np.eye(3), np.ones(3))], indirect=["mock_structure"]
+)
+def test_ls_with_structs(mock_layer_scaler, mock_structure, mock_model, exp_sf):
+    """Test a `LayerScaler` initialized with training structures."""
+    ls = preproc.LayerScaler.from_train_data(mock_model, train_structs=[mock_structure])
+    assert np.array_equal(ls.sf, exp_sf)
