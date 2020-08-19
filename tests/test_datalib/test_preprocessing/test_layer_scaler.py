@@ -135,7 +135,7 @@ def test_ls_with_sf_no_ex(mock_layer_scaler, mock_structure, mock_model, sf, exp
 
 
 @pytest.mark.parametrize(
-    "mock_structure,exp_sf", [(np.eye(3), np.ones(3))], indirect=["mock_structure"]
+    "mock_structure,exp_sf", [(np.eye(3), np.ones((3, 3)))], indirect=["mock_structure"]
 )
 def test_ls_with_structs(mock_layer_scaler, mock_structure, mock_model, exp_sf):
     """Test a `LayerScaler` initialized with training structures."""
