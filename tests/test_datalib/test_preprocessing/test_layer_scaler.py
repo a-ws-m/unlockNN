@@ -7,7 +7,9 @@ Todo:
 """
 import numpy as np
 import pandas as pd
+import pymatgen
 import pytest
+from megnet.models import MEGNetModel
 
 import sse_gnn.datalib.preprocessing as preproc
 
@@ -29,11 +31,104 @@ def test_get_max(test_inp, expected):
     assert np.array_equal(preproc.get_max_elements(test_inp), expected)
 
 
+"""Mock fixtures
+
+These are used to mock `LayerExtractor` so that
+its `get_layer_output` method can be configured to return the
+desired value for a given, mocked `pymatgen.Strucuture`.
+
+"""
+
+
 @pytest.fixture
-def trained_layer_scaler(mocker):
-    """Get a `LayerScaler` with a mock extractor."""
-    le = mocker.Mock()  # Layer extractor mock
-    # TODO: This function is WIP
-    le.get_layer_output.return_value = None
-    mocker.patch("sse_gnn.datalib.preprocessing.LayerExtractor")
-    model = mocker.Mock()
+def mock_model(mocker):
+    """Patch and create a mocked `MEGNetModel`."""
+    return mocker.patch("megnet.models.MEGNetModel")
+
+
+@pytest.fixture
+def mock_structure(mocker, request):
+    """Get a mock pymatgen Structure.
+
+    The request parameter indicates the `layer_output` it
+    should have when run through the mock `LayerExtractor`.
+
+    """
+    mock_structure = mocker.Mock(pymatgen.Structure)
+    mock_structure.layer_output = request.param
+    return mock_structure
+
+
+@pytest.fixture
+def mock_layer_scaler(mocker, mock_model, request):
+    """Get a `LayerScaler` with a mock extractor.
+
+    Can be parametrized with a `layer_index`.
+
+    """
+    layer_extractor = "sse_gnn.datalib.preprocessing.LayerExtractor"
+    mock_le = mocker.patch(layer_extractor, autospec=True)
+    mock_le.return_value.get_layer_output = lambda struct: struct.layer_output
+
+    try:
+        layer_index = request.param
+    except AttributeError:
+        # Not passed
+        layer_index = None
+
+    return preproc.LayerExtractor(mock_model, layer_index)
+
+
+"""Test that the mock fixtures work as expected."""
+
+
+@pytest.mark.parametrize(
+    "mock_layer_scaler,mock_structure,expected_layer_output",
+    [(None, np.eye(3), np.eye(3))],
+    indirect=["mock_layer_scaler", "mock_structure"],
+)
+def test_layer_scaler_mock(mock_layer_scaler, mock_structure, expected_layer_output):
+    """Test that the LayerScaler mock is working."""
+    assert np.array_equal(
+        mock_layer_scaler.get_layer_output(mock_structure), expected_layer_output
+    )
+
+
+@pytest.mark.parametrize(
+    "mock_structure,expected_layer_output",
+    [(np.eye(3), np.eye(3))],
+    indirect=["mock_structure"],
+)
+def test_structure_mock(mock_structure, expected_layer_output):
+    """Test that the Structure mock is working."""
+    assert np.array_equal(mock_structure.layer_output, expected_layer_output)
+
+
+"""Test `LayerScaler` functionality."""
+
+
+@pytest.mark.parametrize(
+    "sf,mock_structure,expected",
+    [
+        (np.ones(3), np.eye(3), np.eye(3)),  # Unit scaling factor
+        (2 * np.ones(3), np.eye(3), np.eye(3) / 2),
+        (
+            np.arange(1, 10).reshape((3, 3)),
+            np.arange(1, 10).reshape((3, 3)),
+            np.ones((3, 3)),
+        ),
+    ],
+    indirect=["mock_structure"],
+)
+def test_ls_with_sf_no_ex(mock_layer_scaler, mock_structure, mock_model, sf, expected):
+    """Test a `LayerScaler` initialized with `sf` but not `extractor`.
+
+    `expected` is the expected scaled layer output. The unscaled layer
+    output is the second parameter, which is passed to `mock_structure`.
+
+    """
+    ls = preproc.LayerScaler(mock_model, sf)
+    scaled = ls.structures_to_input([mock_structure])
+
+    assert len(scaled) == 1
+    assert np.array_equal(scaled[0], expected)
