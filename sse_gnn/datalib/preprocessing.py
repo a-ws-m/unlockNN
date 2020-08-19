@@ -20,6 +20,7 @@ class LayerExtractor:
         model (:obj:`MEGNetModel`): The MEGNet model to perform extraction
             upon.
         layer_index (int): The index of the layer within the model to extract.
+            Defaults to -4, the index of the concatenation layer.
 
     Attributes:
         model (:obj:`MEGNetModel`): The MEGNet model to perform extraction
@@ -29,7 +30,7 @@ class LayerExtractor:
 
     """
 
-    def __init__(self, model: MEGNetModel, layer_index: int):
+    def __init__(self, model: MEGNetModel, layer_index: int=-4):
         """Initialize extractor."""
         self.model = model
         self.conc_layer_output = model.layers[layer_index].output
@@ -81,14 +82,6 @@ class LayerExtractor:
         return self.layer_eval([input])[0]
 
 
-class ConcatExtractor(LayerExtractor):
-    """Wrapper for a `LayerExtractor` that acquires the concatenation layer output."""
-
-    def __init__(self, model: MEGNetModel):
-        """Initialize LayerExtractor with concatenation layer index."""
-        super().__init__(model, layer_index=-4)
-
-
 class LayerScaler:
     """Class for creating GP training data and preprocessing thereof.
 
@@ -102,7 +95,8 @@ class LayerScaler:
             upon.
         sf: The scaling factor.
         layer_index: The index of the layer of the model to extract.
-            Unused if extractor is passed. Defaults to the concatenation layer.
+            Unused if extractor is passed.
+            Defaults to the concatenation layer index of -4.
         extractor: The :obj:`LayerExtractor` to use for extraction.
 
     Attributes:
@@ -118,19 +112,11 @@ class LayerScaler:
         self,
         model: MEGNetModel,
         sf: np.ndarray,
-        layer_index: Optional[int] = None,
+        layer_index: int = -4,
         extractor: Optional[LayerExtractor] = None,
     ):
         """Initialize class attributes."""
-        if extractor:
-            self.extractor: LayerExtractor = extractor
-        else:
-            self.extractor = (
-                ConcatExtractor(model)
-                if layer_index is None
-                else LayerExtractor(model, layer_index)
-            )
-
+        self.extractor = extractor if extractor else LayerExtractor(model, layer_index)
         self.sf = sf
 
     @staticmethod
@@ -138,7 +124,7 @@ class LayerScaler:
         model: MEGNetModel,
         train_structs: Optional[List[pymatgen.Structure]] = None,
         train_graphs: Optional[List[Dict[str, np.ndarray]]] = None,
-        layer_index: Optional[int] = None,
+        layer_index: int = -4,
     ) -> LayerScaler:
         """Create a LayerScaler instance with a scaling factor based on training data.
 
@@ -159,11 +145,7 @@ class LayerScaler:
         if train_structs and train_graphs:
             raise ValueError("May only pass one of `train_structs` and `train_graphs`")
 
-        extractor = (
-            ConcatExtractor(model)
-            if layer_index is None
-            else LayerExtractor(model, layer_index)
-        )
+        extractor = LayerExtractor(model, layer_index)
 
         if train_structs:
             layer_outs = LayerScaler._calc_layer_outs(train_structs, extractor)
