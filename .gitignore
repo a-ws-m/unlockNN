@@ -178,8 +178,5 @@ misc/*
 ### Trained models ###
 models/*
 
-### Built docs ###
-_build/*
-
 ### Make utils ###
 make_*
