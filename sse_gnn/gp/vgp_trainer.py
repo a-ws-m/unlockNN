@@ -114,9 +114,14 @@ class SingleLayerVGP:
             self.model.load_weights(prev_model)
             self.loaded_model = True
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> tfp.distributions.Distribution:
         """Call the embedded Keras model."""
         return self.model.call(*args, **kwargs).distribution
+
+    def predict(self, index_points: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
+        """Predict target value and uncertainty for index points."""
+        dist = self(index_points)
+        return dist.mean(), dist.stddev()
 
     def train_model(
         self,
