@@ -1,13 +1,16 @@
 """Wrappers for main functionality of model training and saving."""
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Dict, Literal, List, Optional, Tuple, Union
 
 import numpy as np
+import pandas as pd
 import pymatgen
 import tensorflow as tf
 from megnet.models import MEGNetModel
+from pyarrow import feather
 
 from .datalib.preprocessing import LayerScaler
 from .gp.gp_trainer import GPTrainer, convert_index_points
@@ -85,6 +88,12 @@ class MEGNetProbModel:
         self.meg_save_path = self.save_dir / "meg_model"
         self.gp_ckpt_path = self.save_dir / "gp_ckpts"
         self.gp_save_path = self.save_dir / "gp_model"
+
+        self.data_save_path = self.save_dir / "data"
+        self.train_database = self.data_save_path / "train.fthr"
+        self.val_database = self.data_save_path / "val.fthr"
+        self.sf_path = self.data_save_path / "sf"
+        self.meta_path = self.data_save_path / "meta.txt"
 
     @property
     def training_stage(self) -> Literal[0, 1, 2]:
@@ -246,9 +255,73 @@ class MEGNetProbModel:
         predicted, uncert = self.gp.predict(index_point)
         return predicted.numpy(), uncert.numpy()
 
-    def save(self):
-        """Save the full-stack model."""
-        raise NotImplementedError()
+    def save(
+        self,
+        train_materials_ids: Optional[List[str]] = None,
+        val_materials_ids: Optional[List[str]] = None,
+    ):
+        """Save the full-stack model.
+
+        Args:
+            train_materials_ids: A list of IDs corresponding to :attr:`train_structs`.
+                Used for indexing in the saved database.
+            val_materials_ids: A list of IDs corresponding to :attr:`val_structs`.
+                Used for indexing in the saved database.
+
+        """
+        for materials_ids, id_name in [
+            (train_materials_ids, "train_materials_ids"),
+            (val_materials_ids, "val_materials_ids"),
+        ]:
+            if materials_ids:
+                if (id_len := len(materials_ids)) != (
+                    struct_len := len(self.train_structs)
+                ):
+                    raise ValueError(
+                        f"Length of supplied `{id_name}`, {id_len}, "
+                        f"does not match length of `train_structs`, {struct_len}"
+                    )
+
+        # * Write training + validation data
+
+        train_data = self._gen_serial_data(self.train_structs)
+        val_data = self._gen_serial_data(self.val_structs)
+
+        train_df = pd.DataFrame(train_data, train_materials_ids)
+        val_df = pd.DataFrame(val_data, val_materials_ids)
+
+        feather.write_feather(train_df, self.train_database)
+        feather.write_feather(val_df, self.val_database)
+
+        # * Write metadata
+        self._write_metadata()
+
+    def _gen_serial_data(
+        self, structs: List[pymatgen.Structure],
+    ) -> Dict[str, List[Union[str, bytes]]]:
+        """Convert a list of structures into a precursor dictionary for a DataFrame."""
+        data = {"struct": [struct.to("json") for struct in structs]}
+
+        if self.training_stage > 0:
+            data["index_points"] = [
+                serialize_array(ips) for ips in self.get_index_points(structs)
+            ]
+
+        return data
+
+    def _write_metadata(self):
+        """Write metadata to a file.
+
+        Metadata contains :attr:`gp_type`, :attr:`num_inducing_points`
+        and :attr:`layer_index`.
+
+        """
+        meta = {
+            "gp_type": self.gp_type,
+            "num_inducing_points": self.num_inducing_points,
+            "layer_index": self.layer_index,
+        }
+        json.dump(meta, self.meta_path)
 
     @staticmethod
     def load(dir: Union[Path, str]) -> MEGNetProbModel:
