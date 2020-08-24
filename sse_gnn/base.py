@@ -86,6 +86,21 @@ class MEGNetProbModel:
         self.gp_ckpt_path = self.save_dir / "gp_ckpts"
         self.gp_save_path = self.save_dir / "gp_model"
 
+    @property
+    def training_stage(self) -> Literal[0, 1, 2]:
+        """Indicate the training stage the model is at.
+
+        Returns:
+            training_stage: How much of the model is trained.
+                Can take one of three values:
+
+                * 0 - Untrained.
+                * 1 - :attr:`meg_model` trained.
+                * 2 - :attr:`meg_model` and :attr:`gp` trained.
+
+        """
+        return self.meg_save_path.exists() + bool(self.gp)  # type: ignore
+
     def train_meg_model(
         self, epochs: Optional[int] = 1000, batch_size: Optional[int] = 128, **kwargs,
     ):
