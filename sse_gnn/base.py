@@ -42,10 +42,10 @@ class MEGNetProbModel:
     def __init__(
         self,
         train_structs: List[pymatgen.Structure],
-        train_targets: List[np.ndarray],
+        train_targets: List[Union[np.ndarray, float]],
         gp_type: Literal["GP", "VGP"],
         val_structs: List[pymatgen.Structure],
-        val_targets: List[np.ndarray],
+        val_targets: List[Union[np.ndarray, float]],
         save_dir: Union[str, Path],
         ntarget: int = 1,
         layer_index: int = -4,
@@ -284,8 +284,8 @@ class MEGNetProbModel:
 
         # * Write training + validation data
 
-        train_data = self._gen_serial_data(self.train_structs)
-        val_data = self._gen_serial_data(self.val_structs)
+        train_data = self._gen_serial_data(self.train_structs, self.train_targets)
+        val_data = self._gen_serial_data(self.val_structs, self.val_targets)
 
         train_df = pd.DataFrame(train_data, train_materials_ids)
         val_df = pd.DataFrame(val_data, val_materials_ids)
@@ -297,10 +297,18 @@ class MEGNetProbModel:
         self._write_metadata()
 
     def _gen_serial_data(
-        self, structs: List[pymatgen.Structure],
-    ) -> Dict[str, List[Union[str, bytes]]]:
+        self, structs: List[pymatgen.Structure], targets: List[Union[float, np.ndarray]]
+    ) -> Dict[str, List[Union[str, float, bytes]]]:
         """Convert a list of structures into a precursor dictionary for a DataFrame."""
         data = {"struct": [struct.to("json") for struct in structs]}
+
+        if self.ntarget > 1:
+            data["target"] = [serialize_array(arr) for arr in targets]
+        else:
+            data["target"] = [
+                (target.item() if isinstance(target, np.ndarray) else target)
+                for target in targets
+            ]
 
         if self.training_stage > 0:
             data["index_points"] = [
@@ -320,6 +328,7 @@ class MEGNetProbModel:
             "gp_type": self.gp_type,
             "num_inducing_points": self.num_inducing_points,
             "layer_index": self.layer_index,
+            "ntarget": self.ntarget,
         }
         json.dump(meta, self.meta_path)
 
