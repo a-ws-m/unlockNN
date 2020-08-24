@@ -132,6 +132,7 @@ class MEGNetProbModel:
             **kwargs,
         )
 
+        self._update_sf()
         self.meg_model.save_model(self.meg_save_path)
 
     def _update_sf(self):
@@ -218,8 +219,8 @@ class MEGNetProbModel:
             # This should already have been handled in __init__, but just in case
             raise ValueError("Cannot train VGP without `num_inducing_points`")
 
-        train_targets = tf.constant(np.stack(self.train_targets), dtype=tf.float64)
-        val_targets = tf.constant(np.stack(self.val_targets), dtype=tf.float64)
+        train_targets = targets_to_tensor(self.train_targets)
+        val_targets = targets_to_tensor(self.val_targets)
 
         vgp = SingleLayerVGP(train_idxs, self.num_inducing_points, self.ntarget)
         vgp.train_model(
@@ -273,7 +274,7 @@ class MEGNetProbModel:
             (train_materials_ids, "train_materials_ids"),
             (val_materials_ids, "val_materials_ids"),
         ]:
-            if materials_ids:
+            if materials_ids is not None:
                 if (id_len := len(materials_ids)) != (
                     struct_len := len(self.train_structs)
                 ):
@@ -336,3 +337,8 @@ class MEGNetProbModel:
     def load(dir: Union[Path, str]) -> MEGNetProbModel:
         """Load a full-stack model."""
         raise NotImplementedError()
+
+
+def targets_to_tensor(targets: List[Union[float, np.ndarray]]) -> tf.Tensor:
+    """Convert a list of target values to a Tensor."""
+    return tf.constant(np.stack(targets), dtype=tf.float64)
