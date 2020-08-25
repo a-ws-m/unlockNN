@@ -24,10 +24,10 @@ class MEGNetProbModel:
     Args:
         train_structs: The training structures.
         train_targets: The training targets.
-        gp_type: The method to use for the Gaussian process.
-            Must be either 'GP' or 'VGP'.
         val_structs: The validation structures.
         val_targets: The validation targets.
+        gp_type: The method to use for the Gaussian process.
+            Must be either 'GP' or 'VGP'.
         save_dir: The directory to save files to during training.
             Files include MEGNet and GP checkpoints.
         ntarget: The number of target variables.
@@ -35,6 +35,10 @@ class MEGNetProbModel:
         layer_index: The index of the layer to extract outputs from
             within :attr:`meg_model`. Defaults to the concatenation
             layer.
+        num_inducing_points: The number of inducing points for the `VGP`.
+            Can only be set for `gp_type='VGP'`.
+        training_stage: The stage of training the model is at.
+            Only applies when loading a model.
         **kwargs: Keyword arguments to pass to :class:`MEGNetModel`.
 
     """
@@ -43,13 +47,14 @@ class MEGNetProbModel:
         self,
         train_structs: List[pymatgen.Structure],
         train_targets: List[Union[np.ndarray, float]],
-        gp_type: Literal["GP", "VGP"],
         val_structs: List[pymatgen.Structure],
         val_targets: List[Union[np.ndarray, float]],
+        gp_type: Literal["GP", "VGP"],
         save_dir: Union[str, Path],
         ntarget: int = 1,
         layer_index: int = -4,
         num_inducing_points: Optional[int] = None,
+        training_stage: int = 0,
         **kwargs,
     ):
         """Initialize `MEGNetModel` and type of GP to use."""
@@ -70,8 +75,6 @@ class MEGNetProbModel:
             )
 
         self.gp_type = gp_type
-        self.meg_model = MEGNetModel(ntarget=ntarget, **kwargs)
-
         self.train_structs = train_structs
         self.train_targets = train_targets
         self.val_structs = val_structs
@@ -81,7 +84,6 @@ class MEGNetProbModel:
         self.ntarget = ntarget
         self.sf: Optional[np.ndarray] = None
         self.layer_index = layer_index
-        self.gp: Optional[Union[GPTrainer, SingleLayerVGP]] = None
         self.num_inducing_points = num_inducing_points
 
         self.meg_ckpt_path = self.save_dir / "meg_ckpts"
@@ -94,6 +96,36 @@ class MEGNetProbModel:
         self.val_database = self.data_save_path / "val.fthr"
         self.sf_path = self.data_save_path / "sf"
         self.meta_path = self.data_save_path / "meta.txt"
+
+        self.meg_model = (
+            MEGNetModel(ntarget=ntarget, **kwargs)
+            if training_stage == 0
+            else MEGNetModel.from_file(self.meg_save_path)
+        )
+
+        # Initialize GP
+        if training_stage < 2:
+            self.gp: Optional[Union[GPTrainer, SingleLayerVGP]] = None
+        else:
+            index_points = np.stack(self.get_index_points(self.train_structs))
+
+            if gp_type == "VGP":
+                index_points = tf.constant(index_points, dtype=tf.float64)
+
+                # Should already have been caught, but for the type checker's sake
+                assert num_inducing_points is not None
+                self.gp = SingleLayerVGP(
+                    index_points,
+                    num_inducing_points,
+                    ntarget,
+                    prev_model=str(self.gp_save_path),
+                )
+
+            else:
+                index_points = convert_index_points(index_points)
+                targets = tf.constant(np.stack(self.train_targets), dtype=tf.float64)
+
+                self.gp = GPTrainer(index_points, targets, self.gp_ckpt_path)
 
     @property
     def training_stage(self) -> Literal[0, 1, 2]:
@@ -108,7 +140,7 @@ class MEGNetProbModel:
                 * 2 - :attr:`meg_model` and :attr:`gp` trained.
 
         """
-        return self.meg_save_path.exists() + bool(self.gp)  # type: ignore
+        return int(self.meg_save_path.exists()) + bool(self.gp)  # type: ignore
 
     def train_meg_model(
         self, epochs: Optional[int] = 1000, batch_size: Optional[int] = 128, **kwargs,
@@ -311,18 +343,19 @@ class MEGNetProbModel:
                 for target in targets
             ]
 
-        if self.training_stage > 0:
-            data["index_points"] = [
-                serialize_array(ips) for ips in self.get_index_points(structs)
-            ]
+        # ? Currently no need to save index_points
+        # if self.training_stage > 0:
+        #     data["index_points"] = [
+        #         serialize_array(ips) for ips in self.get_index_points(structs)
+        #     ]
 
         return data
 
     def _write_metadata(self):
         """Write metadata to a file.
 
-        Metadata contains :attr:`gp_type`, :attr:`num_inducing_points`
-        and :attr:`layer_index`.
+        Metadata contains :attr:`gp_type`, :attr:`num_inducing_points`,
+        :attr:`layer_index`, :attr:`ntarget` and :attr:`training_stage`.
 
         """
         meta = {
@@ -330,13 +363,56 @@ class MEGNetProbModel:
             "num_inducing_points": self.num_inducing_points,
             "layer_index": self.layer_index,
             "ntarget": self.ntarget,
+            "training_stage": self.training_stage,
         }
         json.dump(meta, self.meta_path)
 
     @staticmethod
-    def load(dir: Union[Path, str]) -> MEGNetProbModel:
+    def _load_serial_data(fname: Union[Path, str]) -> pd.DataFrame:
+        """Load serialized data.
+
+        The reverse of :meth:`_gen_serial_data`.
+
+        """
+        data = feather.read_feather(fname)
+        data.loc["struct"] = data["struct"].apply(pymatgen.Structure.from_str)
+
+        if isinstance(data["target"][0], bytes):
+            # Data is serialized
+            data.loc["target"] = data["target"].apply(deserialize_array)
+
+        # ? index_points not currently saved
+        # try:
+        #     data.loc["index_points"] = data["index_points"].apply(deserialize_array)
+        # except KeyError:
+        #     # No index points in dataset
+        #     pass
+
+        return data
+
+    @staticmethod
+    def load(dirname: Union[Path, str]) -> MEGNetProbModel:
         """Load a full-stack model."""
-        raise NotImplementedError()
+        save_dir = Path(dirname)
+
+        train_datafile = save_dir / "train.fthr"
+        val_datafile = save_dir / "val.fthr"
+
+        train_data = MEGNetProbModel._load_serial_data(train_datafile)
+        val_data = MEGNetProbModel._load_serial_data(val_datafile)
+
+        metafile = save_dir / "meta.txt"
+        with metafile.open("r") as f:
+            meta = json.load(f)
+
+        return MEGNetProbModel(
+            train_data["struct"],
+            train_data["target"],
+            val_data["struct"],
+            val_data["target"],
+            save_dir=save_dir,
+            **meta,
+        )
 
 
 def targets_to_tensor(targets: List[Union[float, np.ndarray]]) -> tf.Tensor:
