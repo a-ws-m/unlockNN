@@ -60,19 +60,21 @@ class MEGNetProbModel:
         """Initialize `MEGNetModel` and type of GP to use."""
         if gp_type not in ["GP", "VGP"]:
             raise ValueError(f"`gp_type` must be one of 'GP' or 'VGP', got {gp_type=}")
-        if gp_type == "GP" and ntarget != 1:
-            raise NotImplementedError(
-                f"Can only have `ntarget > 1` when `gp_type` is 'VGP' (got {ntarget=})"
-            )
-        if gp_type == "GP" and num_inducing_points is not None:
-            raise ValueError(
-                "`num_inducing_points` can only be set when `gp_type` is `VGP`"
-            )
-        if gp_type == "VGP" and num_inducing_points is None:
-            raise ValueError(
-                "`num_inducing_points` must be supplied for `gp_type=VGP`, "
-                f"got {num_inducing_points=}"
-            )
+        if gp_type == "GP":
+            if ntarget > 1:
+                raise NotImplementedError(
+                    f"Can only have `ntarget > 1` when `gp_type` is 'VGP' (got {ntarget=})"
+                )
+            if num_inducing_points is not None:
+                raise ValueError(
+                    "`num_inducing_points` can only be set when `gp_type` is `VGP`"
+                )
+        if gp_type == "VGP":
+            if num_inducing_points is None:
+                raise ValueError(
+                    "`num_inducing_points` must be supplied for `gp_type=VGP`, "
+                    f"got {num_inducing_points=}"
+                )
 
         self.gp_type = gp_type
         self.train_structs = train_structs
@@ -111,7 +113,6 @@ class MEGNetProbModel:
 
             if gp_type == "VGP":
                 index_points = tf.constant(index_points, dtype=tf.float64)
-
                 # Should already have been caught, but for the type checker's sake
                 assert num_inducing_points is not None
                 self.gp = SingleLayerVGP(
@@ -124,7 +125,6 @@ class MEGNetProbModel:
             else:
                 index_points = convert_index_points(index_points)
                 targets = tf.constant(np.stack(self.train_targets), dtype=tf.float64)
-
                 self.gp = GPTrainer(index_points, targets, self.gp_ckpt_path)
 
     @property
@@ -394,7 +394,6 @@ class MEGNetProbModel:
     def load(dirname: Union[Path, str]) -> MEGNetProbModel:
         """Load a full-stack model."""
         save_dir = Path(dirname)
-
         train_datafile = save_dir / "train.fthr"
         val_datafile = save_dir / "val.fthr"
 
