@@ -5,7 +5,8 @@ from matminer.datasets import get_all_dataset_info, load_dataset
 from megnet.data.crystal import CrystalGraph
 from sklearn.model_selection import train_test_split
 from sse_gnn import MEGNetProbModel
-from sse_gnn.datalib.metrics import MetricAnalyser
+
+# from sse_gnn.datalib.metrics import MetricAnalyser
 
 
 SAVE_DIR = Path.home() / "matbench_perovskites"
@@ -36,19 +37,19 @@ meg_args = {
 prob_model = MEGNetProbModel(
     train_df["structure"],
     train_df[TARGET_VAR],
-    "VGP",
     test_df["structure"],
     test_df[TARGET_VAR],
+    "VGP",
     SAVE_DIR,
     num_inducing_points=200,
     **meg_args,
 )
 
 print("Training MEGNetModel")
-prob_model.train_meg_model(epochs=1000)
+prob_model.train_meg_model(epochs=100)
 
 print("Training UQ")
-prob_model.train_uq(epochs=10)
+prob_model.train_uq(epochs=100)
 
 print("Saving model")
 prob_model.save(train_df.index, test_df.index)
