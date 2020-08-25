@@ -164,8 +164,8 @@ class MEGNetProbModel:
             **kwargs,
         )
 
-        self._update_sf()
         self.meg_model.save_model(self.meg_save_path)
+        self._update_sf()
 
     def _update_sf(self):
         """Update the saved scaling factor.
