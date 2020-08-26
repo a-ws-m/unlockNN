@@ -102,7 +102,7 @@ class MEGNetProbModel:
         self.meg_model = (
             MEGNetModel(ntarget=ntarget, **kwargs)
             if training_stage == 0
-            else MEGNetModel.from_file(self.meg_save_path)
+            else MEGNetModel.from_file(str(self.meg_save_path))
         )
 
         # Initialize GP
@@ -164,7 +164,7 @@ class MEGNetProbModel:
             **kwargs,
         )
 
-        self.meg_model.save_model(self.meg_save_path)
+        self.meg_model.save_model(str(self.meg_save_path))
         self._update_sf()
 
     def _update_sf(self):
