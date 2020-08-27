@@ -416,14 +416,14 @@ class MEGNetProbModel:
     @staticmethod
     def load(dirname: Union[Path, str]) -> MEGNetProbModel:
         """Load a full-stack model."""
-        save_dir = Path(dirname)
-        train_datafile = save_dir / "train.fthr"
-        val_datafile = save_dir / "val.fthr"
+        data_dir = Path(dirname) / "data"
+        train_datafile = data_dir / "train.fthr"
+        val_datafile = data_dir / "val.fthr"
 
         train_data = MEGNetProbModel._load_serial_data(train_datafile)
         val_data = MEGNetProbModel._load_serial_data(val_datafile)
 
-        metafile = save_dir / "meta.txt"
+        metafile = data_dir / "meta.txt"
         with metafile.open("r") as f:
             meta = json.load(f)
 
@@ -432,7 +432,7 @@ class MEGNetProbModel:
             train_data["target"],
             val_data["struct"],
             val_data["target"],
-            save_dir=save_dir,
+            save_dir=dirname,
             **meta,
         )
 
