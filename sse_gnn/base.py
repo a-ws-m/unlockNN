@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Dict, Literal, List, Optional, Tuple, Union
 
@@ -98,6 +99,10 @@ class MEGNetProbModel:
         self.val_database = self.data_save_path / "val.fthr"
         self.sf_path = self.data_save_path / "sf"
         self.meta_path = self.data_save_path / "meta.txt"
+
+        # * Make directories
+        for direct in [self.save_dir, self.data_save_path]:
+            os.makedirs(direct, exist_ok=True)
 
         self.meg_model = (
             MEGNetModel(ntarget=ntarget, **kwargs)
