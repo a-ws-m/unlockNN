@@ -228,11 +228,11 @@ class MEGNetProbModel:
         val_targets = tf.constant(np.stack(self.val_targets), dtype=tf.float64)
 
         gp_trainer = GPTrainer(
-            train_idxs, train_targets, checkpoint_dir=self.gp_ckpt_path
+            train_idxs, train_targets, checkpoint_dir=str(self.gp_ckpt_path)
         )
         metrics = list(
             gp_trainer.train_model(
-                val_idxs, val_targets, epochs, save_dir=self.gp_save_path, **kwargs
+                val_idxs, val_targets, epochs, save_dir=str(self.gp_save_path), **kwargs
             )
         )
         return gp_trainer, metrics
@@ -262,7 +262,7 @@ class MEGNetProbModel:
             checkpoint_path=str(self.gp_ckpt_path),
             **kwargs,
         )
-        vgp.model.save_weights(self.gp_save_path)
+        vgp.model.save_weights(str(self.gp_save_path))
         return vgp
 
     def predict_structure(
