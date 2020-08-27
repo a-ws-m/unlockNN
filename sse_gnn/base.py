@@ -288,6 +288,30 @@ class MEGNetProbModel:
         predicted, uncert = self.gp.predict(index_point)
         return predicted.numpy(), uncert.numpy()
 
+    def _validate_id_len(self, ids: Optional[List[str]], is_train: bool):
+        """Check that the supplied IDs' length matches the length of saved data.
+
+        Passes by default if `ids is None`.
+
+        Args:
+            ids: The IDs to check.
+            is_train: Whether the supplied IDs correspond to train data (`True`)
+                or validation data (`False`).
+
+        Raises:
+            ValueError: If there is a length mismatch.
+
+        """
+        if ids is not None:
+            id_name = "train" if is_train else "val"
+            struct_len = len(self.train_structs if is_train else self.val_structs)
+
+            if (id_len := len(ids)) != struct_len:
+                raise ValueError(
+                    f"Length of supplied `{id_name}_materials_ids`, {id_len}, "
+                    f"does not match length of `{id_name}_structs`, {struct_len}"
+                )
+
     def save(
         self,
         train_materials_ids: Optional[List[str]] = None,
@@ -302,18 +326,11 @@ class MEGNetProbModel:
                 Used for indexing in the saved database.
 
         """
-        for materials_ids, id_name in [
-            (train_materials_ids, "train_materials_ids"),
-            (val_materials_ids, "val_materials_ids"),
+        for validation_args in [
+            (train_materials_ids, True),
+            (val_materials_ids, False),
         ]:
-            if materials_ids is not None:
-                if (id_len := len(materials_ids)) != (
-                    struct_len := len(self.train_structs)
-                ):
-                    raise ValueError(
-                        f"Length of supplied `{id_name}`, {id_len}, "
-                        f"does not match length of `train_structs`, {struct_len}"
-                    )
+            self._validate_id_len(*validation_args)
 
         # * Write training + validation data
 
