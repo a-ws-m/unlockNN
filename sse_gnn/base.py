@@ -387,7 +387,8 @@ class MEGNetProbModel:
             "ntarget": self.ntarget,
             "training_stage": self.training_stage,
         }
-        json.dump(meta, self.meta_path)
+        with self.meta_path.open("w") as f:
+            json.dump(meta, f)
 
     @staticmethod
     def _load_serial_data(fname: Union[Path, str]) -> pd.DataFrame:
