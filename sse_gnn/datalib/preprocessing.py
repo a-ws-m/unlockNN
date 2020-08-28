@@ -151,10 +151,10 @@ class LayerScaler:
         extractor = LayerExtractor(model, layer_index)
 
         if ts_given:
-            layer_outs = LayerScaler._calc_layer_outs(train_structs, extractor)
+            layer_outs = LayerScaler._calc_layer_outs(train_structs, extractor)  # type: ignore
         elif tg_given:
             layer_outs = LayerScaler._calc_layer_outs(
-                train_graphs, extractor, use_structs=False
+                train_graphs, extractor, use_structs=False  # type: ignore
             )
         else:
             raise ValueError("Must pass one of `train_structs` or `train_graphs`")
