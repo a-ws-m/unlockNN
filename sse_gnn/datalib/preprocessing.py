@@ -30,7 +30,7 @@ class LayerExtractor:
 
     """
 
-    def __init__(self, model: MEGNetModel, layer_index: int=-4):
+    def __init__(self, model: MEGNetModel, layer_index: int = -4):
         """Initialize extractor."""
         self.model = model
         self.conc_layer_output = model.layers[layer_index].output
@@ -142,16 +142,19 @@ class LayerScaler:
                 provided.
 
         """
-        if train_structs and train_graphs:
+        ts_given = train_structs is not None
+        tg_given = train_graphs is not None
+
+        if ts_given and tg_given:
             raise ValueError("May only pass one of `train_structs` and `train_graphs`")
 
         extractor = LayerExtractor(model, layer_index)
 
-        if train_structs:
-            layer_outs = LayerScaler._calc_layer_outs(train_structs, extractor)
-        elif train_graphs:
+        if ts_given:
+            layer_outs = LayerScaler._calc_layer_outs(train_structs, extractor)  # type: ignore
+        elif tg_given:
             layer_outs = LayerScaler._calc_layer_outs(
-                train_graphs, extractor, use_structs=False
+                train_graphs, extractor, use_structs=False  # type: ignore
             )
         else:
             raise ValueError("Must pass one of `train_structs` or `train_graphs`")
@@ -195,6 +198,7 @@ class LayerScaler:
         data: List[Union[pymatgen.Structure, Dict[str, np.ndarray]]],
         extractor: LayerExtractor,
         use_structs: bool = True,
+        show_pbar: bool = False,
     ) -> List[np.ndarray]:
         """Calculate the layer outputs for all structures in a list.
 
@@ -202,6 +206,7 @@ class LayerScaler:
             data (list of :obj:`pymatgen.Structure` or list of dict): The inputs to calculate
                 the layer output for.
             use_structs (bool): Whether `data` are structures (`True`) or graphs (`False`).
+            show_pbar: Whether to show a progress bar during calculation of layer outputs.
 
         Returns:
             layer_outs (list of :obj:`np.ndarray`): The layer outputs.
@@ -210,14 +215,16 @@ class LayerScaler:
             TypeError: If `data` contains incompatible types.
 
         """
+        map_f = tmap if show_pbar else map
+
         if use_structs:
             if not all(isinstance(d, pymatgen.Structure) for d in data):
                 raise TypeError("`data` must be a list of structures")
-            layer_outs = tmap(extractor.get_layer_output, data)
+            layer_outs = map_f(extractor.get_layer_output, data)
         else:
             if not all(isinstance(d, dict) for d in data):
                 raise TypeError("`data` must be a list of dictionaries")
-            layer_outs = tmap(extractor.get_layer_output_graph, data)
+            layer_outs = map_f(extractor.get_layer_output_graph, data)
 
         # Squeeze each value to a nicer shape
         return list(map(np.squeeze, layer_outs))
