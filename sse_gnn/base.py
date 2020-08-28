@@ -40,6 +40,8 @@ class MEGNetProbModel:
             Can only be set for `gp_type='VGP'`.
         training_stage: The stage of training the model is at.
             Only applies when loading a model.
+        sf: The pre-calculated scaling factor. Only applicable when loading
+            a pre-trained model.
         **kwargs: Keyword arguments to pass to :class:`MEGNetModel`.
 
     """
@@ -56,6 +58,7 @@ class MEGNetProbModel:
         layer_index: int = -4,
         num_inducing_points: Optional[int] = None,
         training_stage: int = 0,
+        sf: Optional[np.ndarray] = None,
         **kwargs,
     ):
         """Initialize `MEGNetModel` and type of GP to use."""
@@ -85,7 +88,7 @@ class MEGNetProbModel:
 
         self.save_dir = Path(save_dir)
         self.ntarget = ntarget
-        self.sf: Optional[np.ndarray] = None
+        self.sf = sf
         self.layer_index = layer_index
         self.num_inducing_points = num_inducing_points
 
@@ -97,7 +100,7 @@ class MEGNetProbModel:
         self.data_save_path = self.save_dir / "data"
         self.train_database = self.data_save_path / "train.fthr"
         self.val_database = self.data_save_path / "val.fthr"
-        self.sf_path = self.data_save_path / "sf"
+        self.sf_path = self.data_save_path / "sf.npy"
         self.meta_path = self.data_save_path / "meta.txt"
 
         # * Make directories
@@ -348,6 +351,11 @@ class MEGNetProbModel:
         feather.write_feather(train_df, self.train_database)
         feather.write_feather(val_df, self.val_database)
 
+        # * Write sf
+        if self.sf is not None:
+            with self.sf_path.open("wb") as f:
+                np.save(f, self.sf)
+
         # * Write metadata
         self._write_metadata()
 
@@ -377,7 +385,8 @@ class MEGNetProbModel:
         """Write metadata to a file.
 
         Metadata contains :attr:`gp_type`, :attr:`num_inducing_points`,
-        :attr:`layer_index`, :attr:`ntarget` and :attr:`training_stage`.
+        :attr:`layer_index`, :attr:`ntarget` and :attr:`training_stage`,
+        as well as the serialised :attr:`sf`.
 
         """
         meta = {
@@ -398,15 +407,15 @@ class MEGNetProbModel:
 
         """
         data = feather.read_feather(fname)
-        data.loc["struct"] = data["struct"].apply(pymatgen.Structure.from_str)
+        data["struct"] = data["struct"].apply(pymatgen.Structure.from_str, fmt="json")
 
         if isinstance(data["target"][0], bytes):
             # Data is serialized
-            data.loc["target"] = data["target"].apply(deserialize_array)
+            data["target"] = data["target"].apply(deserialize_array)
 
         # ? index_points not currently saved
         # try:
-        #     data.loc["index_points"] = data["index_points"].apply(deserialize_array)
+        #     data["index_points"] = data["index_points"].apply(deserialize_array)
         # except KeyError:
         #     # No index points in dataset
         #     pass
@@ -427,12 +436,19 @@ class MEGNetProbModel:
         with metafile.open("r") as f:
             meta = json.load(f)
 
+        sf_dir = data_dir / "sf.npy"
+        sf = None
+        if meta["training_stage"] > 0:
+            with sf_dir.open("rb") as f:  # type: ignore
+                sf = np.load(f)
+
         return MEGNetProbModel(
             train_data["struct"],
             train_data["target"],
             val_data["struct"],
             val_data["target"],
             save_dir=dirname,
+            sf=sf,
             **meta,
         )
 
