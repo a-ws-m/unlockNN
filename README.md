@@ -30,4 +30,6 @@ Code licensed under the MIT License.
 Contributors to unlockGNN:
     - [Alexander Moriarty](https://github.com/a-ws-m)
 
-Huge thanks to [Keith Butler](https://github.com/keeeto), [Aron Walsh](https://github.com/aronwalsh) and Kazuki Morita for supervising the project at its inception and providing support.
+Huge thanks to [Keith Butler](https://github.com/keeeto), [Aron Walsh](https://github.com/aronwalsh) and Kazuki Morita
+for supervising the project at its inception and for their immense support.
+
