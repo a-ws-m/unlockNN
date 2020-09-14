@@ -8,7 +8,6 @@ dependencies:
   - pandas
   - pip
   - pyarrow
-  - pymatgen
   - python=3.8
   - seaborn
   - tensorflow=2.2
@@ -16,6 +15,7 @@ dependencies:
       - matminer
       - megnet
       - mlflow
+      - pymatgen
       - smact
       - tensorflow-probability
       - tqdm
