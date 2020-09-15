@@ -1,4 +1,4 @@
-name: sse_gnn
+name: unlockGNN
 channels:
   - defaults
 dependencies:
