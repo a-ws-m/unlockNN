@@ -17,7 +17,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = "Neural UQ"
+project = "unlockGNN"
 copyright = "2020, Alexander Moriarty"
 author = "Alexander Moriarty"
 
