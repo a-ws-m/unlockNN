@@ -12,9 +12,7 @@ dependencies:
   - pip:
       - matminer
       - megnet
-      - mlflow
       - pymatgen
-      - smact
-      - tensorflow-gpu
+      - git+https://github.com/WMD-group/SMACT.git
       - tensorflow-probability
       - tqdm
