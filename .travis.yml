@@ -1,0 +1,16 @@
+language: python
+python:
+  - "3.8"
+install:
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - source "$HOME/miniconda/etc/profile.d/conda.sh"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  # Useful for debugging any issues with conda
+  - conda info -a
+  - conda env create -q -n test-environment -f dev_environment.yml
+  - conda activate test-environment
+  - pip install tensorflow-cpu
+  - python setup.py install
+script: pytest
