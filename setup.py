@@ -27,6 +27,13 @@ setup(
     packages=["unlockgnn"],
     include_package_data=True,
     install_requires=[
-        # TODO: Add dependencies
+        "numpy",
+        "pandas",
+        "pyarrow",
+        "matminer",
+        "megnet",
+        "pymatgen",
+        "smact",
+        "tensorflow-probability",
     ],
 )
