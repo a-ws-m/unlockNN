@@ -32,7 +32,6 @@ setup(
         "pyarrow",
         "matminer",
         "megnet",
-        "pymatgen",
         "smact",
         "tensorflow-probability",
     ],
