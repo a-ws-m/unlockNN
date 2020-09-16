@@ -24,9 +24,10 @@ on unseen structures.
 ## Installation
 
 The package can be installed by cloning this repository and building it using either anaconda or pip.
-In the root directory of the package, run one of
+In the root directory of the package, run one of either
 
-```pip install .```
+```pip install .``` or
+
 ```conda env install -f environment.yml```
 
 In addition, `tensorflow` must be installed as a separate dependency.
