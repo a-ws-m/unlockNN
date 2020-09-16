@@ -4,8 +4,8 @@ import pandas as pd
 import tensorflow as tf
 from pyarrow import feather
 
-from sse_gnn.gp.vgp_trainer import SingleLayerVGP
-from sse_gnn.utilities import deserialize_array, MLFlowMetricsLogger
+from unlockgnn.gp.vgp_trainer import SingleLayerVGP
+from unlockgnn.utilities import deserialize_array, MLFlowMetricsLogger
 
 from .config import (
     CKPT_PATH,

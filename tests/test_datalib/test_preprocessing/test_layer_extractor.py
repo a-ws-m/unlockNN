@@ -4,7 +4,7 @@ import pymatgen as mg
 import pytest
 from megnet.data.crystal import CrystalGraph
 
-from sse_gnn.datalib import preprocessing as preproc
+from unlockgnn.datalib import preprocessing as preproc
 
 test_index = 1
 cg = CrystalGraph()

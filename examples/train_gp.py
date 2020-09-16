@@ -11,9 +11,9 @@ import numpy as np
 import pyarrow.feather as feather
 import tensorflow as tf
 
-from sse_gnn.datalib.metrics import MetricAnalyser
-from sse_gnn.gp.gp_trainer import GPTrainer, convert_index_points
-from sse_gnn.utilities import deserialize_array
+from unlockgnn.datalib.metrics import MetricAnalyser
+from unlockgnn.gp.gp_trainer import GPTrainer, convert_index_points
+from unlockgnn.utilities import deserialize_array
 
 from .config import (
     CKPT_PATH,

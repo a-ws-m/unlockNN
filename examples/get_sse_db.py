@@ -1,7 +1,7 @@
 """Example code demonstrating how to build up a database containing structures and SSEs."""
 import pyarrow.feather as feather
 
-from sse_gnn.datalib.mining import (
+from unlockgnn.datalib.mining import (
     add_smact_structs,
     download_structures,
     extract_sse_data,

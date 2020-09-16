@@ -6,7 +6,7 @@ import pytest
 import tensorflow as tf
 from numpy.testing import assert_almost_equal
 
-from sse_gnn.datalib.metrics import MetricAnalyser
+from unlockgnn.datalib.metrics import MetricAnalyser
 
 # * Generate some test data
 uni_test_points = np.linspace(-1.0, 1.0)

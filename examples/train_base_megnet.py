@@ -7,7 +7,7 @@ from megnet.data.crystal import CrystalGraph
 from megnet.models import MEGNetModel
 from sklearn.model_selection import train_test_split
 
-from sse_gnn.utilities import MLFlowMetricsLogger
+from unlockgnn.utilities import MLFlowMetricsLogger
 
 from .config import (
     SSE_DB_LOC,
