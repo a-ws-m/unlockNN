@@ -2,7 +2,7 @@ name: unlockGNN
 channels:
   - defaults
 dependencies:
-  - cloudpickle=1.4.1
+  - cloudpickle
   - matplotlib
   - numpy
   - pandas
@@ -10,7 +10,7 @@ dependencies:
   - pyarrow
   - python=3.8
   - seaborn
-  - tensorflow=2.2
+  - tensorflow-gpu
   - pip:
       - matminer
       - megnet
