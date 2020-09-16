@@ -1,5 +1,6 @@
 name: unlockGNN
 channels:
+  - conda-forge
   - defaults
 dependencies:
   - black
@@ -10,10 +11,12 @@ dependencies:
   - pip
   - pyarrow
   - pydocstyle
+  - pymatgen
   - pytest
   - pytest-cov
   - pytest-mock
   - python=3.8
+  - scipy=1.4.1
   - seaborn
   - sphinx
   - sphinx_rtd_theme
