@@ -23,7 +23,6 @@ dependencies:
   - pip:
       - matminer
       - megnet
-      - pymatgen
       - git+https://github.com/WMD-group/SMACT.git
       - tensorflow-probability
       - tqdm
