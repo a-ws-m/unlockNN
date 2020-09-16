@@ -7,14 +7,14 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   sse_gnn.datalib
-   sse_gnn.gp
-   sse_gnn.utilities
+   unlockgnn.datalib
+   unlockgnn.gp
+   unlockgnn.utilities
 
 Module contents
 ---------------
 
-.. automodule:: sse_gnn
+.. automodule:: unlockgnn
    :members:
    :undoc-members:
    :show-inheritance:

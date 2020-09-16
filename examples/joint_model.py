@@ -7,7 +7,7 @@ from megnet.data.crystal import CrystalGraph
 from sklearn.model_selection import train_test_split
 from unlockgnn import MEGNetProbModel
 
-# from sse_gnn.datalib.metrics import MetricAnalyser
+# from unlockgnn.datalib.metrics import MetricAnalyser
 
 
 SAVE_DIR = Path.home() / "matbench_perovskites"
