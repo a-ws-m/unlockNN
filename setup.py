@@ -24,7 +24,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.8",
     ],
-    packages=["unlockgnn"],
+    packages=["unlockgnn", "unlockgnn.datalib", "unlockgnn.gp", "unlockgnn.utilities"],
     include_package_data=True,
     install_requires=[
         "numpy",
