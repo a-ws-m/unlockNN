@@ -30,6 +30,7 @@ setup(
         "numpy",
         "pandas",
         "pyarrow",
+        "pymatgen",
         "matminer",
         "megnet",
         "smact",
