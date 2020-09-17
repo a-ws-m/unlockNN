@@ -7,7 +7,7 @@ Submodules
 sse\_gnn.gp.gp\_trainer module
 ------------------------------
 
-.. automodule:: sse_gnn.gp.gp_trainer
+.. automodule:: unlockgnn.gp.gp_trainer
    :members:
    :undoc-members:
    :show-inheritance:
@@ -15,7 +15,7 @@ sse\_gnn.gp.gp\_trainer module
 sse\_gnn.gp.vgp\_trainer module
 -------------------------------
 
-.. automodule:: sse_gnn.gp.vgp_trainer
+.. automodule:: unlockgnn.gp.vgp_trainer
    :members:
    :undoc-members:
    :show-inheritance:
@@ -23,7 +23,7 @@ sse\_gnn.gp.vgp\_trainer module
 Module contents
 ---------------
 
-.. automodule:: sse_gnn.gp
+.. automodule:: unlockgnn.gp
    :members:
    :undoc-members:
    :show-inheritance:

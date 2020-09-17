@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from sse_gnn.gp.gp_trainer import convert_index_points
+from unlockgnn.gp.gp_trainer import convert_index_points
 
 
 ten_space = np.linspace(1, 10, 10)

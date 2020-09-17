@@ -7,7 +7,7 @@ Submodules
 sse\_gnn.utilities.serialization module
 ---------------------------------------
 
-.. automodule:: sse_gnn.utilities.serialization
+.. automodule:: unlockgnn.utilities.serialization
    :members:
    :undoc-members:
    :show-inheritance:
@@ -15,7 +15,7 @@ sse\_gnn.utilities.serialization module
 sse\_gnn.utilities.tracking module
 ----------------------------------
 
-.. automodule:: sse_gnn.utilities.tracking
+.. automodule:: unlockgnn.utilities.tracking
    :members:
    :undoc-members:
    :show-inheritance:
@@ -23,7 +23,7 @@ sse\_gnn.utilities.tracking module
 Module contents
 ---------------
 
-.. automodule:: sse_gnn.utilities
+.. automodule:: unlockgnn.utilities
    :members:
    :undoc-members:
    :show-inheritance:

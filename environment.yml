@@ -1,22 +1,19 @@
-name: sse_gnn
+name: unlockGNN
 channels:
   - defaults
 dependencies:
-  - cloudpickle=1.4.1
   - matplotlib
   - numpy
   - pandas
   - pip
   - pyarrow
   - python=3.8
+  - scipy=1.4.1
   - seaborn
-  - tensorflow=2.2
   - pip:
       - matminer
       - megnet
-      - mlflow
-      - pymatgen
-      - smact
+      - pymatgen==2020.4.29
+      - git+https://github.com/WMD-group/SMACT.git
       - tensorflow-probability
       - tqdm
-prefix: /home/alex/miniconda3/envs/sse_gnn

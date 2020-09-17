@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from pyarrow import feather
 
-from sse_gnn.utilities.serialization import deserialize_array, serialize_array
+from unlockgnn.utilities.serialization import deserialize_array, serialize_array
 
 test_arrays = [
     # Must test different shapes and datatypes

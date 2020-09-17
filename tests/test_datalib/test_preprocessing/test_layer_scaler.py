@@ -11,7 +11,7 @@ import pymatgen
 import pytest
 from megnet.models import MEGNetModel
 
-import sse_gnn.datalib.preprocessing as preproc
+import unlockgnn.datalib.preprocessing as preproc
 
 eye3 = np.eye(3)
 max_elem_tests = [
@@ -66,7 +66,7 @@ def mock_layer_scaler(mocker, mock_model, request):
     Can be parametrized with a `layer_index`.
 
     """
-    layer_extractor = "sse_gnn.datalib.preprocessing.LayerExtractor"
+    layer_extractor = "unlockgnn.datalib.preprocessing.LayerExtractor"
     mock_le = mocker.patch(layer_extractor, autospec=True)
     mock_le.return_value.get_layer_output = lambda struct: struct.layer_output
 

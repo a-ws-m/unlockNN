@@ -5,9 +5,9 @@ import numpy as np
 from matminer.datasets import get_all_dataset_info, load_dataset
 from megnet.data.crystal import CrystalGraph
 from sklearn.model_selection import train_test_split
-from sse_gnn import MEGNetProbModel
+from unlockgnn import MEGNetProbModel
 
-# from sse_gnn.datalib.metrics import MetricAnalyser
+# from unlockgnn.datalib.metrics import MetricAnalyser
 
 
 SAVE_DIR = Path.home() / "matbench_perovskites"

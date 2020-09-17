@@ -7,9 +7,9 @@ import pandas as pd
 import tensorflow as tf
 from pyarrow import feather
 
-from sse_gnn.datalib.metrics import MetricAnalyser
-from sse_gnn.gp.vgp_trainer import SingleLayerVGP
-from sse_gnn.utilities import deserialize_array
+from unlockgnn.datalib.metrics import MetricAnalyser
+from unlockgnn.gp.vgp_trainer import SingleLayerVGP
+from unlockgnn.utilities import deserialize_array
 
 from .config import DB_DIR, MODELS_DIR
 

@@ -5,7 +5,7 @@ import pytest
 
 from smact.structure_prediction.structure import SmactStructure
 
-from sse_gnn.datalib import mining
+from unlockgnn.datalib import mining
 
 sse_lookup_combos = [
     (("Ag", 1), -4.1),
@@ -115,7 +115,7 @@ def test_sse_extract(mocker):
         get_smact_mock,
     )
     # Patch sse calculator
-    mocker.patch("sse_gnn.datalib.mining.get_cat_an_sse", get_sse_mock)
+    mocker.patch("unlockgnn.datalib.mining.get_cat_an_sse", get_sse_mock)
 
     test_df = mining.extract_sse_data(test_df)
 

@@ -7,7 +7,7 @@ Submodules
 sse\_gnn.datalib.metrics module
 -------------------------------
 
-.. automodule:: sse_gnn.datalib.metrics
+.. automodule:: unlockgnn.datalib.metrics
    :members:
    :undoc-members:
    :show-inheritance:
@@ -15,7 +15,7 @@ sse\_gnn.datalib.metrics module
 sse\_gnn.datalib.mining module
 ------------------------------
 
-.. automodule:: sse_gnn.datalib.mining
+.. automodule:: unlockgnn.datalib.mining
    :members:
    :undoc-members:
    :show-inheritance:
@@ -23,7 +23,7 @@ sse\_gnn.datalib.mining module
 sse\_gnn.datalib.preprocessing module
 -------------------------------------
 
-.. automodule:: sse_gnn.datalib.preprocessing
+.. automodule:: unlockgnn.datalib.preprocessing
    :members:
    :undoc-members:
    :show-inheritance:
@@ -31,7 +31,7 @@ sse\_gnn.datalib.preprocessing module
 sse\_gnn.datalib.visualisation module
 -------------------------------------
 
-.. automodule:: sse_gnn.datalib.visualisation
+.. automodule:: unlockgnn.datalib.visualisation
    :members:
    :undoc-members:
    :show-inheritance:
@@ -39,7 +39,7 @@ sse\_gnn.datalib.visualisation module
 Module contents
 ---------------
 
-.. automodule:: sse_gnn.datalib
+.. automodule:: unlockgnn.datalib
    :members:
    :undoc-members:
    :show-inheritance:

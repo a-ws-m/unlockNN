@@ -1,0 +1,28 @@
+name: unlockGNN
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - black
+  - coverage
+  - matplotlib
+  - numpy
+  - pandas
+  - pip
+  - pyarrow
+  - pydocstyle
+  - pytest
+  - pytest-cov
+  - pytest-mock
+  - python=3.8
+  - scipy=1.4.1
+  - seaborn
+  - sphinx
+  - sphinx_rtd_theme
+  - pip:
+      - matminer
+      - megnet
+      - pymatgen==2020.4.29
+      - git+https://github.com/WMD-group/SMACT.git
+      - tensorflow-probability
+      - tqdm
