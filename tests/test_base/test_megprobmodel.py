@@ -9,7 +9,8 @@ from unlockgnn import MEGNetProbModel
 
 
 @pytest.mark.slow
-def test_train(tmp_path):
+@pytest.mark.parametrize("gp_type, n_inducing", [("VGP", 10), ("GP", None)])
+def test_train(tmp_path, gp_type, n_inducing):
     """Test training of the joint model using a benchmark dataset."""
     SAVE_DIR = tmp_path
     DATASET = "matbench_perovskites"
@@ -36,9 +37,9 @@ def test_train(tmp_path):
         train_df[TARGET_VAR],
         test_df["structure"],
         test_df[TARGET_VAR],
-        "VGP",
+        gp_type,
         SAVE_DIR,
-        num_inducing_points=10,
+        num_inducing_points=n_inducing,
         **meg_args,
     )
 
