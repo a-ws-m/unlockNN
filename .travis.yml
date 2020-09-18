@@ -15,5 +15,5 @@ install:
   - conda install tensorflow-base
   - conda list
   - python setup.py install
-script: pytest --cov unlockgnn/ tests
+script: pytest --cov=unlockgnn tests
 after_success: coveralls
