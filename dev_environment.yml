@@ -15,12 +15,12 @@ dependencies:
   - pytest-cov
   - pytest-mock
   - python=3.8
-  - python-coveralls
   - scipy=1.4.1
   - seaborn
   - sphinx
   - sphinx_rtd_theme
   - pip:
+      - coveralls
       - matminer
       - megnet
       - pymatgen==2020.4.29
