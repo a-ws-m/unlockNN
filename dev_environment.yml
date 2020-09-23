@@ -20,6 +20,7 @@ dependencies:
   - sphinx
   - sphinx_rtd_theme
   - pip:
+      - bumpversion
       - coveralls
       - matminer
       - megnet
@@ -27,3 +28,4 @@ dependencies:
       - git+https://github.com/WMD-group/SMACT.git
       - tensorflow-probability
       - tqdm
+      - twine
