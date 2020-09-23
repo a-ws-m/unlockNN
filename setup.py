@@ -12,7 +12,7 @@ README = (HERE / "README.md").read_text()
 setup(
     name="unlockGNN",
     version="1.0.0",
-    description="Uncertainty quantification for graph neural networks",
+    description="Uncertainty quantification for graph neural network models of chemical systems",
     long_description=README,
     long_description_content_type="text/markdown",
     url="https://github.com/a-ws-m/unlockGNN",
