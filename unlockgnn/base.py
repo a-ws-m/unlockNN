@@ -151,7 +151,10 @@ class MEGNetProbModel:
         return int(self.meg_save_path.exists()) + bool(self.gp)  # type: ignore
 
     def train_meg_model(
-        self, epochs: Optional[int] = 1000, batch_size: Optional[int] = 128, **kwargs,
+        self,
+        epochs: Optional[int] = 1000,
+        batch_size: Optional[int] = 128,
+        **kwargs,
     ):
         """Train the MEGNetModel.
 
@@ -166,8 +169,8 @@ class MEGNetProbModel:
             self.train_targets,
             self.val_structs,
             self.val_targets,
-            epochs,
-            batch_size,
+            epochs=epochs,
+            batch_size=batch_size,
             dirname=self.meg_ckpt_path,
             **kwargs,
         )

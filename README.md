@@ -3,6 +3,7 @@
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Coverage Status](https://coveralls.io/repos/github/a-ws-m/unlockGNN/badge.svg?branch=master)](https://coveralls.io/github/a-ws-m/unlockGNN?branch=master)
 
 A Python package for interpreting and extracting uncertainties in graph neural network models of chemical systems based upon Gaussian processes.
 
@@ -32,7 +33,7 @@ In the root directory of the package, run one of either
 
 In addition, `tensorflow` must be installed as a separate dependency.
 This is to give the user the choice of installing GPU support.
-It may be installed using either `pip install tensorflow` or `pip install tensorflow-cpu`.
+TensorFlow may be installed using either `pip install tensorflow` or `pip install tensorflow-cpu`.
 
 The `dev_environment.yml` contains additional dependencies for development, testing and building documentation.
 It can be installed using `conda env install -f dev_environment.yml`.
@@ -43,11 +44,20 @@ Code licensed under the MIT License.
 
 ## Development notes
 
+### Contributing to unlockGNN
+
+Contributions are very welcome as we look to make unlockGNN more flexible and efficient.
+Please use the [Fork and Pull](https://guides.github.com/activities/forking/) workflow to make contributions and follow the contribution guidelines:
+
+- Use the environment defined in `dev_environment.yml`. This installs `black`, the formatter used for this project, as well as utilities for building documentation, enabling the testing suite and publishing to PyPi.
+- Write tests for new features in the appropriate directory. Use `@pytest.mark.slow` for slow tests.
+- Use [Google-style Docstrings](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html). Check docstrings with `pydocstyle`.
+- Feel free to clean up others' code as you go along.
+
 ### List of developers
 
 Contributors to unlockGNN:
 
 - [Alexander Moriarty](https://github.com/a-ws-m)
 
-Huge thanks to [Keith Butler](https://github.com/keeeto), [Aron Walsh](https://github.com/aronwalsh) and Kazuki Morita
-for supervising the project at its inception and for their immense support.
+Huge thanks to [Keith Butler](https://github.com/keeeto), [Aron Walsh](https://github.com/aronwalsh) and Kazuki Morita for supervising the project at its inception and for their immense support.

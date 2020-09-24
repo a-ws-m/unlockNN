@@ -1,6 +1,6 @@
 """Setup script for package."""
 import pathlib
-from setuptools import find_packages, setup
+from setuptools import find_namespace_packages, setup
 
 # The directory containing this file
 HERE = pathlib.Path(__file__).parent
@@ -12,7 +12,7 @@ README = (HERE / "README.md").read_text()
 setup(
     name="unlockGNN",
     version="1.0.0",
-    description="A Python package for interpreting and extracting uncertainties in graph neural network models of chemical systems based upon Gaussian processes.",
+    description="Uncertainty quantification for graph neural network models of chemical systems",
     long_description=README,
     long_description_content_type="text/markdown",
     url="https://github.com/a-ws-m/unlockGNN",
@@ -24,8 +24,8 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.8",
     ],
-    packages=find_packages(exclude="examples"),
-    include_package_data=True,
+    packages=find_namespace_packages(include=["unlockgnn.*"]),
+    include_package_data=False,
     install_requires=[
         "numpy",
         "pandas",

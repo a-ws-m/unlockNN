@@ -20,9 +20,12 @@ dependencies:
   - sphinx
   - sphinx_rtd_theme
   - pip:
+      - bumpversion
+      - coveralls
       - matminer
       - megnet
       - pymatgen==2020.4.29
       - git+https://github.com/WMD-group/SMACT.git
       - tensorflow-probability
       - tqdm
+      - twine
