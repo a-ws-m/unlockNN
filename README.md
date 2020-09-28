@@ -44,6 +44,10 @@ Code licensed under the MIT License.
 
 ## Development notes
 
+### Reporting issues
+
+Please use the Issue tracker to report bugs in the software, suggest feature improvements, or seek support.
+
 ### Contributing to unlockGNN
 
 Contributions are very welcome as we look to make unlockGNN more flexible and efficient.
