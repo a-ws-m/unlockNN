@@ -1,12 +1,12 @@
-.. Neural UQ documentation master file, created by
+.. UnlockGNN documentation master file, created by
    sphinx-quickstart on Mon Aug 17 15:09:19 2020.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Neural UQ
+UnlockGNN
 =========
 
-Neural UQ is a package for adding uncertainty quantification to Keras models using
+UnlockGNN is a package for adding uncertainty quantification to Keras models using
 Gaussian processes.
 It is a Python library that provides tools for extracting layer outputs from a
 pre-trained Keras model and using them as index points for a Gaussian process,
