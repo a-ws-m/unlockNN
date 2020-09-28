@@ -185,7 +185,7 @@ class MetricAnalyser:
         Returns:
             predicted_pi (:obj:`np.ndarray`): The percentiles used.
             observed_pi (:obj:`np.ndarray`): The density of residuals that fall within each of the
-                `predicted_pi` percentiles.
+            `predicted_pi` percentiles.
 
         .. _Tran et al.:
             https://arxiv.org/abs/1912.10066
