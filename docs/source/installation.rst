@@ -3,10 +3,8 @@ Installation
 
 The package can be installed from source using either anaconda or pip.
 In the root directory of the package, run one of either
-
 ``pip install .`` or
-
-``conda env install -f environment.yml``
+``conda env install -f environment.yml``.
 
 In addition, `tensorflow` must be installed as a separate dependency.
 This is to give the user the choice of installing GPU support.
