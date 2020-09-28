@@ -24,6 +24,7 @@ dependencies:
       - coveralls
       - matminer
       - megnet
+      - mlflow
       - pymatgen==2020.4.29
       - git+https://github.com/WMD-group/SMACT.git
       - tensorflow-probability
