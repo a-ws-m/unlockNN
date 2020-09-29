@@ -2,6 +2,7 @@ name: unlockGNN
 channels:
   - defaults
 dependencies:
+  - cloudpickle
   - matplotlib
   - numpy
   - pandas

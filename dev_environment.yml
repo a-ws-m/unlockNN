@@ -4,6 +4,7 @@ channels:
   - defaults
 dependencies:
   - black
+  - cloudpickle
   - coverage
   - matplotlib
   - numpy

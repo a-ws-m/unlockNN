@@ -27,6 +27,7 @@ setup(
     packages=find_namespace_packages(include=["unlockgnn.*"]),
     include_package_data=False,
     install_requires=[
+        "cloudpickle",
         "numpy",
         "pandas",
         "pyarrow",
