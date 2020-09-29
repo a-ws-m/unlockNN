@@ -17,7 +17,7 @@ Knowledge of the certainty in an estimate is particularly important for data-dri
 as the reliability of a prediction depends on the existence of functionally similar structures in the
 training dataset, which cannot be readily determined.
 
-We have developed utilities for training a neural network-fed Gaussian process as an uncertainty quantifier.
+`UnlockGNN` contains utilities for training a neural network-fed Gaussian process as an uncertainty quantifier.
 The framework enables the training of a precursor GNN, which functions as a representation learning algorithm.
 A layer of the GNN can then be selected to serve as the input (index points) for a Gaussian process.
 The model can be saved and reloaded in a bundled format and used to perform predictions and confidence intervals
