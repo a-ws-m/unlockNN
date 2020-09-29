@@ -1,5 +1,6 @@
 # unlockGNN
 
+[![Documentation Status](https://readthedocs.org/projects/unlockgnn/badge/?version=latest)](https://unlockgnn.readthedocs.io/en/latest/?badge=latest)
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -37,6 +38,10 @@ TensorFlow may be installed using either `pip install tensorflow` or `pip instal
 
 The `dev_environment.yml` contains additional dependencies for development, testing and building documentation.
 It can be installed using `conda env install -f dev_environment.yml`.
+
+## Documentation
+
+Full documentation is available for the project [here](https://unlockgnn.readthedocs.io/en/latest/).
 
 ## License and attribution
 
