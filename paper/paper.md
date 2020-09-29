@@ -33,8 +33,8 @@ bibliography: paper.bib
 
 ## Summary
 
-Graph neural networks have recently gained interest from materials researchers for their ability to predict materials'
-properties accurately
+Machine learning models have gained interest from materials researchers for their ability to predict materials'
+properties accurately and faster than first-principles calculations based on physical laws [@ramprasad_machine_2017].
 
 ## Statement of need
 
