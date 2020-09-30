@@ -9,24 +9,24 @@ tags:
   - MEGNet
 authors:
   - name: Alexander Moriarty
-  orcid: 0000-0001-7525-1419
-  affiliation: 1
+    orcid: 0000-0001-7525-1419
+    affiliation: 1
   - name: Keith Butler
-  orcid: 0000-0001-5432-5597
-  affiliation: 2
+    orcid: 0000-0001-5432-5597
+    affiliation: 2
   - name: Aron Walsh
-  orcid: 0000-0001-5460-7033
-  affiliation: "1, 3"
+    orcid: 0000-0001-5460-7033
+    affiliation: "1, 3"
   - name: Kazuki Morita
-  orcid: 0000-0002-2558-6963
-  affiliation: 1
+    orcid: 0000-0002-2558-6963
+    affiliation: 1
 affiliations:
   - name: Department of Materials, Imperial College London, London, UK
-  index: 1
+    index: 1
   - name: SciML, STFC Scientific Computing Division, Rutherford Appleton Laboratories, UK
-  index: 2
+    index: 2
   - name: Department of Materials Science and Engineering, Yonsei University, Seoul, Korea
-  index: 3
+    index: 3
 date: 29 September 2020
 bibliography: paper.bib
 ---
