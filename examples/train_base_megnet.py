@@ -18,8 +18,8 @@ from .config import (
     PREV_MODEL,
 )
 
-mlflow.set_tracking_uri("databricks")
-mlflow.set_experiment("/Users/awm1017@ic.ac.uk/MEGNet SSE Model")
+# mlflow.set_tracking_uri("databricks")
+# mlflow.set_experiment()
 
 nfeat_bond = 10
 r_cutoff = 5
@@ -46,28 +46,29 @@ train_structs, test_structs, train_sses, test_sses = train_test_split(
 )
 
 # * Save the split we train with for use in the GP
-# train_struc_strs = [struct.to("json") for struct in train_structs]
-# test_struc_strs = [struct.to("json") for struct in test_structs]
+train_struc_strs = [struct.to("json") for struct in train_structs]
+test_struc_strs = [struct.to("json") for struct in test_structs]
 
-# train_df = data.loc[data["structure"].isin(train_struc_strs)]
-# test_df = data.loc[data["structure"].isin(test_struc_strs)]
+train_df = data.loc[data["structure"].isin(train_struc_strs)]
+test_df = data.loc[data["structure"].isin(test_struc_strs)]
 
-# feather.write_feather(train_df, DB_DIR / "train_df.fthr")
-# feather.write_feather(test_df, DB_DIR / "test_df.fthr")
+feather.write_feather(train_df, DB_DIR / "train_df.fthr")
+feather.write_feather(test_df, DB_DIR / "test_df.fthr")
 
 # * Model training
 # Here, `structures` is a list of pymatgen Structure objects.
 # `targets` is a corresponding list of properties.
-with mlflow.start_run(run_name="laptop_test"):
-    model.train(
-        train_structs,
-        train_sses,
-        test_structs,
-        test_sses,
-        epochs=N_EPOCHS,
-        patience=PATIENCE,
-        prev_model=PREV_MODEL,
-        callbacks=[MLFlowMetricsLogger()],
-    )
+
+# with mlflow.start_run():
+model.train(
+    train_structs,
+    train_sses,
+    test_structs,
+    test_sses,
+    epochs=N_EPOCHS,
+    patience=PATIENCE,
+    prev_model=PREV_MODEL,
+    callbacks=[MLFlowMetricsLogger()],
+)
 
 model.save_model(MODELS_DIR / "base_megnet" / NEW_MODEL)
