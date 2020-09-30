@@ -1,11 +1,11 @@
 unlockgnn.gp package
-===================
+====================
 
 Submodules
 ----------
 
 unlockgnn.gp.gp\_trainer module
-------------------------------
+-------------------------------
 
 .. automodule:: unlockgnn.gp.gp_trainer
    :members:
@@ -13,7 +13,7 @@ unlockgnn.gp.gp\_trainer module
    :show-inheritance:
 
 unlockgnn.gp.vgp\_trainer module
--------------------------------
+--------------------------------
 
 .. automodule:: unlockgnn.gp.vgp_trainer
    :members:

@@ -1,11 +1,11 @@
 unlockgnn.utilities package
-==========================
+===========================
 
 Submodules
 ----------
 
 unlockgnn.utilities.serialization module
----------------------------------------
+----------------------------------------
 
 .. automodule:: unlockgnn.utilities.serialization
    :members:
@@ -13,7 +13,7 @@ unlockgnn.utilities.serialization module
    :show-inheritance:
 
 unlockgnn.utilities.tracking module
-----------------------------------
+-----------------------------------
 
 .. automodule:: unlockgnn.utilities.tracking
    :members:
