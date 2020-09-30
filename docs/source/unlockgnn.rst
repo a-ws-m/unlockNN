@@ -1,4 +1,4 @@
-sse\_gnn package
+unlockgnn package
 ================
 
 Subpackages

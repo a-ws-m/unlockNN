@@ -1,10 +1,10 @@
-sse\_gnn.gp package
+unlockgnn.gp package
 ===================
 
 Submodules
 ----------
 
-sse\_gnn.gp.gp\_trainer module
+unlockgnn.gp.gp\_trainer module
 ------------------------------
 
 .. automodule:: unlockgnn.gp.gp_trainer
@@ -12,7 +12,7 @@ sse\_gnn.gp.gp\_trainer module
    :undoc-members:
    :show-inheritance:
 
-sse\_gnn.gp.vgp\_trainer module
+unlockgnn.gp.vgp\_trainer module
 -------------------------------
 
 .. automodule:: unlockgnn.gp.vgp_trainer
