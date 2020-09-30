@@ -34,19 +34,32 @@ bibliography: paper.bib
 ## Summary
 
 Machine learning models have gained interest from materials researchers for their ability to predict materials'
-properties accurately and faster than first-principles calculations based on physical laws [@ramprasad_machine_2017].
+properties accurately and faster than first-principles calculations based on physical laws, particularly
+for complex systems with many possible configurations [@butler_machine_2018;@ramprasad_machine_2017;@xue_accelerated_2016].
+Graph neural networks (GNNs), a subset of the graph networks proposed by @battaglia_relational_2018, provide a data-driven
+approach for learning materials' properties based on crystal or molecular _structure_.
+This approach is both general and interpretable [@xie_crystal_2018;@chen_graph_2019], which addresses a major criticism
+of machine learning techniques as "black boxes" [@schmidt_recent_2019].
+Howver, current implementations of GNNs lack uncertainty quantification, a measure of the confidence of a prediction.
+This is especially detrimental to a data-driven model, as its reliability is contingent upon the existence of "similar"
+materials in the training data set. To the end user, there is no easy way to tell whether this is the case.
 
 ## Statement of need
-
-Graph neural networks (GNNs) are powerful tools for performing materials property prediciton based on structural information.
-They offer a cheaper alternative to DFT models and are therefore promising for high throughput screening of materials.
-However, current implementations of GNNs lack uncertainty quantifiers for regression problems.
-Knowledge of the certainty in an estimate is particularly important for data-driven predictive models,
-as the reliability of a prediction depends on the existence of functionally similar structures in the
-training dataset, which cannot be readily determined.
 
 `UnlockGNN` contains utilities for training a neural network-fed Gaussian process as an uncertainty quantifier.
 The framework enables the training of a precursor GNN, which functions as a representation learning algorithm.
 A layer of the GNN can then be selected to serve as the input (index points) for a Gaussian process.
 The model can be saved and reloaded in a bundled format and used to perform predictions and confidence intervals
 on unseen structures.
+
+`UnlockGNN` was designed for use with `Keras` [@chollet2015keras] implementations of graph neural networks.
+Expanded functionality is provided for `MEGNet` [@chen_graph_2019], a high performing, modular architecture for
+graph network-based modelling of materials.
+
+## Acknowledgements
+
+This project was proposed by [Keith Butler](https://github.com/keeeto) and has benefitted hugely from his support,
+as well as the support of [Aron Walsh](https://wmd-group.github.io/) and [Kazuki Morita](https://github.com/KazMorita).
+This project was funded by the Walsh Materials Design group.
+
+## References
