@@ -40,7 +40,7 @@ Graph neural networks (GNNs), a subset of the graph networks proposed by @battag
 approach for learning materials' properties based on crystal or molecular _structure_.
 This approach is both general and interpretable [@xie_crystal_2018;@chen_graph_2019], which addresses a major criticism
 of machine learning techniques as "black boxes" [@schmidt_recent_2019].
-Howver, current implementations of GNNs lack uncertainty quantification, a measure of the confidence of a prediction.
+However, current implementations of GNNs lack uncertainty quantification, a measure of the confidence of a prediction.
 This is especially detrimental to a data-driven model, as its reliability is contingent upon the existence of "similar"
 materials in the training data set. To the end user, there is no easy way to tell whether this is the case.
 
@@ -51,6 +51,10 @@ The framework enables the training of a precursor GNN, which functions as a repr
 A layer of the GNN can then be selected to serve as the input (index points) for a Gaussian process.
 The model can be saved and reloaded in a bundled format and used to perform predictions and confidence intervals
 on unseen structures.
+
+Graph network-fed Gaussian processes share a similar principle to the convolution-fed Gaussian processes
+formulated by @tran_methods_2020 and `UnlockGNN` provides tools for calculating the performance metrics
+suggested by them, including sharpness and calibration error.
 
 `UnlockGNN` was designed for use with `Keras` [@chollet2015keras] implementations of graph neural networks.
 Expanded functionality is provided for `MEGNet` [@chen_graph_2019], a high performing, modular architecture for
