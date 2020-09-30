@@ -1,5 +1,6 @@
 # unlockGNN
 
+[![Documentation Status](https://readthedocs.org/projects/unlockgnn/badge/?version=latest)](https://unlockgnn.readthedocs.io/en/latest/?badge=latest)
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -16,7 +17,7 @@ Knowledge of the certainty in an estimate is particularly important for data-dri
 as the reliability of a prediction depends on the existence of functionally similar structures in the
 training dataset, which cannot be readily determined.
 
-We have developed utilities for training a neural network-fed Gaussian process as an uncertainty quantifier.
+`UnlockGNN` contains utilities for training a neural network-fed Gaussian process as an uncertainty quantifier.
 The framework enables the training of a precursor GNN, which functions as a representation learning algorithm.
 A layer of the GNN can then be selected to serve as the input (index points) for a Gaussian process.
 The model can be saved and reloaded in a bundled format and used to perform predictions and confidence intervals
@@ -37,6 +38,10 @@ TensorFlow may be installed using either `pip install tensorflow` or `pip instal
 
 The `dev_environment.yml` contains additional dependencies for development, testing and building documentation.
 It can be installed using `conda env install -f dev_environment.yml`.
+
+## Documentation
+
+Full documentation is available for the project [here](https://unlockgnn.readthedocs.io/en/latest/).
 
 ## License and attribution
 
@@ -64,4 +69,4 @@ Contributors to unlockGNN:
 
 - [Alexander Moriarty](https://github.com/a-ws-m)
 
-Huge thanks to [Keith Butler](https://github.com/keeeto), [Aron Walsh](https://github.com/aronwalsh) and Kazuki Morita for supervising the project at its inception and for their immense support.
+Huge thanks to [Keith Butler](https://github.com/keeeto), [Aron Walsh](https://github.com/aronwalsh) and [Kazuki Morita](https://github.com/KazMorita) for supervising the project at its inception and for their immense support.
