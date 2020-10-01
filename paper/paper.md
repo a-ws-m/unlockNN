@@ -66,6 +66,6 @@ graph network-based modelling of materials.
 
 This project was proposed by [Keith Butler](https://github.com/keeeto) and has benefitted hugely from his support,
 as well as the support of [Aron Walsh](https://wmd-group.github.io/) and [Kazuki Morita](https://github.com/KazMorita).
-This project was supported by the Royal Society of Chemistry.
+This project was supported by the Royal Society.
 
 ## References
