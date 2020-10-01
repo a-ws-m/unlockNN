@@ -10,6 +10,7 @@ from sklearn.model_selection import train_test_split
 from unlockgnn.utilities import MLFlowMetricsLogger
 
 from .config import (
+    DB_DIR,
     SSE_DB_LOC,
     MODELS_DIR,
     NEW_MODEL,
