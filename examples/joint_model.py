@@ -50,7 +50,7 @@ prob_model = MEGNetProbModel(
 )
 
 print("Training MEGNetModel")
-prob_model.train_meg_model(epochs=GNN_TRAINING_EPOCHS)
+prob_model.train_gnn(epochs=GNN_TRAINING_EPOCHS)
 
 print("Training UQ")
 prob_model.train_uq(epochs=UQ_TRAINING_EPOCHS)

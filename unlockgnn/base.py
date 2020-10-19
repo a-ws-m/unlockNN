@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import json
 import os
+from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, Literal, List, Optional, Tuple, Union
+from typing import Dict, List, Literal, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -18,9 +19,14 @@ from .gp.gp_trainer import GPTrainer, convert_index_points
 from .gp.vgp_trainer import SingleLayerVGP
 from .utilities.serialization import deserialize_array, serialize_array
 
+GNN = TypeVar("GNN")
 
-class MEGNetProbModel:
-    """A base MEGNetModel with uncertainty quantification.
+
+class ProbGNN(ABC):
+    """An abstract class for developing GNNs with uncertainty quantification.
+
+    Provides a bundled interface for creating, training, saving and loading
+    a GNN and a Gaussian process, minimising data handling for the end user.
 
     Args:
         train_structs: The training structures.
@@ -30,11 +36,11 @@ class MEGNetProbModel:
         gp_type: The method to use for the Gaussian process.
             Must be either 'GP' or 'VGP'.
         save_dir: The directory to save files to during training.
-            Files include MEGNet and GP checkpoints.
+            Files include GNN and GP checkpoints.
         ntarget: The number of target variables.
             This can only be greater than one if `gp_type` is 'VGP'.
         layer_index: The index of the layer to extract outputs from
-            within :attr:`meg_model`. Defaults to the concatenation
+            within :attr:`gnn`. Defaults to the concatenation
             layer.
         num_inducing_points: The number of inducing points for the `VGP`.
             Can only be set for `gp_type='VGP'`.
@@ -42,7 +48,7 @@ class MEGNetProbModel:
             Only applies when loading a model.
         sf: The pre-calculated scaling factor. Only applicable when loading
             a pre-trained model.
-        **kwargs: Keyword arguments to pass to :class:`MEGNetModel`.
+        **kwargs: Keyword arguments to pass to :meth:`make_gnn`.
 
     """
 
@@ -61,7 +67,7 @@ class MEGNetProbModel:
         sf: Optional[np.ndarray] = None,
         **kwargs,
     ):
-        """Initialize `MEGNetModel` and type of GP to use."""
+        """Initialize class."""
         if gp_type not in ["GP", "VGP"]:
             raise ValueError(f"`gp_type` must be one of 'GP' or 'VGP', got {gp_type=}")
         if gp_type == "GP":
@@ -92,8 +98,8 @@ class MEGNetProbModel:
         self.layer_index = layer_index
         self.num_inducing_points = num_inducing_points
 
-        self.meg_ckpt_path = self.save_dir / "meg_ckpts"
-        self.meg_save_path = self.save_dir / "meg_model"
+        self.gnn_ckpt_path = self.save_dir / "gnn_ckpts"
+        self.gnn_save_path = self.save_dir / "gnn_model"
         self.gp_ckpt_path = self.save_dir / "gp_ckpts"
         self.gp_save_path = self.save_dir / "gp_model"
 
@@ -107,11 +113,7 @@ class MEGNetProbModel:
         for direct in [self.save_dir, self.data_save_path]:
             os.makedirs(direct, exist_ok=True)
 
-        self.meg_model = (
-            MEGNetModel(ntarget=ntarget, **kwargs)
-            if training_stage == 0
-            else MEGNetModel.from_file(str(self.meg_save_path))
-        )
+        self.gnn = self.make_gnn(**kwargs) if training_stage == 0 else self.load_gnn()
 
         # Initialize GP
         if training_stage < 2:
@@ -135,6 +137,16 @@ class MEGNetProbModel:
                 targets = tf.constant(np.stack(self.train_targets), dtype=tf.float64)
                 self.gp = GPTrainer(index_points, targets, self.gp_ckpt_path)
 
+    @abstractmethod
+    def make_gnn(self, **kwargs) -> GNN:
+        """Construct a new GNN."""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def load_gnn(self) -> GNN:
+        """Load a pre-trained GNN."""
+        raise NotImplementedError()
+
     @property
     def training_stage(self) -> Literal[0, 1, 2]:
         """Indicate the training stage the model is at.
@@ -144,39 +156,20 @@ class MEGNetProbModel:
                 Can take one of three values:
 
                 * 0 - Untrained.
-                * 1 - :attr:`meg_model` trained.
-                * 2 - :attr:`meg_model` and :attr:`gp` trained.
+                * 1 - :attr:`gnn` trained.
+                * 2 - :attr:`gnn` and :attr:`gp` trained.
 
         """
-        return int(self.meg_save_path.exists()) + bool(self.gp)  # type: ignore
+        return int(self.gnn_save_path.exists()) + bool(self.gp)  # type: ignore
 
-    def train_meg_model(
+    @abstractmethod
+    def train_gnn(
         self,
-        epochs: Optional[int] = 1000,
-        batch_size: Optional[int] = 128,
+        *args,
         **kwargs,
     ):
-        """Train the MEGNetModel.
-
-        Args:
-            epochs: The number of training epochs.
-            batch_size: The batch size.
-            **kwargs: Keyword arguments to pass to :func:`MEGNetModel.train`.
-
-        """
-        self.meg_model.train(
-            self.train_structs,
-            self.train_targets,
-            self.val_structs,
-            self.val_targets,
-            epochs=epochs,
-            batch_size=batch_size,
-            dirname=self.meg_ckpt_path,
-            **kwargs,
-        )
-
-        self.meg_model.save_model(str(self.meg_save_path))
-        self._update_sf()
+        """Train the GNN."""
+        raise NotImplementedError()
 
     def _update_sf(self):
         """Update the saved scaling factor.
@@ -186,7 +179,7 @@ class MEGNetProbModel:
 
         """
         ls = LayerScaler.from_train_data(
-            self.meg_model, self.train_structs, layer_index=self.layer_index
+            self.gnn, self.train_structs, layer_index=self.layer_index
         )
         self.sf = ls.sf
 
@@ -202,13 +195,13 @@ class MEGNetProbModel:
             index_points: The feature arrays of the structures.
 
         """
-        ls = LayerScaler(self.meg_model, self.sf, self.layer_index)
+        ls = LayerScaler(self.gnn, self.sf, self.layer_index)
         return ls.structures_to_input(structures)
 
     def train_uq(self, epochs: int = 500, **kwargs):
         """Train the uncertainty quantifier.
 
-        Extracts chosen layer outputs from :attr:`meg_model`,
+        Extracts chosen layer outputs from :attr:`gnn`,
         scale them and train the appropriate GP (from :attr:`gp_type`).
 
         """
@@ -425,15 +418,15 @@ class MEGNetProbModel:
 
         return data
 
-    @staticmethod
-    def load(dirname: Union[Path, str]) -> MEGNetProbModel:
+    @classmethod
+    def load(cls, dirname: Union[Path, str]) -> ProbGNN:
         """Load a full-stack model."""
         data_dir = Path(dirname) / "data"
         train_datafile = data_dir / "train.fthr"
         val_datafile = data_dir / "val.fthr"
 
-        train_data = MEGNetProbModel._load_serial_data(train_datafile)
-        val_data = MEGNetProbModel._load_serial_data(val_datafile)
+        train_data = cls._load_serial_data(train_datafile)
+        val_data = cls._load_serial_data(val_datafile)
 
         metafile = data_dir / "meta.txt"
         with metafile.open("r") as f:
@@ -445,7 +438,7 @@ class MEGNetProbModel:
             with sf_dir.open("rb") as f:  # type: ignore
                 sf = np.load(f)
 
-        return MEGNetProbModel(
+        return cls(
             train_data["struct"],
             train_data["target"],
             val_data["struct"],
@@ -454,6 +447,70 @@ class MEGNetProbModel:
             sf=sf,
             **meta,
         )
+
+
+class MEGNetProbModel(ProbGNN):
+    """A base MEGNetModel with uncertainty quantification.
+
+    Args:
+        train_structs: The training structures.
+        train_targets: The training targets.
+        val_structs: The validation structures.
+        val_targets: The validation targets.
+        gp_type: The method to use for the Gaussian process.
+            Must be either 'GP' or 'VGP'.
+        save_dir: The directory to save files to during training.
+            Files include MEGNet and GP checkpoints.
+        ntarget: The number of target variables.
+            This can only be greater than one if `gp_type` is 'VGP'.
+        layer_index: The index of the layer to extract outputs from
+            within :attr:`gnn`. Defaults to the concatenation
+            layer.
+        num_inducing_points: The number of inducing points for the `VGP`.
+            Can only be set for `gp_type='VGP'`.
+        training_stage: The stage of training the model is at.
+            Only applies when loading a model.
+        sf: The pre-calculated scaling factor. Only applicable when loading
+            a pre-trained model.
+        **kwargs: Keyword arguments to pass to :class:`MEGNetModel`.
+
+    """
+
+    def make_gnn(self, **kwargs) -> MEGNetModel:
+        """Create a new MEGNetModel."""
+        return MEGNetModel(ntarget=self.ntarget, **kwargs)
+
+    def load_gnn(self) -> MEGNetModel:
+        """Load a saved MEGNetModel."""
+        return MEGNetModel.from_file(str(self.gnn_save_path))
+
+    def train_gnn(
+        self,
+        epochs: Optional[int] = 1000,
+        batch_size: Optional[int] = 128,
+        **kwargs,
+    ):
+        """Train the MEGNetModel.
+
+        Args:
+            epochs: The number of training epochs.
+            batch_size: The batch size.
+            **kwargs: Keyword arguments to pass to :func:`MEGNetModel.train`.
+
+        """
+        self.gnn.train(
+            self.train_structs,
+            self.train_targets,
+            self.val_structs,
+            self.val_targets,
+            epochs=epochs,
+            batch_size=batch_size,
+            dirname=self.gnn_ckpt_path,
+            **kwargs,
+        )
+
+        self.gnn.save_model(str(self.gnn_save_path))
+        self._update_sf()
 
 
 def targets_to_tensor(targets: List[Union[float, np.ndarray]]) -> tf.Tensor:

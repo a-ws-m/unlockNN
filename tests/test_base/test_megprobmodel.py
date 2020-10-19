@@ -56,7 +56,7 @@ def test_train(tmp_path, mocker, gp_type, n_inducing):
         **meg_args,
     )
 
-    prob_model.train_meg_model(epochs=1)
+    prob_model.train_gnn(epochs=1)
     megnet.models.MEGNetModel.train.assert_called_once()
 
     prob_model.train_uq(epochs=1)
