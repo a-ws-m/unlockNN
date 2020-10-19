@@ -59,13 +59,17 @@ formulated by @tran_methods_2020 and `UnlockGNN` provides tools for calculating 
 suggested by them, including sharpness and calibration error.
 
 `UnlockGNN` was designed for use with `Keras` [@chollet2015keras] implementations of graph neural networks.
-Expanded functionality is provided for `MEGNet` [@chen_graph_2019], a high performing, modular architecture for
-graph network-based modelling of materials.
+Its front end is implemented in the `ProbGNN` class, which provides an API that allows a GNN and an uncertainty
+quantifier to be bundled together in a single interface. This minimises the amount of data handling an
+end user needs to perform.
+An implementation of the `ProbGNN` is included for `MEGNet` [@chen_graph_2019], a high performing,
+modular architecture for graph network-based modelling of materials.
 
 ## Acknowledgements
 
 This project was proposed by [Keith Butler](https://github.com/keeeto) and has benefitted hugely from his support,
 as well as the support of [Aron Walsh](https://wmd-group.github.io/) and [Kazuki Morita](https://github.com/KazMorita).
-This project was supported by the Royal Society.
+Thanks also to the Royal Society for funding the project and the Science and Technology Facilities Council
+for providing access to their computing cluster, which was used extensively for testing during development.
 
 ## References
