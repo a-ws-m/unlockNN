@@ -1,6 +1,7 @@
 # unlockGNN
 
 [![Documentation Status](https://readthedocs.org/projects/unlockgnn/badge/?version=latest)](https://unlockgnn.readthedocs.io/en/latest/?badge=latest)
+[![PyPi](https://img.shields.io/pypi/v/unlockGNN)
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -25,16 +26,20 @@ on unseen structures.
 
 ## Installation
 
-The package can be installed by cloning this repository and building it using either anaconda or pip.
-In the root directory of the package, run one of either
+
+The package can be installed by cloning this repository and building it using either anaconda or pip,
+or it can be downloaded directly from PyPi.
+In addition, `tensorflow` must be installed as a separate dependency.
+This is to give the user the choice of installing GPU support.
+TensorFlow may be installed using either `pip install tensorflow` or `pip install tensorflow-cpu`.
+
+To install from PyPi, run `pip install unlockGNN`.
+
+To install from this repository, in the root directory of the package, run one of either
 
 ```pip install .``` or
 
 ```conda env create -f environment.yml```
-
-In addition, `tensorflow` must be installed as a separate dependency.
-This is to give the user the choice of installing GPU support.
-TensorFlow may be installed using either `pip install tensorflow` or `pip install tensorflow-cpu`.
 
 The `dev_environment.yml` contains additional dependencies for development, testing and building documentation.
 It can be installed using `conda env create -f dev_environment.yml`.
