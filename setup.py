@@ -33,14 +33,15 @@ setup(
         "pyarrow",
         "pymatgen",
         "matminer",
+        "matplotlib",
         "megnet",
         "scipy",
+        "seaborn",
         "smact",
         "tensorflow-probability",
     ],
     extras_require={
         "choice of tensorflow install": ["tensorflow"],
-        "UQ metrics": ["matplotlib", "seaborn"],
         "progress bar": ["tqdm"],
     },
 )
