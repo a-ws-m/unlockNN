@@ -9,7 +9,7 @@ quantification using the extracted layer outputs for a training data set.
 On top of these back end tools is the |probgnn| abstract base class, which provides a single interface
 for adding an uncertainty quantifier to graph neural networks.
 It is discussed in :ref:`Implementing |probgnn| for a different GNN`.
-It has been implemented for ``MEGNetModel``\ s: see :class:`~unlockgnn.MEGNetProbModel`.
+It has been implemented for ``MEGNetModel``\ s: see |megmodel|.
 
 Types of Gaussian process
 -------------------------
@@ -29,17 +29,19 @@ Implementing |probgnn| for a different GNN
 ------------------------------------------
 
 |probgnn| handles Gaussian process instantiation and training, as well as model and data saving and loading.
-It also implements a :meth:`~unlockgnn.ProbGNN.predict` method for obtaining a result and an uncertainty without
+It also implements a :meth:`~unlockgnn.base.ProbGNN.predict` method for obtaining a result and an uncertainty without
 having to manage the data pipeline between the GNN and the uncertainty quantifier.
 
 There are three ``abstractmethod``\ s that need to be implemented in a class that inherits from |probgnn|:
 
-* :meth:`~unlockgnn.ProbGNN.make_gnn` must construct and return an untrained GNN model, which is assigned
-    to the :attr:`~unlockgnn.ProbGNN.gnn` attribute.
-* :meth:`~unlockgnn.ProbGNN.train_gnn` must train the GNN and save it to :attr:`~unlockgnn.ProbGNN.gnn_save_path`.
-    :attr:`~unlockgnn.ProbGNN.gnn_ckpt_path` should be used for saving checkpoints, if applicable.
-* :meth:`~unlockgnn.ProbGNN.load_gnn` must load a pre-trained GNN from the disk (from :attr:`~unlockgnn.ProbGNN.gnn_save_path`).
+* :meth:`~unlockgnn.base.ProbGNN.make_gnn` must construct and return an untrained GNN model, which is assigned
+    to the :attr:`~unlockgnn.base.ProbGNN.gnn` attribute.
+* :meth:`~unlockgnn.base.ProbGNN.train_gnn` must train the GNN and save it to :attr:`~unlockgnn.base.ProbGNN.gnn_save_path`.
+    :attr:`~unlockgnn.base.ProbGNN.gnn_ckpt_path` should be used for saving checkpoints, if applicable.
+* :meth:`~unlockgnn.base.ProbGNN.load_gnn` must load a pre-trained GNN from the disk (from :attr:`~unlockgnn.base.ProbGNN.gnn_save_path`).
 
-For an example implementation, see the :class:`~unlockgnn.MEGNetProbModel` class.
+For an example implementation, see the |megmodel| class.
 
-.. |probgnn| replace:: :class:`~unlockgnn.ProbGNN`
+.. |probgnn| replace:: :class:`~unlockgnn.base.ProbGNN`
+
+.. |megmodel| replace:: :class:`~unlockgnn.base.MEGNetProbModel`
