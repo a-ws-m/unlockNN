@@ -50,6 +50,34 @@ class ProbGNN(ABC):
             a pre-trained model.
         **kwargs: Keyword arguments to pass to :meth:`make_gnn`.
 
+    Attributes:
+        gnn: The GNN model.
+        gp: The GP model.
+        train_structs: The training structures.
+        train_targets: The training targets.
+        val_structs: The validation structures.
+        val_targets: The validation targets.
+        gp_type: The method to use for the Gaussian process.
+            One of 'GP' or 'VGP'.
+        save_dir: The directory to save files to during training.
+            Files include GNN and GP checkpoints.
+        ntarget: The number of target variables.
+        layer_index: The index of the layer to extract outputs from
+            within :attr:`gnn`.
+        num_inducing_points: The number of inducing points for the `VGP`.
+            Shoud be `None` for `gp_type='GP'`.
+        sf: The scaling factor. Defaults to `None` when uncalculated.
+        gnn_ckpt_path: The path to the GNN checkpoints.
+        gnn_save_path: The path to the saved GNN.
+        gp_ckpt_path: The path to the GP checkpoints.
+        gp_save_path: The path to the saved GP.
+        data_save_path: The path to the saved serialized data needed for
+            reloading the GP: see :meth:`_gen_serial_data`.
+        train_database: The path to the training database.
+        val_database: The path to the validation database.
+        sf_path: The path to the saved :attr:`sf`.
+        meta_path: The path to the saved metadata: see :meth:`_write_metadata`.
+
     """
 
     def __init__(
