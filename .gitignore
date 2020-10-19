@@ -180,3 +180,6 @@ models/*
 
 ### Make utils ###
 make_*
+
+### MLFlow files from building docs ###
+mlruns/*
