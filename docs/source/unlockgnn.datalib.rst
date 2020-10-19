@@ -1,35 +1,35 @@
-sse\_gnn.datalib package
-========================
+unlockgnn.datalib package
+=========================
 
 Submodules
 ----------
 
-sse\_gnn.datalib.metrics module
--------------------------------
+unlockgnn.datalib.metrics module
+--------------------------------
 
 .. automodule:: unlockgnn.datalib.metrics
    :members:
    :undoc-members:
    :show-inheritance:
 
-sse\_gnn.datalib.mining module
-------------------------------
+unlockgnn.datalib.mining module
+-------------------------------
 
 .. automodule:: unlockgnn.datalib.mining
    :members:
    :undoc-members:
    :show-inheritance:
 
-sse\_gnn.datalib.preprocessing module
--------------------------------------
+unlockgnn.datalib.preprocessing module
+--------------------------------------
 
 .. automodule:: unlockgnn.datalib.preprocessing
    :members:
    :undoc-members:
    :show-inheritance:
 
-sse\_gnn.datalib.visualisation module
--------------------------------------
+unlockgnn.datalib.visualisation module
+--------------------------------------
 
 .. automodule:: unlockgnn.datalib.visualisation
    :members:

@@ -1,19 +1,19 @@
-sse\_gnn.utilities package
-==========================
+unlockgnn.utilities package
+===========================
 
 Submodules
 ----------
 
-sse\_gnn.utilities.serialization module
----------------------------------------
+unlockgnn.utilities.serialization module
+----------------------------------------
 
 .. automodule:: unlockgnn.utilities.serialization
    :members:
    :undoc-members:
    :show-inheritance:
 
-sse\_gnn.utilities.tracking module
-----------------------------------
+unlockgnn.utilities.tracking module
+-----------------------------------
 
 .. automodule:: unlockgnn.utilities.tracking
    :members:

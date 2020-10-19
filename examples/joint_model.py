@@ -1,5 +1,6 @@
 """Example implementation of a MEGNetProbModel."""
 from pathlib import Path
+from typing import Literal, Optional
 
 import numpy as np
 from matminer.datasets import get_all_dataset_info, load_dataset
@@ -10,6 +11,11 @@ from unlockgnn import MEGNetProbModel
 SAVE_DIR = Path.home() / "matbench_perovskites"
 DATASET = "matbench_perovskites"
 TARGET_VAR = "e_form"
+
+GNN_TRAINING_EPOCHS: int = 100
+UQ_TRAINING_EPOCHS: int = 100
+UQ_TYPE: Literal["GP", "VGP"] = "VGP"
+NUM_INDUCING_POINTS: Optional[int] = 200  # Must only be set for "VGP"
 
 print(get_all_dataset_info(DATASET))
 data = load_dataset(DATASET)
@@ -37,17 +43,17 @@ prob_model = MEGNetProbModel(
     train_df[TARGET_VAR],
     test_df["structure"],
     test_df[TARGET_VAR],
-    "VGP",
+    UQ_TYPE,
     SAVE_DIR,
-    num_inducing_points=200,
+    num_inducing_points=NUM_INDUCING_POINTS,
     **meg_args,
 )
 
 print("Training MEGNetModel")
-prob_model.train_meg_model(epochs=100)
+prob_model.train_meg_model(epochs=GNN_TRAINING_EPOCHS)
 
 print("Training UQ")
-prob_model.train_uq(epochs=100)
+prob_model.train_uq(epochs=UQ_TRAINING_EPOCHS)
 
 print("Saving model")
 prob_model.save(train_df.index, test_df.index)
