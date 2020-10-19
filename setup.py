@@ -34,6 +34,7 @@ setup(
         "pymatgen",
         "matminer",
         "megnet",
+        "scipy",
         "smact",
         "tensorflow-probability",
     ],
