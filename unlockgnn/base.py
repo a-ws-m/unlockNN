@@ -28,6 +28,28 @@ class ProbGNN(ABC):
     Provides a bundled interface for creating, training, saving and loading
     a GNN and a Gaussian process, minimising data handling for the end user.
 
+    Args:
+        train_structs: The training structures.
+        train_targets: The training targets.
+        val_structs: The validation structures.
+        val_targets: The validation targets.
+        gp_type: The method to use for the Gaussian process.
+            Must be either 'GP' or 'VGP'.
+        save_dir: The directory to save files to during training.
+            Files include GNN and GP checkpoints.
+        ntarget: The number of target variables.
+            This can only be greater than one if `gp_type` is 'VGP'.
+        layer_index: The index of the layer to extract outputs from
+            within :attr:`gnn`. Defaults to the concatenation
+            layer.
+        num_inducing_points: The number of inducing points for the `VGP`.
+            Can only be set for `gp_type='VGP'`.
+        training_stage: The stage of training the model is at.
+            Only applies when loading a model.
+        sf: The pre-calculated scaling factor. Only applicable when loading
+            a pre-trained model.
+        **kwargs: Keyword arguments to pass to :meth:`make_gnn`.
+
     """
 
     def __init__(
