@@ -8,7 +8,6 @@ conda:
   environment: dev_environment.yml
 
 python:
-  version: 3.8
   install:
     - method: setuptools
       path: .
