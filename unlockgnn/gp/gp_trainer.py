@@ -45,19 +45,21 @@ class GPTrainer(tf.Module):
     Args:
         observation_index_points (:obj:`tf.Tensor`): The observed index points (`x` values).
         observations (:obj:`tf.Tensor`): The observed samples (`y` values).
-        checkpoint_dir (str or :obj:`Path`, optional): The directory to check for
-            checkpoints and to save checkpoints to.
+        checkpoint_dir (str or :obj:`Path`, optional): The directory to check
+            for checkpoints and to save checkpoints to.
+        kernel: The kernel to use. Must be instantiated with trainable
+            parameters. Defaults to a radial basis function.
 
     Attributes:
         observation_index_points (:obj:`tf.Tensor`): The observed index points (`x` values).
         observations (:obj:`tf.Tensor`): The observed samples (`y` values).
         checkpoint_dir (str or :obj:`Path`, optional): The directory to check for
             checkpoints and to save checkpoints to.
-        amplitude (:obj:`tf.Tensor`): The amplitude of the kernel.
-        length_scale (:obj:`tf.Tensor`): The length scale of the kernel.
+        trainable_vars: The trainable variables (parameters) of the kernel as a dictionary.
+            The keys are the variables' names, stripped of the colon.
         kernel (:obj:`tf.Tensor`): The kernel to use for the Gaussian process.
         optimizer (:obj:`Optimizer`): The optimizer to use for determining
-            :attr:`amplitude` and :attr:`length_scale`.
+            :attr:`trainable_vars`.
         training_steps (:obj:`tf.Tensor`): The current number of training epochs executed.
         loss (:obj:`tf.Tensor`): The current loss on the training data
             (A negative log likelihood).
@@ -78,6 +80,7 @@ class GPTrainer(tf.Module):
         observation_index_points: tf.Tensor,
         observations: tf.Tensor,
         checkpoint_dir: Optional[Union[str, Path]] = None,
+        kernel: Optional[tfp.math.psd_kernels.PositiveSemidefiniteKernel] = None,
     ):
         """Initialze attributes, kernel, optimizer and checkpoint manager."""
         self.observation_index_points = tf.Variable(
@@ -87,18 +90,29 @@ class GPTrainer(tf.Module):
             name="observation_index_points",
         )
         self.observations = tf.Variable(
-            observations, dtype=tf.float64, trainable=False, name="observations",
+            observations,
+            dtype=tf.float64,
+            trainable=False,
+            name="observations",
         )
 
-        self.amplitude = tf.Variable(1.0, dtype=tf.float64, name="amplitude")
-        self.length_scale = tf.Variable(1.0, dtype=tf.float64, name="length_scale")
+        if kernel is None:
+            amplitude = tf.Variable(
+                1.0, trainable=True, dtype=tf.float64, name="amplitude"
+            )
+            length_scale = tf.Variable(
+                1.0, trainable=True, dtype=tf.float64, name="length_scale"
+            )
+            self.kernel: tfp.math.psd_kernels.PositiveSemidefiniteKernel = (
+                tfk.ExponentiatedQuadratic(
+                    amplitude=amplitude,
+                    length_scale=length_scale,
+                )
+            )
+        else:
+            self.kernel = kernel
 
-        # TODO: Customizable kernel
-        self.kernel = tfk.MaternOneHalf(
-            amplitude=self.amplitude,
-            length_scale=self.length_scale,
-            feature_ndims=self.observation_index_points.shape[1],
-        )
+        self.trainable_vars: Dict[str, tf.Variable] = {var.name.strip(":"): var for var in self.kernel.trainable_variables}
 
         self.optimizer = tf.optimizers.Adam()
 
@@ -107,18 +121,30 @@ class GPTrainer(tf.Module):
         )
 
         self.loss = tf.Variable(
-            np.nan, dtype=tf.float64, trainable=False, name="training_nll",
+            np.nan,
+            dtype=tf.float64,
+            trainable=False,
+            name="training_nll",
         )
 
         self.metrics = {
             "nll": tf.Variable(
-                np.nan, dtype=tf.float64, trainable=False, name="validation_nll",
+                np.nan,
+                dtype=tf.float64,
+                trainable=False,
+                name="validation_nll",
             ),
             "mae": tf.Variable(
-                np.nan, dtype=tf.float64, trainable=False, name="validation_mae",
+                np.nan,
+                dtype=tf.float64,
+                trainable=False,
+                name="validation_mae",
             ),
             "sharpness": tf.Variable(
-                np.nan, dtype=tf.float64, trainable=False, name="validation_sharpness",
+                np.nan,
+                dtype=tf.float64,
+                trainable=False,
+                name="validation_sharpness",
             ),
             "variation": tf.Variable(
                 np.nan,
@@ -137,14 +163,13 @@ class GPTrainer(tf.Module):
         if checkpoint_dir:
             self.ckpt = tf.train.Checkpoint(
                 step=self.training_steps,
-                amp=self.amplitude,
-                ls=self.length_scale,
                 loss=self.loss,
                 val_nll=self.metrics["nll"],
                 val_mae=self.metrics["mae"],
                 val_sharpness=self.metrics["sharpness"],
                 val_coeff_var=self.metrics["variation"],
                 val_cal_err=self.metrics["calibration_err"],
+                **self.trainable_vars,
             )
             self.ckpt_manager = tf.train.CheckpointManager(
                 self.ckpt,
