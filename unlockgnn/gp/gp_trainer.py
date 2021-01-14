@@ -26,7 +26,7 @@ def convert_index_points(array: np.ndarray) -> tf.Tensor:
     Args:
         array (:obj:`np.ndarray`): The array to extend.
 
-    Returns
+    Returns:
         tensor (:obj:`tf.Tensor`): The converted Tensor.
 
     """
@@ -112,7 +112,9 @@ class GPTrainer(tf.Module):
         else:
             self.kernel = kernel
 
-        self.trainable_vars: Dict[str, tf.Variable] = {var.name.strip(":"): var for var in self.kernel.trainable_variables}
+        self.trainable_vars: Dict[str, tf.Variable] = {
+            var.name.strip(":"): var for var in self.kernel.trainable_variables
+        }
 
         self.optimizer = tf.optimizers.Adam()
 

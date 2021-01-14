@@ -44,6 +44,8 @@ class ProbGNN(ABC):
             layer.
         num_inducing_points: The number of inducing points for the `VGP`.
             Can only be set for `gp_type='VGP'`.
+        kernel: The kernel to use. Currently only implemented for `gp_type='GP'`.
+            Defaults to a radial basis function, for both GP types.
         training_stage: The stage of training the model is at.
             Only applies when loading a model.
         sf: The pre-calculated scaling factor. Only applicable when loading
@@ -66,6 +68,8 @@ class ProbGNN(ABC):
             within :attr:`gnn`.
         num_inducing_points: The number of inducing points for the `VGP`.
             Shoud be `None` for `gp_type='GP'`.
+        kernel: The kernel to use. Currently only implemented for `gp_type='GP'`.
+            `None` means a radial basis function.
         sf: The scaling factor. Defaults to `None` when uncalculated.
         gnn_ckpt_path: The path to the GNN checkpoints.
         gnn_save_path: The path to the saved GNN.
@@ -91,6 +95,7 @@ class ProbGNN(ABC):
         ntarget: int = 1,
         layer_index: int = -4,
         num_inducing_points: Optional[int] = None,
+        kernel: Optional[tfp.math.psd_kernels.PositiveSemidefiniteKernel] = None,
         training_stage: int = 0,
         sf: Optional[np.ndarray] = None,
         **kwargs,
@@ -113,6 +118,10 @@ class ProbGNN(ABC):
                     "`num_inducing_points` must be supplied for `gp_type=VGP`, "
                     f"got {num_inducing_points=}"
                 )
+            if kernel is not None:
+                raise NotImplementedError(
+                    "Kernel cannot yet be modified for `gp_type=VGP`"
+                )
 
         self.gp_type = gp_type
         self.train_structs = train_structs
@@ -125,6 +134,7 @@ class ProbGNN(ABC):
         self.sf = sf
         self.layer_index = layer_index
         self.num_inducing_points = num_inducing_points
+        self.kernel = kernel
 
         self.gnn_ckpt_path = self.save_dir / "gnn_ckpts"
         self.gnn_save_path = self.save_dir / "gnn_model"
@@ -163,7 +173,9 @@ class ProbGNN(ABC):
             else:
                 index_points = convert_index_points(index_points)
                 targets = tf.constant(np.stack(self.train_targets), dtype=tf.float64)
-                self.gp = GPTrainer(index_points, targets, self.gp_ckpt_path)
+                self.gp = GPTrainer(
+                    index_points, targets, self.gp_ckpt_path, self.kernel
+                )
 
     @abstractmethod
     def make_gnn(self, **kwargs) -> GNN:
@@ -217,7 +229,7 @@ class ProbGNN(ABC):
         """Determine and preprocess index points for GP training.
 
         Args:
-            structures: A list of structrues to convert to inputs.
+            structures: A list of structures to convert to inputs.
 
         Returns:
             index_points: The feature arrays of the structures.
@@ -260,7 +272,10 @@ class ProbGNN(ABC):
         val_targets = tf.constant(np.stack(self.val_targets), dtype=tf.float64)
 
         gp_trainer = GPTrainer(
-            train_idxs, train_targets, checkpoint_dir=str(self.gp_ckpt_path)
+            train_idxs,
+            train_targets,
+            checkpoint_dir=str(self.gp_ckpt_path),
+            kernel=self.kernel,
         )
         metrics = list(
             gp_trainer.train_model(
@@ -397,7 +412,7 @@ class ProbGNN(ABC):
                 for target in targets
             ]
 
-        # ? Currently no need to save index_points
+        # ? Currently no need to save preprocessed index_points; the structures suffice
         # if self.training_stage > 0:
         #     data["index_points"] = [
         #         serialize_array(ips) for ips in self.get_index_points(structs)
