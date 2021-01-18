@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import pymatgen
 import tensorflow as tf
+import tensorflow_probability as tfp
 from megnet.models import MEGNetModel
 from pyarrow import feather
 
@@ -158,9 +159,9 @@ class ProbGNN(ABC):
             self.gp: Optional[Union[GPTrainer, SingleLayerVGP]] = None
         else:
             index_points = np.stack(self.get_index_points(self.train_structs))
+            index_points = convert_index_points(index_points)
 
             if gp_type == "VGP":
-                index_points = tf.constant(index_points, dtype=tf.float64)
                 # Should already have been caught, but for the type checker's sake
                 assert num_inducing_points is not None
                 self.gp = SingleLayerVGP(
@@ -171,7 +172,6 @@ class ProbGNN(ABC):
                 )
 
             else:
-                index_points = convert_index_points(index_points)
                 targets = tf.constant(np.stack(self.train_targets), dtype=tf.float64)
                 self.gp = GPTrainer(
                     index_points, targets, self.gp_ckpt_path, self.kernel
@@ -248,13 +248,12 @@ class ProbGNN(ABC):
         training_idxs = np.stack(self.get_index_points(self.train_structs))
         val_idxs = np.stack(self.get_index_points(self.val_structs))
 
+        training_idxs = convert_index_points(training_idxs)
+        val_idxs = convert_index_points(val_idxs)
+
         if self.gp_type == "GP":
-            training_idxs = convert_index_points(training_idxs)
-            val_idxs = convert_index_points(val_idxs)
             self.gp, _ = self._train_gp(training_idxs, val_idxs, epochs, **kwargs)
         else:
-            training_idxs = tf.constant(training_idxs, dtype=tf.float64)
-            val_idxs = tf.constant(val_idxs, dtype=tf.float64)
             self.gp = self._train_vgp(training_idxs, val_idxs, epochs, **kwargs)
 
     def _train_gp(

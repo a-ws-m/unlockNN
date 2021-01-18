@@ -18,10 +18,7 @@ tfk = tfp.math.psd_kernels
 
 
 def convert_index_points(array: np.ndarray) -> tf.Tensor:
-    """Reshape an array into a tensor appropriate for GP index points.
-
-    Extends the amount of dimensions by ``array.shape[-1] - 1`` and converts
-    to a `Tensor` with `dtype=tf.float64`.
+    """Convert an array into a tensor appropriate for GP index points.
 
     Args:
         array (:obj:`np.ndarray`): The array to extend.
@@ -30,13 +27,7 @@ def convert_index_points(array: np.ndarray) -> tf.Tensor:
         tensor (:obj:`tf.Tensor`): The converted Tensor.
 
     """
-    shape = array.shape
-    try:
-        shape += (1,) * (shape[1] - 1)
-    except IndexError:
-        # Vector input
-        shape += (1,)
-    return tf.constant(array, dtype=tf.float64, shape=shape)
+    return tf.constant(array, dtype=tf.float64)
 
 
 class GPTrainer(tf.Module):
