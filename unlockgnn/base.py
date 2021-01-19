@@ -76,6 +76,7 @@ class ProbGNN(ABC):
         gnn_save_path: The path to the saved GNN.
         gp_ckpt_path: The path to the GP checkpoints.
         gp_save_path: The path to the saved GP.
+        kernel_save_path: The path to the saved kernel (only saved for `gp_type='GP'`).
         data_save_path: The path to the saved serialized data needed for
             reloading the GP: see :meth:`_gen_serial_data`.
         train_database: The path to the training database.
@@ -141,6 +142,7 @@ class ProbGNN(ABC):
         self.gnn_save_path = self.save_dir / "gnn_model"
         self.gp_ckpt_path = self.save_dir / "gp_ckpts"
         self.gp_save_path = self.save_dir / "gp_model"
+        self.kernel_save_path = self.save_dir / "kernel"
 
         self.data_save_path = self.save_dir / "data"
         self.train_database = self.data_save_path / "train.fthr"
@@ -152,7 +154,9 @@ class ProbGNN(ABC):
         for direct in [self.save_dir, self.data_save_path]:
             os.makedirs(direct, exist_ok=True)
 
-        self.gnn = self.make_gnn(**kwargs) if training_stage == 0 else self.load_gnn()
+        self.gnn: GNN = (
+            self.make_gnn(**kwargs) if training_stage == 0 else self.load_gnn()
+        )
 
         # Initialize GP
         if training_stage < 2:
@@ -203,13 +207,9 @@ class ProbGNN(ABC):
         return int(self.gnn_save_path.exists()) + bool(self.gp)  # type: ignore
 
     @abstractmethod
-    def train_gnn(
-        self,
-        *args,
-        **kwargs,
-    ):
+    def train_gnn(self):
         """Train the GNN."""
-        raise NotImplementedError()
+        pass
 
     def _update_sf(self):
         """Update the saved scaling factor.
@@ -397,6 +397,10 @@ class ProbGNN(ABC):
         # * Write metadata
         self._write_metadata()
 
+        # * Write kernel, if :attr:`gp_type` == 'GP'
+        if self.gp_type == "GP":
+            tf.saved_model.save(self.kernel, self.kernel_save_path)
+
     def _gen_serial_data(
         self, structs: List[pymatgen.Structure], targets: List[Union[float, np.ndarray]]
     ) -> Dict[str, List[Union[str, float, bytes]]]:
@@ -466,19 +470,28 @@ class ProbGNN(ABC):
         data_dir = Path(dirname) / "data"
         train_datafile = data_dir / "train.fthr"
         val_datafile = data_dir / "val.fthr"
+        kernel_save_path = Path(dirname) / "kernel"
 
+        # * Load serialized training + validation data
         train_data = cls._load_serial_data(train_datafile)
         val_data = cls._load_serial_data(val_datafile)
 
+        # * Load metadata
         metafile = data_dir / "meta.txt"
         with metafile.open("r") as f:
             meta = json.load(f)
 
+        # * Load scaling factor, if already calculated
         sf_dir = data_dir / "sf.npy"
         sf = None
         if meta["training_stage"] > 0:
             with sf_dir.open("rb") as f:  # type: ignore
                 sf = np.load(f)
+
+        # * Load kernel, if applicable
+        kernel = (
+            tf.saved_model.load(kernel_save_path) if meta["gp_type"] == "GP" else None
+        )
 
         return cls(
             train_data["struct"],
@@ -487,6 +500,7 @@ class ProbGNN(ABC):
             val_data["target"],
             save_dir=dirname,
             sf=sf,
+            kernel=kernel,
             **meta,
         )
 
