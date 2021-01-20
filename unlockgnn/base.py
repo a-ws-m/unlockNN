@@ -238,11 +238,14 @@ class ProbGNN(ABC):
         ls = LayerScaler(self.gnn, self.sf, self.layer_index)
         return ls.structures_to_input(structures)
 
-    def train_uq(self, epochs: int = 500, **kwargs):
+    def train_uq(self, epochs: int = 500, **kwargs) -> Optional[List[Dict[str, float]]]:
         """Train the uncertainty quantifier.
 
         Extracts chosen layer outputs from :attr:`gnn`,
         scale them and train the appropriate GP (from :attr:`gp_type`).
+
+        Returns:
+            metrics: The calculated metrics at every step of training. (Only for `gp_type='GP'`).
 
         """
         training_idxs = np.stack(self.get_index_points(self.train_structs))
@@ -251,10 +254,13 @@ class ProbGNN(ABC):
         training_idxs = convert_index_points(training_idxs)
         val_idxs = convert_index_points(val_idxs)
 
+        metrics = None
         if self.gp_type == "GP":
-            self.gp, _ = self._train_gp(training_idxs, val_idxs, epochs, **kwargs)
+            self.gp, metrics = self._train_gp(training_idxs, val_idxs, epochs, **kwargs)
         else:
             self.gp = self._train_vgp(training_idxs, val_idxs, epochs, **kwargs)
+
+        return metrics
 
     def _train_gp(
         self,
