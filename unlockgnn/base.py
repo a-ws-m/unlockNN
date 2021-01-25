@@ -12,6 +12,7 @@ import pandas as pd
 import pymatgen
 import tensorflow as tf
 import tensorflow_probability as tfp
+from megnet.data.crystal import CrystalGraph
 from megnet.models import MEGNetModel
 from pyarrow import feather
 
@@ -540,7 +541,13 @@ class MEGNetProbModel(ProbGNN):
 
     def make_gnn(self, **kwargs) -> MEGNetModel:
         """Create a new MEGNetModel."""
-        return MEGNetModel(ntarget=self.ntarget, **kwargs)
+        try:
+            meg_model = MEGNetModel(ntarget=self.ntarget, **kwargs)
+        except ValueError:
+            meg_model = MEGNetModel(
+                ntarget=self.ntarget, **kwargs, **get_default_megnet_args()
+            )
+        return meg_model
 
     def load_gnn(self) -> MEGNetModel:
         """Load a saved MEGNetModel."""
@@ -578,3 +585,22 @@ class MEGNetProbModel(ProbGNN):
 def targets_to_tensor(targets: List[Union[float, np.ndarray]]) -> tf.Tensor:
     """Convert a list of target values to a Tensor."""
     return tf.constant(np.stack(targets), dtype=tf.float64)
+
+
+def get_default_megnet_args() -> dict:
+    """Get default MEGNet arguments.
+
+    These are the fallback for when no graph converter is supplied,
+    taken from the MEGNet Github page.
+
+    """
+    nfeat_bond = 10
+    r_cutoff = 5
+    gaussian_centers = np.linspace(0, r_cutoff + 1, nfeat_bond)
+    gaussian_width = 0.5
+    graph_converter = CrystalGraph(cutoff=r_cutoff)
+    return {
+        "graph_converter": graph_converter,
+        "centers": gaussian_centers,
+        "width": gaussian_width,
+    }
