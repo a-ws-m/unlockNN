@@ -5,7 +5,17 @@ import json
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Tuple, TypeVar, Union
+from typing import (
+    Dict,
+    Generator,
+    Iterator,
+    List,
+    Literal,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
@@ -239,14 +249,17 @@ class ProbGNN(ABC):
         ls = LayerScaler(self.gnn, self.sf, self.layer_index)
         return ls.structures_to_input(structures)
 
-    def train_uq(self, epochs: int = 500, **kwargs) -> Optional[List[Dict[str, float]]]:
+    def train_uq(
+        self, epochs: int = 500, **kwargs
+    ) -> Optional[Iterator[Dict[str, float]]]:
         """Train the uncertainty quantifier.
 
         Extracts chosen layer outputs from :attr:`gnn`,
         scale them and train the appropriate GP (from :attr:`gp_type`).
 
-        Returns:
-            metrics: The calculated metrics at every step of training. (Only for `gp_type='GP'`).
+        Yields:
+            metrics: The calculated metrics at every step of training.
+                (Only for `gp_type='GP'`).
 
         """
         training_idxs = np.stack(self.get_index_points(self.train_structs))
@@ -255,13 +268,10 @@ class ProbGNN(ABC):
         training_idxs = convert_index_points(training_idxs)
         val_idxs = convert_index_points(val_idxs)
 
-        metrics = None
         if self.gp_type == "GP":
-            self.gp, metrics = self._train_gp(training_idxs, val_idxs, epochs, **kwargs)
+            yield from self._train_gp(training_idxs, val_idxs, epochs, **kwargs)
         else:
-            self.gp = self._train_vgp(training_idxs, val_idxs, epochs, **kwargs)
-
-        return metrics
+            self._train_vgp(training_idxs, val_idxs, epochs, **kwargs)
 
     def _train_gp(
         self,
@@ -269,7 +279,7 @@ class ProbGNN(ABC):
         val_idxs: List[np.ndarray],
         epochs: int,
         **kwargs,
-    ) -> Tuple[GPTrainer, List[Dict[str, float]]]:
+    ) -> Iterator[Dict[str, float]]:
         """Train a GP on preprocessed layer outputs from a model."""
         if self.gp_type != "GP":
             raise ValueError("Can only train GP for `gp_type='GP'`")
@@ -283,12 +293,10 @@ class ProbGNN(ABC):
             checkpoint_dir=str(self.gp_ckpt_path),
             kernel=self.kernel,
         )
-        metrics = list(
-            gp_trainer.train_model(
-                val_idxs, val_targets, epochs, save_dir=str(self.gp_save_path), **kwargs
-            )
+        yield from gp_trainer.train_model(
+            val_idxs, val_targets, epochs, save_dir=str(self.gp_save_path), **kwargs
         )
-        return gp_trainer, metrics
+        self.gp = gp_trainer
 
     def _train_vgp(
         self,
@@ -296,7 +304,7 @@ class ProbGNN(ABC):
         val_idxs: List[np.ndarray],
         epochs: int,
         **kwargs,
-    ) -> SingleLayerVGP:
+    ) -> None:
         """Train a VGP on preprocessed layer outputs from a model."""
         if self.gp_type != "VGP":
             raise ValueError("Can only train VGP for `gp_type='VGP'`")
@@ -316,7 +324,7 @@ class ProbGNN(ABC):
             **kwargs,
         )
         vgp.model.save_weights(str(self.gp_save_path))
-        return vgp
+        self.gp = vgp
 
     def predict_structure(
         self, struct: pymatgen.Structure
