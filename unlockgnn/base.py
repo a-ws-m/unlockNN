@@ -3,11 +3,11 @@ from __future__ import annotations
 
 import json
 import os
+import pickle
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import (
     Dict,
-    Generator,
     Iterator,
     List,
     Literal,
@@ -153,7 +153,7 @@ class ProbGNN(ABC):
         self.gnn_save_path = self.save_dir / "gnn_model"
         self.gp_ckpt_path = self.save_dir / "gp_ckpts"
         self.gp_save_path = self.save_dir / "gp_model"
-        self.kernel_save_path = self.save_dir / "kernel"
+        self.kernel_save_path = self.save_dir / "kernel.pkl"
 
         self.data_save_path = self.save_dir / "data"
         self.train_database = self.data_save_path / "train.fthr"
@@ -422,7 +422,8 @@ class ProbGNN(ABC):
 
         # * Write kernel, if :attr:`gp_type` == 'GP'
         if self.gp_type == "GP":
-            tf.saved_model.save(self.kernel, str(self.kernel_save_path))
+            with self.kernel_save_path.open("wb") as f:
+                pickle.dump(self.kernel, f)
 
     def _gen_serial_data(
         self, structs: List[pymatgen.Structure], targets: List[Union[float, np.ndarray]]
@@ -493,7 +494,7 @@ class ProbGNN(ABC):
         data_dir = Path(dirname) / "data"
         train_datafile = data_dir / "train.fthr"
         val_datafile = data_dir / "val.fthr"
-        kernel_save_path = Path(dirname) / "kernel"
+        kernel_save_path = Path(dirname) / "kernel.pkl"
 
         # * Load serialized training + validation data
         train_data = cls._load_serial_data(train_datafile)
@@ -512,11 +513,11 @@ class ProbGNN(ABC):
                 sf = np.load(f)
 
         # * Load kernel, if applicable
-        kernel = (
-            tf.saved_model.load(str(kernel_save_path))
-            if meta["gp_type"] == "GP"
-            else None
-        )
+        if meta["gp_type"] == "GP":
+            with kernel_save_path.open("rb") as f:
+                kernel = pickle.load(f)
+        else:
+            kernel = None
 
         return cls(
             train_data["struct"],
