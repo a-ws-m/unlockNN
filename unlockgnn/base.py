@@ -513,7 +513,9 @@ class ProbGNN(ABC):
 
         # * Load kernel, if applicable
         kernel = (
-            tf.saved_model.load(kernel_save_path) if meta["gp_type"] == "GP" else None
+            tf.saved_model.load(str(kernel_save_path))
+            if meta["gp_type"] == "GP"
+            else None
         )
 
         return cls(
