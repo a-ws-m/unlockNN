@@ -422,7 +422,7 @@ class ProbGNN(ABC):
 
         # * Write kernel, if :attr:`gp_type` == 'GP'
         if self.gp_type == "GP":
-            tf.saved_model.save(self.kernel, self.kernel_save_path)
+            tf.saved_model.save(self.kernel, str(self.kernel_save_path))
 
     def _gen_serial_data(
         self, structs: List[pymatgen.Structure], targets: List[Union[float, np.ndarray]]
