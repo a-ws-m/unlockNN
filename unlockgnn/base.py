@@ -187,7 +187,7 @@ class ProbGNN(ABC):
                 )
 
             else:
-                targets = tf.constant(np.stack(self.train_targets), dtype=tf.float64)
+                targets = convert_index_points(np.stack(self.train_targets))
                 self.gp = GPTrainer(
                     index_points, targets, self.gp_ckpt_path, self.kernel
                 )
@@ -300,6 +300,10 @@ class ProbGNN(ABC):
             val_idxs, val_targets, epochs, save_dir=str(self.gp_save_path), **kwargs
         )
         self.gp = gp_trainer
+
+        if self.kernel is None:
+            # We got the default kernel
+            self.kernel = self.gp.kernel
 
     def _train_vgp(
         self,
