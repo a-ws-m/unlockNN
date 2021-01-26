@@ -254,7 +254,7 @@ class ProbGNN(ABC):
 
     def train_uq(
         self, epochs: int = 500, **kwargs
-    ) -> Optional[Iterator[Dict[str, float]]]:
+    ) -> Iterator[Optional[Dict[str, float]]]:
         """Train the uncertainty quantifier.
 
         Extracts chosen layer outputs from :attr:`gnn`,
@@ -275,6 +275,7 @@ class ProbGNN(ABC):
             yield from self._train_gp(training_idxs, val_idxs, epochs, **kwargs)
         else:
             self._train_vgp(training_idxs, val_idxs, epochs, **kwargs)
+            yield None
 
     def _train_gp(
         self,

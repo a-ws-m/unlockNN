@@ -1,4 +1,6 @@
 """Tests for the MEGNetProbModel class."""
+from collections import deque
+
 import megnet
 import numpy as np
 import pytest
@@ -59,9 +61,10 @@ def test_train(tmp_path, mocker, gp_type, n_inducing):
     prob_model.train_gnn(epochs=1)
     megnet.models.MEGNetModel.train.assert_called_once()
 
-    prob_model.train_uq(epochs=1)
+    # Exhaust iterator
+    deque(prob_model.train_uq(epochs=1), maxlen=0)
     # eval(gp_train_func).assert_called_once()
 
     prob_model.save(train_df.index, test_df.index)
 
-    reload = MEGNetProbModel.load(tmp_path)
+    MEGNetProbModel.load(tmp_path)
