@@ -191,6 +191,9 @@ class ProbGNN(ABC):
                 self.gp = GPTrainer(
                     index_points, targets, self.gp_ckpt_path, self.kernel
                 )
+                if self.kernel is None:
+                    # We got the GPTrainer default kernel
+                    self.kernel = self.gp.kernel
 
     @abstractmethod
     def make_gnn(self, **kwargs) -> GNN:
