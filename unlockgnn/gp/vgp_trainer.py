@@ -7,42 +7,7 @@ import tensorflow_probability as tfp
 from tensorflow.keras.callbacks import Callback
 from tensorflow.python.keras.utils import losses_utils
 
-
-class RBFKernelFn(tf.keras.layers.Layer):
-    """A radial basis function implementation that works with keras.
-
-    Attributes:
-        _amplitude (tf.Tensor): The amplitude of the kernel.
-        _length_scale (tf.Tensor): The length scale of the kernel.
-
-    """
-
-    def __init__(self, **kwargs):
-        """Initialize layer and parameters."""
-        super().__init__(**kwargs)
-        dtype = kwargs.get("dtype", None)
-
-        self._amplitude = self.add_variable(
-            initializer=tf.constant_initializer(0), dtype=dtype, name="amplitude"
-        )
-
-        self._length_scale = self.add_variable(
-            initializer=tf.constant_initializer(0), dtype=dtype, name="length_scale"
-        )
-
-    def call(self, x):
-        """Do nothing -- a placeholder for keras."""
-        # Never called -- this is just a layer so it can hold variables
-        # in a way Keras understands.
-        return x
-
-    @property
-    def kernel(self) -> tfp.math.psd_kernels.PositiveSemidefiniteKernel:
-        """Get a callable kernel."""
-        return tfp.math.psd_kernels.ExponentiatedQuadratic(
-            amplitude=tf.nn.softplus(0.1 * self._amplitude),
-            length_scale=tf.nn.softplus(5.0 * self._length_scale),
-        )
+from .kernel_layers import RBFKernelFn
 
 
 class VariationalLoss(tf.keras.losses.Loss):
@@ -96,7 +61,6 @@ class SingleLayerVGP:
             RBFKernelFn(dtype=tf.float64),
             event_shape=(ntargets,),
             jitter=1e-06,
-            convert_to_tensor_fn=tfp.distributions.Distribution.mean,
         )(inputs)
         model = tf.keras.Model(inputs, output)
 
@@ -155,7 +119,9 @@ class SingleLayerVGP:
                     print(f"Couldn't load any checkpoints: {e}")
 
             checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-                checkpoint_path, save_best_only=True, save_weights_only=True,
+                checkpoint_path,
+                save_best_only=True,
+                save_weights_only=True,
             )
             callbacks.append(checkpoint_callback)
 
