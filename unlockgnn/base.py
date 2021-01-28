@@ -595,17 +595,24 @@ def targets_to_tensor(targets: List[Union[float, np.ndarray]]) -> tf.Tensor:
     return tf.constant(np.stack(targets), dtype=tf.float64)
 
 
-def get_default_megnet_args() -> dict:
+def get_default_megnet_args(
+    nfeat_bond: int = 10, r_cutoff: float = 5.0, gaussian_width: float = 0.5
+) -> dict:
     """Get default MEGNet arguments.
 
     These are the fallback for when no graph converter is supplied,
     taken from the MEGNet Github page.
 
+    Args:
+        nfeat_bond: Number of bond features. Default (10) is very low, useful for testing.
+        r_cutoff: The atomic radius cutoff, above which to ignore bonds.
+        gaussian_width: The width of the gaussian to use in determining bond features.
+
+    Returns:
+        megnet_args: Some default-ish MEGNet arguments.
+
     """
-    nfeat_bond = 10
-    r_cutoff = 5
     gaussian_centers = np.linspace(0, r_cutoff + 1, nfeat_bond)
-    gaussian_width = 0.5
     graph_converter = CrystalGraph(cutoff=r_cutoff)
     return {
         "graph_converter": graph_converter,
