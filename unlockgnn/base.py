@@ -56,8 +56,7 @@ class ProbGNN(ABC):
             layer.
         num_inducing_points: The number of inducing points for the `VGP`.
             Can only be set for `gp_type='VGP'`.
-        kernel: The kernel to use. Currently only implemented for `gp_type='GP'`.
-            Defaults to a radial basis function, for both GP types.
+        kernel: The kernel to use. Defaults to a radial basis function.
         training_stage: The stage of training the model is at.
             Only applies when loading a model.
         sf: The pre-calculated scaling factor. Only applicable when loading
@@ -80,14 +79,13 @@ class ProbGNN(ABC):
             within :attr:`gnn`.
         num_inducing_points: The number of inducing points for the `VGP`.
             Shoud be `None` for `gp_type='GP'`.
-        kernel: The kernel to use. Currently only implemented for `gp_type='GP'`.
-            `None` means a radial basis function.
+        kernel: The kernel to use. `None` means a radial basis function.
         sf: The scaling factor. Defaults to `None` when uncalculated.
         gnn_ckpt_path: The path to the GNN checkpoints.
         gnn_save_path: The path to the saved GNN.
         gp_ckpt_path: The path to the GP checkpoints.
         gp_save_path: The path to the saved GP.
-        kernel_save_path: The path to the saved kernel (only saved for `gp_type='GP'`).
+        kernel_save_path: The path to the saved kernel.
         data_save_path: The path to the saved serialized data needed for
             reloading the GP: see :meth:`_gen_serial_data`.
         train_database: The path to the training database.
@@ -130,10 +128,6 @@ class ProbGNN(ABC):
                 raise ValueError(
                     "`num_inducing_points` must be supplied for `gp_type=VGP`, "
                     f"got {num_inducing_points=}"
-                )
-            if kernel is not None:
-                raise NotImplementedError(
-                    "Kernel cannot yet be modified for `gp_type=VGP`"
                 )
 
         self.gp_type = gp_type
@@ -184,6 +178,7 @@ class ProbGNN(ABC):
                     num_inducing_points,
                     ntarget,
                     prev_model=str(self.gp_save_path),
+                    kernel=self.kernel,
                 )
 
             else:
@@ -191,9 +186,8 @@ class ProbGNN(ABC):
                 self.gp = GPTrainer(
                     index_points, targets, self.gp_ckpt_path, self.kernel
                 )
-                if self.kernel is None:
-                    # We got the GPTrainer default kernel
-                    self.kernel = self.gp.kernel
+
+            self.kernel = self.gp.kernel
 
     @abstractmethod
     def make_gnn(self, **kwargs) -> GNN:
@@ -300,11 +294,8 @@ class ProbGNN(ABC):
         yield from gp_trainer.train_model(
             val_idxs, val_targets, epochs, save_dir=str(self.gp_save_path), **kwargs
         )
-        self.gp = gp_trainer
 
-        if self.kernel is None:
-            # We got the default kernel
-            self.kernel = self.gp.kernel
+        self.kernel = self.gp.kernel
 
     def _train_vgp(
         self,
@@ -333,6 +324,8 @@ class ProbGNN(ABC):
         )
         vgp.model.save_weights(str(self.gp_save_path))
         self.gp = vgp
+
+        self.kernel = self.gp.kernel
 
     def predict_structure(
         self, struct: pymatgen.Structure
@@ -420,10 +413,9 @@ class ProbGNN(ABC):
         # * Write metadata
         self._write_metadata()
 
-        # * Write kernel, if :attr:`gp_type` == 'GP'
-        if self.gp_type == "GP":
-            with self.kernel_save_path.open("wb") as f:
-                pickle.dump(self.kernel, f)
+        # * Write kernel
+        with self.kernel_save_path.open("wb") as f:
+            pickle.dump(self.kernel, f)
 
     def _gen_serial_data(
         self, structs: List[pymatgen.Structure], targets: List[Union[float, np.ndarray]]
@@ -512,12 +504,9 @@ class ProbGNN(ABC):
             with sf_dir.open("rb") as f:  # type: ignore
                 sf = np.load(f)
 
-        # * Load kernel, if applicable
-        if meta["gp_type"] == "GP":
-            with kernel_save_path.open("rb") as f:
-                kernel = pickle.load(f)
-        else:
-            kernel = None
+        # * Load kernel
+        with kernel_save_path.open("rb") as f:
+            kernel = pickle.load(f)
 
         return cls(
             train_data["struct"],
