@@ -395,15 +395,15 @@ class ProbGNN(ABC):
             self._validate_id_len(*validation_args)
 
         # * Write training + validation data
+        if not self.train_database.exists():
+            train_data = self._gen_serial_data(self.train_structs, self.train_targets)
+            val_data = self._gen_serial_data(self.val_structs, self.val_targets)
 
-        train_data = self._gen_serial_data(self.train_structs, self.train_targets)
-        val_data = self._gen_serial_data(self.val_structs, self.val_targets)
+            train_df = pd.DataFrame(train_data, train_materials_ids)
+            val_df = pd.DataFrame(val_data, val_materials_ids)
 
-        train_df = pd.DataFrame(train_data, train_materials_ids)
-        val_df = pd.DataFrame(val_data, val_materials_ids)
-
-        feather.write_feather(train_df, self.train_database)
-        feather.write_feather(val_df, self.val_database)
+            feather.write_feather(train_df, self.train_database)
+            feather.write_feather(val_df, self.val_database)
 
         # * Write sf
         if self.sf is not None:
