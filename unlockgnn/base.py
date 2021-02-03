@@ -285,13 +285,13 @@ class ProbGNN(ABC):
         train_targets = tf.constant(np.stack(self.train_targets), dtype=tf.float64)
         val_targets = tf.constant(np.stack(self.val_targets), dtype=tf.float64)
 
-        gp_trainer = GPTrainer(
+        self.gp = GPTrainer(
             train_idxs,
             train_targets,
             checkpoint_dir=str(self.gp_ckpt_path),
             kernel=self.kernel,
         )
-        yield from gp_trainer.train_model(
+        yield from self.gp.train_model(
             val_idxs, val_targets, epochs, save_dir=str(self.gp_save_path), **kwargs
         )
 
@@ -314,16 +314,15 @@ class ProbGNN(ABC):
         train_targets = targets_to_tensor(self.train_targets)
         val_targets = targets_to_tensor(self.val_targets)
 
-        vgp = SingleLayerVGP(train_idxs, self.num_inducing_points, self.ntarget)
-        vgp.train_model(
+        self.gp = SingleLayerVGP(train_idxs, self.num_inducing_points, self.ntarget)
+        self.gp.train_model(
             train_targets,
             (val_idxs, val_targets),
             epochs,
             checkpoint_path=str(self.gp_ckpt_path),
             **kwargs,
         )
-        vgp.model.save_weights(str(self.gp_save_path))
-        self.gp = vgp
+        self.gp.model.save_weights(str(self.gp_save_path))
 
         self.kernel = self.gp.kernel
 
