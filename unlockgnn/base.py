@@ -546,13 +546,16 @@ class MEGNetProbModel(ProbGNN):
 
     """
 
-    def make_gnn(self, **kwargs) -> MEGNetModel:
+    def make_gnn(self, metrics=["MeanAbsoluteError"], **kwargs) -> MEGNetModel:
         """Create a new MEGNetModel."""
         try:
-            meg_model = MEGNetModel(ntarget=self.ntarget, **kwargs)
+            meg_model = MEGNetModel(ntarget=self.ntarget, metrics=metrics, **kwargs)
         except ValueError:
             meg_model = MEGNetModel(
-                ntarget=self.ntarget, **kwargs, **get_default_megnet_args()
+                ntarget=self.ntarget,
+                metrics=metrics,
+                **kwargs,
+                **get_default_megnet_args(),
             )
         return meg_model
 
