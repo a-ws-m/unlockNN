@@ -25,6 +25,7 @@ import tensorflow_probability as tfp
 from megnet.data.crystal import CrystalGraph
 from megnet.models import MEGNetModel
 from pyarrow import feather
+from tensorflow.python.framework.errors_impl import NotFoundError
 
 from .datalib.preprocessing import LayerScaler
 from .gp.gp_trainer import GPTrainer, convert_index_points
@@ -560,7 +561,7 @@ class MEGNetProbModel(ProbGNN):
 
         try:
             meg_model.model.load_weights(str(self.gnn_ckpt_path))
-        except RuntimeError:
+        except NotFoundError:
             pass
 
         return meg_model
