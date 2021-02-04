@@ -557,6 +557,12 @@ class MEGNetProbModel(ProbGNN):
                 **kwargs,
                 **get_default_megnet_args(),
             )
+
+        try:
+            meg_model.model.load_weights(str(self.gnn_ckpt_path))
+        except FileNotFoundError:
+            pass
+
         return meg_model
 
     def load_gnn(self) -> MEGNetModel:
@@ -567,6 +573,7 @@ class MEGNetProbModel(ProbGNN):
         self,
         epochs: Optional[int] = 1000,
         batch_size: Optional[int] = 128,
+        callbacks: List[tf.keras.callbacks.Callback] = [],
         **kwargs,
     ):
         """Train the MEGNetModel.
@@ -574,9 +581,16 @@ class MEGNetProbModel(ProbGNN):
         Args:
             epochs: The number of training epochs.
             batch_size: The batch size.
+            callbacks: Callbacks to use during training.
+                Will always add a checkpoint callback.
             **kwargs: Keyword arguments to pass to :func:`MEGNetModel.train`.
 
         """
+        checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+            str(self.gnn_ckpt_path), save_best_only=True, save_weights_only=True
+        )
+        callbacks.append(checkpoint_callback)
+
         self.gnn.train(
             self.train_structs,
             self.train_targets,
@@ -584,7 +598,8 @@ class MEGNetProbModel(ProbGNN):
             self.val_targets,
             epochs=epochs,
             batch_size=batch_size,
-            dirname=self.gnn_ckpt_path,
+            callbacks=callbacks,
+            save_checkpoint=False,
             **kwargs,
         )
 
