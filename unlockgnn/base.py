@@ -560,7 +560,7 @@ class MEGNetProbModel(ProbGNN):
 
         try:
             meg_model.model.load_weights(str(self.gnn_ckpt_path))
-        except FileNotFoundError:
+        except RuntimeError:
             pass
 
         return meg_model
