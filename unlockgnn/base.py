@@ -12,8 +12,8 @@ from typing import (
     List,
     Literal,
     Optional,
+    Protocol,
     Tuple,
-    TypeVar,
     Union,
 )
 
@@ -32,7 +32,19 @@ from .gp.gp_trainer import GPTrainer, convert_index_points
 from .gp.vgp_trainer import SingleLayerVGP
 from .utilities.serialization import deserialize_array, serialize_array
 
-GNN = TypeVar("GNN")
+
+class GNN(Protocol):
+    """Class for duck typing of generic GNNs."""
+
+    def __init__(self, *args, **kwargs):
+        ...
+        # TODO: Flesh this out with the proper methods. Needs a more generalised LayerExtractor first.
+
+    def train(self, *args, **kwargs):
+        ...
+
+    def save_model(self, *args, **kwargs):
+        ...
 
 
 class ProbGNN(ABC):
@@ -494,19 +506,19 @@ class ProbGNN(ABC):
 
         # * Load metadata
         metafile = data_dir / "meta.txt"
-        with metafile.open("r") as f:
-            meta = json.load(f)
+        with metafile.open("r") as meta_io:
+            meta = json.load(meta_io)
 
         # * Load scaling factor, if already calculated
         sf_dir = data_dir / "sf.npy"
         sf = None
         if meta["training_stage"] > 0:
-            with sf_dir.open("rb") as f:  # type: ignore
-                sf = np.load(f)
+            with sf_dir.open("rb") as sf_io:  # type: ignore
+                sf = np.load(sf_io)
 
         # * Load kernel
-        with kernel_save_path.open("rb") as f:
-            kernel = pickle.load(f)
+        with kernel_save_path.open("rb") as kernel_io:
+            kernel = pickle.load(kernel_io)
 
         return cls(
             train_data["struct"],
