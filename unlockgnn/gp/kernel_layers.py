@@ -33,7 +33,7 @@ class AmpAndLengthScaleFn(KernelLayer):
     def __init__(self, **kwargs):
         """Initialize layer and parameters."""
         super().__init__(**kwargs)
-        dtype = kwargs.get("dtype", None)
+        dtype = kwargs.get("dtype", tf.float64)
 
         self._amplitude = self.add_variable(
             initializer=tf.constant_initializer(0), dtype=dtype, name="amplitude"
