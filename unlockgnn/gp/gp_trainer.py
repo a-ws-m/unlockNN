@@ -30,6 +30,18 @@ def convert_index_points(array: np.ndarray) -> tf.Tensor:
     return tf.constant(array, dtype=tf.float64)
 
 
+def get_default_kernel() -> tfp.math.psd_kernels.ExponentiatedQuadratic:
+    """Get a default kernel."""
+    amplitude = tf.Variable(1.0, trainable=True, dtype=tf.float64, name="amplitude")
+    length_scale = tf.Variable(
+        1.0, trainable=True, dtype=tf.float64, name="length_scale"
+    )
+    return tfk.ExponentiatedQuadratic(
+        amplitude=amplitude,
+        length_scale=length_scale,
+    )
+
+
 class GPTrainer(tf.Module):
     """Class for training hyperparameters for GP kernels.
 
@@ -88,17 +100,8 @@ class GPTrainer(tf.Module):
         )
 
         if kernel is None:
-            amplitude = tf.Variable(
-                1.0, trainable=True, dtype=tf.float64, name="amplitude"
-            )
-            length_scale = tf.Variable(
-                1.0, trainable=True, dtype=tf.float64, name="length_scale"
-            )
             self.kernel: tfp.math.psd_kernels.PositiveSemidefiniteKernel = (
-                tfk.ExponentiatedQuadratic(
-                    amplitude=amplitude,
-                    length_scale=length_scale,
-                )
+                get_default_kernel()
             )
         else:
             self.kernel = kernel
