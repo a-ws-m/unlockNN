@@ -5,6 +5,7 @@ import json
 import os
 import pickle
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from pathlib import Path
 from typing import (
     Dict,
@@ -29,6 +30,7 @@ from tensorflow.python.framework.errors_impl import NotFoundError
 
 from .datalib.preprocessing import LayerScaler
 from .gp.gp_trainer import GPTrainer, convert_index_points
+from .gp.kernel_layers import KernelLayer
 from .gp.vgp_trainer import SingleLayerVGP
 from .utilities.serialization import deserialize_array, serialize_array
 
@@ -119,7 +121,9 @@ class ProbGNN(ABC):
         ntarget: int = 1,
         layer_index: int = -4,
         num_inducing_points: Optional[int] = None,
-        kernel: Optional[tfp.math.psd_kernels.PositiveSemidefiniteKernel] = None,
+        kernel: Optional[
+            Union[tfp.math.psd_kernels.PositiveSemidefiniteKernel, KernelLayer]
+        ] = None,
         training_stage: int = 0,
         sf: Optional[np.ndarray] = None,
         **kwargs,
@@ -149,28 +153,15 @@ class ProbGNN(ABC):
         self.val_structs = val_structs
         self.val_targets = val_targets
 
-        self.save_dir = Path(save_dir)
         self.ntarget = ntarget
         self.sf = sf
         self.layer_index = layer_index
         self.num_inducing_points = num_inducing_points
         self.kernel = kernel
 
-        self.gnn_ckpt_path = self.save_dir / "gnn_ckpts"
-        self.gnn_save_path = self.save_dir / "gnn_model"
-        self.gp_ckpt_path = self.save_dir / "gp_ckpts"
-        self.gp_save_path = self.save_dir / "gp_model"
-        self.kernel_save_path = self.save_dir / "kernel.pkl"
+        self._validate_kernel()
 
-        self.data_save_path = self.save_dir / "data"
-        self.train_database = self.data_save_path / "train.fthr"
-        self.val_database = self.data_save_path / "val.fthr"
-        self.sf_path = self.data_save_path / "sf.npy"
-        self.meta_path = self.data_save_path / "meta.txt"
-
-        # * Make directories
-        for direct in [self.save_dir, self.data_save_path]:
-            os.makedirs(direct, exist_ok=True)
+        self.assign_save_directories(Path(save_dir))
 
         self.gnn: GNN = (
             self.make_gnn(**kwargs) if training_stage == 0 else self.load_gnn()
@@ -202,6 +193,46 @@ class ProbGNN(ABC):
 
             self.kernel = self.gp.kernel
 
+    def assign_save_directories(self, save_dir: Path) -> None:
+        """Assign the directories for saving components.
+
+        Also instantiates the base directory and the data directory.
+
+        Args:
+            save_dir: The base path for the save directory.
+
+        """
+        self.save_dir = save_dir
+
+        self.gnn_ckpt_path = self.save_dir / "gnn_ckpts"
+        self.gnn_save_path = self.save_dir / "gnn_model"
+        self.gp_ckpt_path = self.save_dir / "gp_ckpts"
+        self.gp_save_path = self.save_dir / "gp_model"
+        self.kernel_save_path = self.save_dir / "kernel.pkl"
+
+        self.data_save_path = self.save_dir / "data"
+        self.train_database = self.data_save_path / "train.fthr"
+        self.val_database = self.data_save_path / "val.fthr"
+        self.sf_path = self.data_save_path / "sf.npy"
+        self.meta_path = self.data_save_path / "meta.txt"
+
+        # * Make directories
+        for direct in [self.save_dir, self.data_save_path]:
+            os.makedirs(direct, exist_ok=True)
+
+    def _validate_kernel(self):
+        """Validate the assigned kernel."""
+        expected_kernels = {
+            "VGP": KernelLayer,
+            "GP": tfp.math.psd_kernels.PositiveSemidefiniteKernel,
+        }
+        current_expected_kernel = expected_kernels[self.gp_type]
+
+        if not isinstance(self.kernel, current_expected_kernel):
+            raise TypeError(
+                f"Expected kernel with type {current_expected_kernel} for {self.gp_type=}, got {type(self.kernel)}"
+            )
+
     @abstractmethod
     def make_gnn(self, **kwargs) -> GNN:
         """Construct a new GNN."""
@@ -230,6 +261,11 @@ class ProbGNN(ABC):
     @abstractmethod
     def train_gnn(self):
         """Train the GNN."""
+        pass
+
+    @abstractmethod
+    def save_gnn(self):
+        """Save the GNN."""
         pass
 
     def _update_sf(self):
@@ -429,6 +465,9 @@ class ProbGNN(ABC):
         with self.kernel_save_path.open("wb") as f:
             pickle.dump(self.kernel, f)
 
+        # * Write the GNN
+        self.save_gnn()
+
     def _gen_serial_data(
         self, structs: List[pymatgen.Structure], targets: List[Union[float, np.ndarray]]
     ) -> Dict[str, List[Union[str, float, bytes]]]:
@@ -531,6 +570,34 @@ class ProbGNN(ABC):
             **meta,
         )
 
+    def change_kernel_type(
+        self,
+        new_kernel: Union[tfp.math.psd_kernels.PositiveSemidefiniteKernel, KernelLayer],
+        new_save_dir: Path,
+    ) -> ProbGNN:
+        """Create a copy of the model with a different kernel type.
+
+        The GP of the copy is overwritten.
+
+        Args:
+            new_kernel: The new kernel object.
+            new_save_dir: The new saving location.
+
+        Returns:
+            The altered `ProbGNN`.
+
+        """
+        new_model: ProbGNN = deepcopy(self)
+
+        new_model.assign_save_directories(new_save_dir)
+
+        new_model.gp = None
+
+        new_model.kernel = new_kernel
+        new_model._validate_kernel()
+
+        return new_model
+
 
 class MEGNetProbModel(ProbGNN):
     """A base MEGNetModel with uncertainty quantification.
@@ -616,8 +683,11 @@ class MEGNetProbModel(ProbGNN):
             **kwargs,
         )
 
-        self.gnn.save_model(str(self.gnn_save_path))
+        self.save_gnn()
         self._update_sf()
+
+    def save_gnn(self):
+        self.gnn.save_model(str(self.gnn_save_path))
 
 
 def targets_to_tensor(targets: List[Union[float, np.ndarray]]) -> tf.Tensor:
