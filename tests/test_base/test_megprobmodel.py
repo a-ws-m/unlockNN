@@ -2,19 +2,33 @@
 from collections import deque
 
 import megnet
-import numpy as np
+import pandas as pd
+import pymatgen
 import pytest
-from matminer.datasets import load_dataset
-from megnet.data.crystal import CrystalGraph
-from sklearn.model_selection import train_test_split
+from pymatgen.util.testing import PymatgenTest
 
-import unlockgnn
 from unlockgnn import MEGNetProbModel
+
+
+@pytest.fixture
+def structure_database() -> pd.DataFrame:
+    """Get a minimal test database for training."""
+    # Based on the first results from the materials project
+    # The true values don't really matter for testing
+    structure_band_gaps = {"TiO2": 2.694, "SiO2": 5.851, "VO2": 0, "Li2O2": 2.023}
+    data = {
+        "structure": [
+            PymatgenTest.get_structure(name) for name in structure_band_gaps.keys()
+        ],
+        "band_gap": list(structure_band_gaps.values()),
+    }
+
+    return pd.DataFrame(data)
 
 
 @pytest.mark.slow
 @pytest.mark.parametrize("gp_type, n_inducing", [("VGP", 10), ("GP", None)])
-def test_train(tmp_path, mocker, gp_type, n_inducing):
+def test_train(tmp_path, mocker, structure_database, gp_type, n_inducing):
     """Test training of the joint model using a benchmark dataset."""
     # Patch out training routines to speed up process
     mocker.patch("megnet.models.MEGNetModel.train")
@@ -26,25 +40,25 @@ def test_train(tmp_path, mocker, gp_type, n_inducing):
 
     # Dataset information
     SAVE_DIR = tmp_path
-    DATASET = "dielectric_constant"
     TARGET_VAR = "band_gap"
 
-    data = load_dataset(DATASET, data_home=str(SAVE_DIR))
+    data = structure_database
 
-    train_df, test_df = train_test_split(data, random_state=2020)
+    train_df = data.iloc[:2, :]
+    test_df = data.iloc[2:, :]
 
-    # Standard MEGNet arguments
-    nfeat_bond = 10
-    r_cutoff = 5
-    gaussian_centers = np.linspace(0, r_cutoff + 1, nfeat_bond)
-    gaussian_width = 0.5
-    graph_converter = CrystalGraph(cutoff=r_cutoff)
-    meg_args = {
-        "graph_converter": graph_converter,
-        "centers": gaussian_centers,
-        "width": gaussian_width,
-        "metrics": ["mae"],
-    }
+    # * Standard MEGNet arguments, now not needed
+    # nfeat_bond = 10
+    # r_cutoff = 5
+    # gaussian_centers = np.linspace(0, r_cutoff + 1, nfeat_bond)
+    # gaussian_width = 0.5
+    # graph_converter = CrystalGraph(cutoff=r_cutoff)
+    # meg_args = {
+    #     "graph_converter": graph_converter,
+    #     "centers": gaussian_centers,
+    #     "width": gaussian_width,
+    #     "metrics": ["mae"],
+    # }
 
     # Model creation
     prob_model = MEGNetProbModel(
@@ -55,7 +69,6 @@ def test_train(tmp_path, mocker, gp_type, n_inducing):
         gp_type,
         SAVE_DIR,
         num_inducing_points=n_inducing,
-        **meg_args,
     )
 
     prob_model.train_gnn(epochs=1)
