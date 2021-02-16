@@ -221,7 +221,14 @@ class ProbGNN(ABC):
             os.makedirs(direct, exist_ok=True)
 
     def _validate_kernel(self):
-        """Validate the assigned kernel."""
+        """Validate the assigned kernel.
+        
+        Passes if kernel is yet to be assigned.
+        
+        """
+        if self.kernel is None:
+            return
+
         expected_kernels = {
             "VGP": KernelLayer,
             "GP": tfp.math.psd_kernels.PositiveSemidefiniteKernel,
