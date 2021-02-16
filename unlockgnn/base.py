@@ -5,7 +5,6 @@ import json
 import os
 import pickle
 from abc import ABC, abstractmethod
-from copy import deepcopy
 from pathlib import Path
 from typing import (
     Dict,
@@ -222,9 +221,9 @@ class ProbGNN(ABC):
 
     def _validate_kernel(self):
         """Validate the assigned kernel.
-        
+
         Passes if kernel is yet to be assigned.
-        
+
         """
         if self.kernel is None:
             return
@@ -594,7 +593,8 @@ class ProbGNN(ABC):
             The altered `ProbGNN`.
 
         """
-        new_model: ProbGNN = deepcopy(self)
+        self.save()
+        new_model = self.load(self.save_dir)
 
         new_model.assign_save_directories(new_save_dir)
 
