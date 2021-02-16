@@ -5,8 +5,10 @@ import megnet
 import pandas as pd
 import pymatgen
 import pytest
+from pathlib import Path
 from pymatgen.util.testing import PymatgenTest
 
+import unlockgnn
 from unlockgnn import MEGNetProbModel
 
 
@@ -29,7 +31,11 @@ def structure_database() -> pd.DataFrame:
 @pytest.mark.slow
 @pytest.mark.parametrize("gp_type, n_inducing", [("VGP", 10), ("GP", None)])
 def test_train(tmp_path, mocker, structure_database, gp_type, n_inducing):
-    """Test training of the joint model using a benchmark dataset."""
+    """Test training of the joint model using a benchmark dataset.
+
+    This is an integration test to catch any glaring errors.
+
+    """
     # Patch out training routines to speed up process
     mocker.patch("megnet.models.MEGNetModel.train")
 
@@ -39,7 +45,7 @@ def test_train(tmp_path, mocker, structure_database, gp_type, n_inducing):
     # mocker.patch(gp_train_func)
 
     # Dataset information
-    SAVE_DIR = tmp_path
+    SAVE_DIR = Path(tmp_path)
     TARGET_VAR = "band_gap"
 
     data = structure_database
@@ -78,6 +84,20 @@ def test_train(tmp_path, mocker, structure_database, gp_type, n_inducing):
     deque(prob_model.train_uq(epochs=1), maxlen=0)
     # eval(gp_train_func).assert_called_once()
 
+    # * Test IO routine
     prob_model.save(train_df.index, test_df.index)
+    prob_model = MEGNetProbModel.load(SAVE_DIR)
 
-    MEGNetProbModel.load(tmp_path)
+    # * Test mutation operations
+    NEW_SAVE_DIR = SAVE_DIR / "new_kernel"
+
+    new_kernel_layer = unlockgnn.gp.kernel_layers.MaternOneHalfFn()
+    # Need to extract the kernel property if we're using a GP
+    new_kernel = new_kernel_layer if gp_type == "VGP" else new_kernel_layer.kernel
+
+    new_kernel_model = prob_model.change_kernel_type(new_kernel, NEW_SAVE_DIR)
+
+    deque(new_kernel_model.train_uq(epochs=1), maxlen=0)
+
+    new_kernel_model.save()
+    MEGNetProbModel.load(NEW_SAVE_DIR)
