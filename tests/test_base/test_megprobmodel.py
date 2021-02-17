@@ -95,8 +95,8 @@ def test_train(tmp_path, mocker, structure_database, gp_type, n_inducing):
     NEW_GP_SAVE_DIR = SAVE_DIR / "new_gp"
 
     new_kernel_layer = unlockgnn.gp.kernel_layers.MaternOneHalfFn()
-    # Need to extract the kernel property if we're using a GP
-    new_kernel = new_kernel_layer if gp_type == "VGP" else new_kernel_layer.kernel
+    # Need to extract the kernel property if our new model is a GP
+    new_kernel = new_kernel_layer if gp_type == "GP" else new_kernel_layer.kernel
 
     new_gp_model = prob_model.change_gp_type(new_kernel, NEW_GP_SAVE_DIR)
 
