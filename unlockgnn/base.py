@@ -722,10 +722,10 @@ class MEGNetProbModel(ProbGNN):
 
         """
         checkpoint_file_path = (
-            self.gnn_ckpt_path / "val_mae_{epoch:05d}_{val_mae:.6f}.hdf5"
+            self.gnn_ckpt_path / "val_mae_{epoch:05d}_{val_mean_absolute_error:.6f}.hdf5"
         )
         checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-            str(checkpoint_file_path), monitor="val_mae", verbose=1, save_best_only=True, save_weights_only=True
+            str(checkpoint_file_path), monitor="val_mean_absolute_error", verbose=1, save_best_only=True, save_weights_only=True
         )
         callbacks.append(checkpoint_callback)
 
