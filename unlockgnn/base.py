@@ -620,6 +620,7 @@ class ProbGNN(ABC):
         self,
         new_kernel: Union[tfp.math.psd_kernels.PositiveSemidefiniteKernel, KernelLayer],
         new_save_dir: Path,
+        new_num_inducing_points: Optional[int] = None,
     ) -> ProbGNN:
         """Change the GP type.
 
@@ -628,15 +629,23 @@ class ProbGNN(ABC):
         Args:
             new_kernel: The new kernel.
             new_save_dir: The new save directory.
+            new_num_inducing_points: The number of inducing points. Needed if changing to VGP.
 
         Returns:
             The altered `ProbGNN`.
 
         """
+        if self.gp_type != "VGP" and new_num_inducing_points is None:
+            raise ValueError("Must specify number of inducing points for the VGP.")
+
         new_model = deepcopy(self)
         new_model.assign_save_directories(new_save_dir)
         new_model.gp_type = "GP" if self.gp_type == "VGP" else "VGP"
         new_model._mutate_kernel(new_kernel)
+
+        if new_model.gp_type == "VGP":
+            new_model.num_inducing_points = new_num_inducing_points
+
         return new_model
 
     def __deepcopy__(self, memodict={}) -> ProbGNN:
