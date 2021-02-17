@@ -5,6 +5,7 @@ import json
 import os
 import pickle
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from pathlib import Path
 from typing import (
     Dict,
@@ -376,7 +377,7 @@ class ProbGNN(ABC):
             epochs,
             checkpoint_path=str(self.gp_ckpt_path),
             **kwargs,
-        )
+        )  # type: ignore
         self.gp.model.save_weights(str(self.gp_save_path))
 
         self.kernel = self.gp.kernel
@@ -593,17 +594,55 @@ class ProbGNN(ABC):
             The altered `ProbGNN`.
 
         """
-        self.save()
-        new_model = self.load(self.save_dir)
-
+        new_model = deepcopy(self)
         new_model.assign_save_directories(new_save_dir)
-
-        new_model.gp = None
-
-        new_model.kernel = new_kernel
-        new_model._validate_kernel()
-
+        new_model._mutate_kernel(new_kernel)
         return new_model
+
+    def _mutate_kernel(
+        self,
+        new_kernel: Union[tfp.math.psd_kernels.PositiveSemidefiniteKernel, KernelLayer],
+    ):
+        """Change the kernel type, overwriting the uncertainty quantifier.
+
+        End users should use :meth:`change_kernel_type` so as not to
+        accidentally overwrite the current model.
+
+        Args:
+            new_kernel: The new kernel
+
+        """
+        self.gp = None
+        self.kernel = new_kernel
+        self._validate_kernel()
+
+    def change_gp_type(
+        self,
+        new_kernel: Union[tfp.math.psd_kernels.PositiveSemidefiniteKernel, KernelLayer],
+        new_save_dir: Path,
+    ) -> ProbGNN:
+        """Change the GP type.
+
+        Requires the kernel to be overwritten.
+
+        Args:
+            new_kernel: The new kernel.
+            new_save_dir: The new save directory.
+
+        Returns:
+            The altered `ProbGNN`.
+
+        """
+        new_model = deepcopy(self)
+        new_model.assign_save_directories(new_save_dir)
+        new_model.gp_type = "GP" if self.gp_type == "VGP" else "VGP"
+        new_model._mutate_kernel(new_kernel)
+        return new_model
+
+    def __deepcopy__(self, memodict={}) -> ProbGNN:
+        """Create a deepcopy."""
+        self.save()
+        return self.load(self.save_dir)
 
 
 class MEGNetProbModel(ProbGNN):
@@ -687,6 +726,7 @@ class MEGNetProbModel(ProbGNN):
             batch_size=batch_size,
             callbacks=callbacks,
             save_checkpoint=False,
+            dirname=str(self.gnn_ckpt_path),
             **kwargs,
         )
 
