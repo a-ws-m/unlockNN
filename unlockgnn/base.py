@@ -721,8 +721,11 @@ class MEGNetProbModel(ProbGNN):
             **kwargs: Keyword arguments to pass to :func:`MEGNetModel.train`.
 
         """
+        checkpoint_file_path = (
+            self.gnn_ckpt_path / "val_mae_{epoch:05d}_{val_mae:.6f}.hdf5"
+        )
         checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-            str(self.gnn_ckpt_path), save_best_only=True, save_weights_only=True
+            str(checkpoint_file_path), monitor="val_mae", verbose=1, save_best_only=True, save_weights_only=True
         )
         callbacks.append(checkpoint_callback)
 
