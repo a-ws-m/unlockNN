@@ -1,15 +1,18 @@
-"""Tests for the MEGNetProbModel class."""
+"""Tests for the MEGNetProbModel class.
+TODO: Add some pre-trained models for testing.
+"""
 from collections import deque
+from pathlib import Path
 
 import megnet
 import pandas as pd
 import pymatgen
 import pytest
-from pathlib import Path
-from pymatgen.util.testing import PymatgenTest
-
 import unlockgnn
+from pymatgen.util.testing import PymatgenTest
 from unlockgnn import MEGNetProbModel
+
+prob_model_parameters = ["gp_type, n_inducing", [("VGP", 10), ("GP", None)]]
 
 
 @pytest.fixture
@@ -29,7 +32,7 @@ def structure_database() -> pd.DataFrame:
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("gp_type, n_inducing", [("VGP", 10), ("GP", None)])
+@pytest.mark.parametrize(*prob_model_parameters)
 def test_train(tmp_path, mocker, structure_database, gp_type, n_inducing):
     """Test training of the joint model using a benchmark dataset.
 
@@ -89,15 +92,12 @@ def test_train(tmp_path, mocker, structure_database, gp_type, n_inducing):
     prob_model = MEGNetProbModel.load(SAVE_DIR)
 
     # * Test mutation operations
-    NEW_SAVE_DIR = SAVE_DIR / "new_kernel"
+    NEW_GP_SAVE_DIR = SAVE_DIR / "new_gp"
 
     new_kernel_layer = unlockgnn.gp.kernel_layers.MaternOneHalfFn()
     # Need to extract the kernel property if we're using a GP
     new_kernel = new_kernel_layer if gp_type == "VGP" else new_kernel_layer.kernel
 
-    new_kernel_model = prob_model.change_kernel_type(new_kernel, NEW_SAVE_DIR)
+    new_gp_model = prob_model.change_gp_type(new_kernel, NEW_GP_SAVE_DIR)
 
-    deque(new_kernel_model.train_uq(epochs=1), maxlen=0)
-
-    new_kernel_model.save()
-    MEGNetProbModel.load(NEW_SAVE_DIR)
+    deque(new_gp_model.train_uq(epochs=1), maxlen=0)
