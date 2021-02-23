@@ -5,14 +5,21 @@ from collections import deque
 from pathlib import Path
 
 import megnet
+import numpy as np
 import pandas as pd
-import pymatgen
 import pytest
 import unlockgnn
 from pymatgen.util.testing import PymatgenTest
 from unlockgnn import MEGNetProbModel
 
 prob_model_parameters = ["gp_type, n_inducing", [("VGP", 10), ("GP", None)]]
+
+
+@pytest.fixture
+def phonons_model_1() -> MEGNetProbModel:
+    """Get a model that has been trained to stage 1 on phonons data."""
+    source = Path(__file__).parents[1] / "static" / "matbench_phonons" / "stage_1"
+    return MEGNetProbModel.load(source)
 
 
 @pytest.fixture
@@ -29,6 +36,18 @@ def structure_database() -> pd.DataFrame:
     }
 
     return pd.DataFrame(data)
+
+
+def test_mutation(tmp_path, phonons_model_1):
+    """Test that mutation preserves model weights."""
+    origin_weights = phonons_model_1.gnn.get_weights()
+    kernel = phonons_model_1.kernel
+    new_model = phonons_model_1.change_kernel_type(kernel, tmp_path)
+    new_weights = new_model.gnn.get_weights()
+    assert all(
+        np.allclose(new_weight, origin_weight)
+        for new_weight, origin_weight in zip(new_weights, origin_weights)
+    )
 
 
 @pytest.mark.slow
@@ -103,6 +122,8 @@ def test_train(tmp_path, mocker, structure_database, gp_type, n_inducing):
         new_kernel = new_kernel_layer.kernel
         new_num_inducing_points = None
 
-    new_gp_model = prob_model.change_gp_type(new_kernel, NEW_GP_SAVE_DIR, new_num_inducing_points)
+    new_gp_model = prob_model.change_gp_type(
+        new_kernel, NEW_GP_SAVE_DIR, new_num_inducing_points
+    )
 
     deque(new_gp_model.train_uq(epochs=1), maxlen=0)
