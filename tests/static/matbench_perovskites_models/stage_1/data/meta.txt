@@ -1,1 +1,0 @@
-{"gp_type": "VGP", "num_inducing_points": 500, "layer_index": -4, "ntarget": 1, "training_stage": 1}
