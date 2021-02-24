@@ -101,6 +101,7 @@ class SingleLayerVGP:
         checkpoint_path: Optional[str] = None,
         patience: int = 500,
         callbacks: List[Callback] = [],
+        **kwargs,
     ):
         """Train the model.
 
@@ -115,6 +116,7 @@ class SingleLayerVGP:
             patience (int): The number of iterations to continue training without
                 validation loss improvement before stopping training early.
             callbacks (list of :obj:`Callback`): A list of additional callbacks.
+            kwargs: Key word arguments to pass to Keras.
 
         """
         if checkpoint_path:
@@ -141,4 +143,5 @@ class SingleLayerVGP:
             epochs=epochs,
             validation_data=validation_data,
             callbacks=callbacks,
+            **kwargs,
         )
