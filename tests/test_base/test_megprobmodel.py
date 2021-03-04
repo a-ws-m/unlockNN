@@ -40,10 +40,18 @@ def structure_database() -> pd.DataFrame:
 
 def test_mutation(tmp_path, phonons_model_1):
     """Test that mutation preserves model weights."""
-    origin_weights = phonons_model_1.gnn.get_weights()
+    new_save_dir = tmp_path / "phonons_mutated"
     kernel = phonons_model_1.kernel
-    new_model = phonons_model_1.change_kernel_type(kernel, tmp_path)
-    new_weights = new_model.gnn.get_weights()
+
+    new_model = phonons_model_1.change_kernel_type(kernel, new_save_dir)
+
+    assert new_model.training_stage == phonons_model_1.training_stage
+
+    new_model.save()
+    reloaded_new_model = MEGNetProbModel.load(new_save_dir)
+
+    origin_weights = phonons_model_1.gnn.get_weights()
+    new_weights = reloaded_new_model.gnn.get_weights()
     assert all(
         np.allclose(new_weight, origin_weight)
         for new_weight, origin_weight in zip(new_weights, origin_weights)

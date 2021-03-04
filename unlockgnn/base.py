@@ -597,6 +597,10 @@ class ProbGNN(ABC):
         new_model = deepcopy(self)
         new_model.assign_save_directories(new_save_dir)
         new_model._mutate_kernel(new_kernel)
+
+        if self.training_stage > 0:
+            new_model.save_gnn()
+
         return new_model
 
     def _mutate_kernel(
@@ -642,6 +646,9 @@ class ProbGNN(ABC):
         new_model.assign_save_directories(new_save_dir)
         new_model.gp_type = "GP" if self.gp_type == "VGP" else "VGP"
         new_model._mutate_kernel(new_kernel)
+
+        if self.training_stage > 0:
+            new_model.save_gnn()
 
         if new_model.gp_type == "VGP":
             new_model.num_inducing_points = new_num_inducing_points
@@ -722,10 +729,15 @@ class MEGNetProbModel(ProbGNN):
 
         """
         checkpoint_file_path = (
-            self.gnn_ckpt_path / "val_mae_{epoch:05d}_{val_mean_absolute_error:.6f}.hdf5"
+            self.gnn_ckpt_path
+            / "val_mae_{epoch:05d}_{val_mean_absolute_error:.6f}.hdf5"
         )
         checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-            str(checkpoint_file_path), monitor="val_mean_absolute_error", verbose=1, save_best_only=True, save_weights_only=True
+            str(checkpoint_file_path),
+            monitor="val_mean_absolute_error",
+            verbose=1,
+            save_best_only=True,
+            save_weights_only=True,
         )
         callbacks.append(checkpoint_callback)
 
