@@ -370,12 +370,16 @@ class ProbGNN(ABC):
         train_targets = targets_to_tensor(self.train_targets)
         val_targets = targets_to_tensor(self.val_targets)
 
+        checkpoint_file_path = str(
+            self.gp_ckpt_path / "val_mae_{epoch:05d}_{val_mae:.6f}.hdf5"
+        )
+
         self.gp = SingleLayerVGP(train_idxs, self.num_inducing_points, self.ntarget)
         self.gp.train_model(
             train_targets,
             (val_idxs, val_targets),
             epochs,
-            checkpoint_path=str(self.gp_ckpt_path),
+            checkpoint_path=checkpoint_file_path,
             **kwargs,
         )  # type: ignore
         self.gp.model.save_weights(str(self.gp_save_path))
