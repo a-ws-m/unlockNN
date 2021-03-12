@@ -659,6 +659,31 @@ class ProbGNN(ABC):
 
         return new_model
 
+    def change_num_inducing_points(
+        self, new_num_inducing_points: int, new_save_dir: Path
+    ) -> ProbGNN:
+        """Change the number of VGP inducing points.
+
+        Args:
+            new_num_inducing_points: The new number of inducing points.
+            new_save_dir: The save directory for the new model.
+
+        """
+        if self.gp_type != "VGP":
+            raise ValueError(
+                "Not using a VGP, cannot change number of inducing points."
+            )
+
+        new_model = deepcopy(self)
+        new_model.assign_save_directories(new_save_dir)
+        new_model.gp = None
+        new_model.num_inducing_points = new_num_inducing_points
+
+        if self.training_stage > 0:
+            new_model.save_gnn()
+
+        return new_model
+
     def __deepcopy__(self, memodict={}) -> ProbGNN:
         """Create a deepcopy."""
         self.save()
