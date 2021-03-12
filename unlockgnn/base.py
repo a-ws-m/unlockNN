@@ -302,6 +302,46 @@ class ProbGNN(ABC):
         ls = LayerScaler(self.gnn, self.sf, self.layer_index)
         return ls.structures_to_input(structures)
 
+    def evaluate(
+        self, dataset: Literal["train", "val"], just_gnn: bool = False
+    ) -> Dict[str, int]:
+        """Evaluate the model on either the training or test data.
+
+        Args:
+            dataset: Which of the datasets to use.
+            just_gnn: Whether to exclusively evaluate the GNN performance, or the entire model's.
+
+        Returns:
+            metrics: Names and values of metrics.
+
+        """
+        if just_gnn:
+            raise NotImplementedError()
+
+        if self.training_stage < 2:
+            # Not fully trained
+            raise ValueError("GP not trained")
+
+        eval_model = self.gp.model
+        metric_names = eval_model.metrics_names
+
+        if dataset == "train":
+            index_points = np.stack(self.get_index_points(self.train_structs))
+            targets = targets_to_tensor(self.train_targets)
+        elif dataset == "val":
+            index_points = np.stack(self.get_index_points(self.val_structs))
+            targets = targets_to_tensor(self.val_targets)
+        else:
+            raise ValueError("`dataset` must be either 'train' or 'val'")
+
+        index_points = convert_index_points(index_points)
+
+        metric_values = eval_model.evaluate(index_points, targets)
+        return {
+            metric_name: metric_value
+            for metric_name, metric_value in zip(metric_names, metric_values)
+        }
+
     def train_uq(
         self, epochs: int = 500, **kwargs
     ) -> Iterator[Optional[Dict[str, float]]]:
