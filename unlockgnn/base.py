@@ -186,6 +186,10 @@ class ProbGNN(ABC):
                     prev_model=str(self.gp_save_path),
                     kernel=self.kernel,
                 )
+                try:
+                    self.gp.model.load_weights(str(self.gp_ckpt_path))
+                except Exception as e:
+                    print(f"Couldn't load any VGP checkpoints: {e}")
 
             else:
                 targets = convert_index_points(np.stack(self.train_targets))
@@ -321,13 +325,12 @@ class ProbGNN(ABC):
             return self.evaluate_gnn(dataset)
         else:
             return self.evaluate_uq(dataset)
-    
+
     @abstractmethod
     def evaluate_gnn(self, dataset: Literal["train", "val"]) -> Dict[str, int]:
         """Evaluate the GNN's performance."""
         raise NotImplementedError()
 
-    
     def evaluate_uq(self, dataset: Literal["train", "val"]) -> Dict[str, int]:
         """Evaluate the uncertainty quantifier's performance."""
         if self.training_stage < 2:
@@ -833,7 +836,7 @@ class MEGNetProbModel(ProbGNN):
 
         self.save_gnn()
         self._update_sf()
-    
+
     def evaluate_gnn(self, dataset: Literal["train", "val"]) -> Dict[str, int]:
         """Evaluate the MEGNet model's performance."""
         if dataset == "train":
@@ -847,9 +850,7 @@ class MEGNetProbModel(ProbGNN):
 
         predicted = self.gnn.predict_structures(structs)
 
-        return {
-            "mae": mean_absolute_error(targets, predicted)
-        }
+        return {"mae": mean_absolute_error(targets, predicted)}
 
     def save_gnn(self):
         self.gnn.save_model(str(self.gnn_save_path))
