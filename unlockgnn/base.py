@@ -21,11 +21,13 @@ from typing import (
 import numpy as np
 import pandas as pd
 import pymatgen
+import sklearn
 import tensorflow as tf
 import tensorflow_probability as tfp
 from megnet.data.crystal import CrystalGraph
 from megnet.models import MEGNetModel
 from pyarrow import feather
+from sklearn.metrics import mean_absolute_error
 from tensorflow.python.framework.errors_impl import NotFoundError
 
 from .datalib.preprocessing import LayerScaler
@@ -316,8 +318,18 @@ class ProbGNN(ABC):
 
         """
         if just_gnn:
-            raise NotImplementedError()
+            return self.evaluate_gnn(dataset)
+        else:
+            return self.evaluate_uq(dataset)
+    
+    @abstractmethod
+    def evaluate_gnn(self, dataset: Literal["train", "val"]) -> Dict[str, int]:
+        """Evaluate the GNN's performance."""
+        raise NotImplementedError()
 
+    
+    def evaluate_uq(self, dataset: Literal["train", "val"]) -> Dict[str, int]:
+        """Evaluate the uncertainty quantifier's performance."""
         if self.training_stage < 2:
             # Not fully trained
             raise ValueError("GP not trained")
@@ -821,6 +833,23 @@ class MEGNetProbModel(ProbGNN):
 
         self.save_gnn()
         self._update_sf()
+    
+    def evaluate_gnn(self, dataset: Literal["train", "val"]) -> Dict[str, int]:
+        """Evaluate the MEGNet model's performance."""
+        if dataset == "train":
+            structs = self.train_structs
+            targets = np.stack(self.train_targets)
+        elif dataset == "val":
+            structs = self.val_structs
+            targets = np.stack(self.val_targets)
+        else:
+            raise ValueError("`dataset` must be either 'train' or 'val'")
+
+        predicted = self.gnn.predict_structures(structs)
+
+        return {
+            "mae": mean_absolute_error(targets, predicted)
+        }
 
     def save_gnn(self):
         self.gnn.save_model(str(self.gnn_save_path))
