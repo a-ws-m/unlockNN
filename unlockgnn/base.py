@@ -37,6 +37,11 @@ from .gp.vgp_trainer import SingleLayerVGP
 from .utilities.serialization import deserialize_array, serialize_array
 
 
+def mean_absolute_percentage_error(y_true: np.ndarray, y_pred: np.ndarray):
+    """Calculate MAPE."""
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+
+
 class GNN(Protocol):
     """Class for duck typing of generic GNNs."""
 
@@ -850,7 +855,12 @@ class MEGNetProbModel(ProbGNN):
 
         predicted = self.gnn.predict_structures(structs)
 
-        return {"mae": mean_absolute_error(targets, predicted)}
+        return {
+            "mae": mean_absolute_error(targets, predicted),
+            "mape": mean_absolute_percentage_error(
+                np.stack(targets), np.stack(predicted)
+            ),
+        }
 
     def save_gnn(self):
         self.gnn.save_model(str(self.gnn_save_path))
