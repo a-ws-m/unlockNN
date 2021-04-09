@@ -359,7 +359,7 @@ class ProbGNN(ABC):
         metric_values = eval_model.evaluate(index_points, targets)
 
         distribution = (
-            eval_model(index_points).distribution
+            eval_model.call(index_points).distribution
             if self.gp_type == "VGP"
             else eval_model.get_model(index_points)
         )
