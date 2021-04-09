@@ -365,7 +365,7 @@ class ProbGNN(ABC):
         )
         metric_analyser = MetricAnalyser(index_points, targets, distribution)
 
-        uq_metric_names = ["nll", "sharpness", "variation", "calibration_err"]
+        uq_metric_names = ["nll", "sharpness", "variation"]
         for metric_name in uq_metric_names:
             metric_values[metric_name] = getattr(metric_analyser, metric_name)
 
