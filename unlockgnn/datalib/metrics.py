@@ -12,6 +12,49 @@ from .visualisation import plot_calibration, plot_sharpness
 tfd = tfp.distributions
 
 
+def calculate_mean(vgp: tfp.layers.VariationalGaussianProcess):
+    """Get the mean values from a distribution."""
+    obs_index_points = vgp._index_points
+    obs_index_points = tf.convert_to_tensor(
+        obs_index_points, dtype=obs_index_points._dtype, name="observation_index_points"
+    )
+    return vgp.mean(index_points=obs_index_points)
+
+
+def calculate_stddev(vgp: tfp.layers.VariationalGaussianProcess):
+    """Get the mean values from a distribution."""
+    obs_index_points = vgp._index_points
+    obs_index_points = tf.convert_to_tensor(
+        obs_index_points, dtype=obs_index_points._dtype, name="observation_index_points"
+    )
+    return vgp.stddev(index_points=obs_index_points)
+
+
+class Sharpness(tf.keras.metrics.Metric):
+    """Metric class for sharpness."""
+
+    def __init__(self, name="sharpness", **kwargs):
+        super().__init__(name=name, **kwargs)
+        self.squared_std_devs = self.add_weight(
+            name="squared_stddevs", initializer="zeros"
+        )
+        self.num_data_points = self.add_weight(
+            name="sha_num_data_points", initializer="zeros"
+        )
+
+    def update_state(self, y_true, predicted_distribution, sample_weight=None):
+        std_devs = calculate_stddev(predicted_distribution)
+        self.squared_std_devs.assign_add(np.sum(np.square(std_devs)))
+        self.num_data_points.assign_add(len(std_devs))
+
+    def result(self):
+        return np.sqrt(self.squared_std_devs / self.num_data_points)
+
+    def reset_states(self):
+        self.squared_std_devs.assign(0)
+        self.num_data_points.assign(0)
+
+
 class MetricAnalyser:
     """Handler for metric calculations.
 
