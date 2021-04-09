@@ -21,7 +21,6 @@ from typing import (
 import numpy as np
 import pandas as pd
 import pymatgen
-import sklearn
 import tensorflow as tf
 import tensorflow_probability as tfp
 from megnet.data.crystal import CrystalGraph
@@ -30,6 +29,7 @@ from pyarrow import feather
 from sklearn.metrics import mean_absolute_error
 from tensorflow.python.framework.errors_impl import NotFoundError
 
+from .datalib.metrics import MetricAnalyser
 from .datalib.preprocessing import LayerScaler
 from .gp.gp_trainer import GPTrainer, convert_index_points
 from .gp.kernel_layers import KernelLayer
@@ -357,6 +357,18 @@ class ProbGNN(ABC):
         index_points = convert_index_points(index_points)
 
         metric_values = eval_model.evaluate(index_points, targets)
+
+        distribution = (
+            eval_model(index_points).distribution
+            if self.gp_type == "VGP"
+            else eval_model.get_model(index_points)
+        )
+        metric_analyser = MetricAnalyser(index_points, targets, distribution)
+
+        uq_metric_names = ["nll", "sharpness", "variation", "calibration_err"]
+        for metric_name in uq_metric_names:
+            metric_values[metric_name] = getattr(metric_analyser, metric_name)
+
         return {
             metric_name: metric_value
             for metric_name, metric_value in zip(metric_names, metric_values)
