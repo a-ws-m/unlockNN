@@ -442,13 +442,32 @@ class ProbGNN(ABC):
 
         self.kernel = self.gp.kernel
 
-    def predict_structure(
-        self, struct: pymatgen.Structure
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        """Predict target value and an uncertainty for a given structure.
+    def _get_vgp_dist(self, structs: List[pymatgen.Structure]):
+        """Get VGP calculated distributions of target values for some structures.
 
         Args:
-            struct: The structure to make predictions on.
+            struct: The structures to make predictions on.
+
+        Returns:
+            dist: The distributions.
+
+        """
+        if self.gp is None:
+            raise ValueError(
+                "UQ must be trained using `train_uq` before making predictions."
+            )
+
+        index_points = self.get_index_points(structs)
+        index_points = tf.Tensor(index_points, dtype=tf.float64)
+        return self.gp(index_points)
+
+    def predict_structures(
+        self, structs: List[pymatgen.Structure]
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Predict target values and uncertainties for given structures.
+
+        Args:
+            struct: The structures to make predictions on.
 
         Returns:
             predicted_target: The predicted target value(s).
@@ -460,9 +479,9 @@ class ProbGNN(ABC):
                 "UQ must be trained using `train_uq` before making predictions."
             )
 
-        index_point = self.get_index_points([struct])[0]
-        index_point = tf.Tensor(index_point, dtype=tf.float64)
-        predicted, uncert = self.gp.predict(index_point)
+        index_points = self.get_index_points(structs)
+        index_points = tf.Tensor(index_points, dtype=tf.float64)
+        predicted, uncert = self.gp.predict(index_points)
         return predicted.numpy(), uncert.numpy()
 
     def _validate_id_len(self, ids: Optional[List[str]], is_train: bool):
