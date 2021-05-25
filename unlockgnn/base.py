@@ -480,7 +480,7 @@ class ProbGNN(ABC):
             )
 
         index_point = self.get_index_points([struct])[0]
-        index_point = tf.Tensor(index_point, dtype=tf.float64)
+        index_point = tf.constant(index_point, dtype=tf.float64)
         predicted, uncert = self.gp.predict(index_point)
         return predicted.numpy(), uncert.numpy()
 
