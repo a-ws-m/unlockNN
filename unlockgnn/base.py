@@ -457,7 +457,7 @@ class ProbGNN(ABC):
                 "UQ must be trained using `train_uq` before making predictions."
             )
 
-        index_points = self.get_index_points(structs)
+        index_points = np.stack(self.get_index_points(structs))
         index_points = tf.Tensor(index_points, dtype=tf.float64)
         return self.gp(index_points)
 
@@ -479,7 +479,7 @@ class ProbGNN(ABC):
                 "UQ must be trained using `train_uq` before making predictions."
             )
 
-        index_points = self.get_index_points(structs)
+        index_points = np.stack(self.get_index_points(structs))
         index_points = tf.Tensor(index_points, dtype=tf.float64)
         predicted, uncert = self.gp.predict(index_points)
         return predicted.numpy(), uncert.numpy()
