@@ -461,13 +461,13 @@ class ProbGNN(ABC):
         index_points = tf.constant(index_points, dtype=tf.float64)
         return self.gp(index_points)
 
-    def predict_structures(
-        self, structs: List[pymatgen.Structure]
+    def predict_structure(
+        self, struct: pymatgen.Structure
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """Predict target values and uncertainties for given structures.
+        """Predict target value and an uncertainty for a given structure.
 
         Args:
-            struct: The structures to make predictions on.
+            struct: The structure to make predictions on.
 
         Returns:
             predicted_target: The predicted target value(s).
@@ -479,9 +479,9 @@ class ProbGNN(ABC):
                 "UQ must be trained using `train_uq` before making predictions."
             )
 
-        index_points = np.stack(self.get_index_points(structs))
-        index_points = tf.constant(index_points, dtype=tf.float64)
-        predicted, uncert = self.gp.predict(index_points)
+        index_point = self.get_index_points([struct])[0]
+        index_point = tf.Tensor(index_point, dtype=tf.float64)
+        predicted, uncert = self.gp.predict(index_point)
         return predicted.numpy(), uncert.numpy()
 
     def _validate_id_len(self, ids: Optional[List[str]], is_train: bool):
