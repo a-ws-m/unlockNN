@@ -147,6 +147,15 @@ class MetricAnalyser:
         return mean_absolute_error(self.val_obs, self.mean)
 
     @property
+    def mape(self) -> float:
+        """Calculate the mean average percentage error of predicted values.
+
+        Returns:
+            mape (float)
+        """
+        return np.mean(np.abs(self.residuals / self.val_obs.numpy())) * 100
+
+    @property
     def sharpness(self) -> float:
         """Calculate the root-mean-squared of predicted standard deviations.
 
