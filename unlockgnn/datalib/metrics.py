@@ -97,7 +97,7 @@ class MetricAnalyser:
     """
 
     # Set of which properties need the mean and standard deviation to be updated
-    REQUIRES_MEAN = {"mae", "calibration_err", "residuals", "pis"}
+    REQUIRES_MEAN = {"mae", "mape", "calibration_err", "residuals", "pis"}
     REQUIRES_STDDEV = {"sharpness", "variation", "calibration_err"}
 
     def __init__(
