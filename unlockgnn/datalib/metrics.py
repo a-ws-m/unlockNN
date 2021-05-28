@@ -198,11 +198,11 @@ class MetricAnalyser:
         """Calculate the residuals.
 
         Returns:
-            residuals (:obj:`np.ndarray`): The difference between the means
-                of the predicted distributions and the true values.
+            residuals (:obj:`np.ndarray`): The difference between the true
+                values and the means of the predicted distributions.
 
         """
-        return self.mean - self.val_obs.numpy()
+        return self.val_obs.numpy() - self.mean
 
     def sharpness_plot(self, fname: Optional[Union[str, Path]] = None):
         """Plot the distribution of standard deviations and the sharpness.
