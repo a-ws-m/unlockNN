@@ -191,7 +191,7 @@ class MetricAnalyser:
 
         """
         predicted_pi, observed_pi = self.pis
-        return np.sum(np.square(predicted_pi - observed_pi))
+        return np.mean(np.square(predicted_pi - observed_pi))
 
     @property
     def residuals(self) -> np.ndarray:
