@@ -176,8 +176,10 @@ class MetricAnalyser:
 
         """
         stdev_mean = self.stddevs.mean()
-        coeff_var = np.sqrt(np.sum(np.square(self.stddevs - stdev_mean)))
-        coeff_var /= stdev_mean * (len(self.stddevs) - 1)
+        coeff_var = np.sqrt(
+            np.sum(np.square(self.stddevs - stdev_mean)) / (len(self.stddevs) - 1)
+        )
+        coeff_var /= stdev_mean
         return coeff_var
 
     @property
