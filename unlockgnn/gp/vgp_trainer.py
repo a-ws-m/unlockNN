@@ -7,42 +7,7 @@ import tensorflow_probability as tfp
 from tensorflow.keras.callbacks import Callback
 from tensorflow.python.keras.utils import losses_utils
 
-
-class RBFKernelFn(tf.keras.layers.Layer):
-    """A radial basis function implementation that works with keras.
-
-    Attributes:
-        _amplitude (tf.Tensor): The amplitude of the kernel.
-        _length_scale (tf.Tensor): The length scale of the kernel.
-
-    """
-
-    def __init__(self, **kwargs):
-        """Initialize layer and parameters."""
-        super().__init__(**kwargs)
-        dtype = kwargs.get("dtype", None)
-
-        self._amplitude = self.add_variable(
-            initializer=tf.constant_initializer(0), dtype=dtype, name="amplitude"
-        )
-
-        self._length_scale = self.add_variable(
-            initializer=tf.constant_initializer(0), dtype=dtype, name="length_scale"
-        )
-
-    def call(self, x):
-        """Do nothing -- a placeholder for keras."""
-        # Never called -- this is just a layer so it can hold variables
-        # in a way Keras understands.
-        return x
-
-    @property
-    def kernel(self) -> tfp.math.psd_kernels.PositiveSemidefiniteKernel:
-        """Get a callable kernel."""
-        return tfp.math.psd_kernels.ExponentiatedQuadratic(
-            amplitude=tf.nn.softplus(0.1 * self._amplitude),
-            length_scale=tf.nn.softplus(5.0 * self._length_scale),
-        )
+from .kernel_layers import KernelLayer, RBFKernelFn
 
 
 class VariationalLoss(tf.keras.losses.Loss):
@@ -67,12 +32,14 @@ class SingleLayerVGP:
         ntargets (int): The number of parameters to be modelled.
         batch_size (int): The training batch size.
         prev_model (str, optional): The path to a previously saved model.
+        kernel: The kernel to use. Defaults to a radial basis function.
 
     Attributes:
         observation_indices (:obj:`tf.Tensor`): The (training) observation index points (x data).
         batch_size (int): The training batch size.
         model (:obj:`Model`): The Keras model containing the obj:`VariationalGaussianProcess`.
         loaded_modl (bool): Whether a previously trained model was loaded.
+        kernel: The kernel for the VGP.
 
     """
 
@@ -83,20 +50,23 @@ class SingleLayerVGP:
         ntargets: int = 1,
         batch_size: int = 32,
         prev_model: Optional[str] = None,
+        kernel: Optional[KernelLayer] = None,
     ):
         """Initialize and compile model."""
         self.observation_indices = observation_indices
         self.batch_size = batch_size
+
+        # * Set up kernel
+        self.kernel = RBFKernelFn(dtype=tf.float64) if kernel is None else kernel
 
         # * Set up model
         input_shape = observation_indices.shape[1:]
         inputs = tf.keras.layers.Input(shape=input_shape)
         output = tfp.layers.VariationalGaussianProcess(
             num_inducing_points,
-            RBFKernelFn(dtype=tf.float64),
+            self.kernel,
             event_shape=(ntargets,),
             jitter=1e-06,
-            convert_to_tensor_fn=tfp.distributions.Distribution.mean,
         )(inputs)
         model = tf.keras.Model(inputs, output)
 
@@ -131,6 +101,7 @@ class SingleLayerVGP:
         checkpoint_path: Optional[str] = None,
         patience: int = 500,
         callbacks: List[Callback] = [],
+        **kwargs,
     ):
         """Train the model.
 
@@ -145,6 +116,7 @@ class SingleLayerVGP:
             patience (int): The number of iterations to continue training without
                 validation loss improvement before stopping training early.
             callbacks (list of :obj:`Callback`): A list of additional callbacks.
+            kwargs: Key word arguments to pass to Keras.
 
         """
         if checkpoint_path:
@@ -155,7 +127,9 @@ class SingleLayerVGP:
                     print(f"Couldn't load any checkpoints: {e}")
 
             checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-                checkpoint_path, save_best_only=True, save_weights_only=True,
+                checkpoint_path,
+                save_best_only=True,
+                save_weights_only=True,
             )
             callbacks.append(checkpoint_callback)
 
@@ -169,4 +143,5 @@ class SingleLayerVGP:
             epochs=epochs,
             validation_data=validation_data,
             callbacks=callbacks,
+            **kwargs,
         )

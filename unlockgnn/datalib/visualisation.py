@@ -9,6 +9,8 @@ import seaborn as sns
 FIGSIZE = (4, 4)
 FONTSIZE = 12
 
+sns.set_theme()
+
 
 def plot_calibration(
     predicted_pi: np.ndarray,
@@ -30,7 +32,11 @@ def plot_calibration(
 
     sns.lineplot(predicted_pi, observed_pi)
     plt.fill_between(
-        predicted_pi, predicted_pi, observed_pi, alpha=0.2, label="miscalibration area",
+        predicted_pi,
+        predicted_pi,
+        observed_pi,
+        alpha=0.2,
+        label="Miscalibration area",
     )
 
     ax_ideal.set_xlabel("Expected cumulative distribution")

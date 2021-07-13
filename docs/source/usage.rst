@@ -29,7 +29,7 @@ Implementing |probgnn| for a different GNN
 ------------------------------------------
 
 |probgnn| handles Gaussian process instantiation and training, as well as model and data saving and loading.
-It also implements a :meth:`~unlockgnn.base.ProbGNN.predict_structure` method for obtaining a result and an uncertainty without
+It also implements a :meth:`~unlockgnn.base.ProbGNN.predict_structures` method for obtaining a result and an uncertainty without
 having to manage the data pipeline between the GNN and the uncertainty quantifier.
 
 There are three ``abstractmethod``\ s that need to be implemented in a class that inherits from |probgnn|:

@@ -7,5 +7,10 @@ version: 2
 conda:
   environment: dev_environment.yml
 
+python:
+  install:
+    - method: setuptools
+      path: .
+
 sphinx:
   configuration: docs/source/conf.py

@@ -95,5 +95,4 @@ else:
     ]
 
 # * Print model parameters
-print(f"{cat_gp_trainer.amplitude=}")
-print(f"{cat_gp_trainer.length_scale=}")
+print(f"{cat_gp_trainer.trainable_vars=}")

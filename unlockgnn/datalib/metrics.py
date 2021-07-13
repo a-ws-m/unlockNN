@@ -12,6 +12,49 @@ from .visualisation import plot_calibration, plot_sharpness
 tfd = tfp.distributions
 
 
+def calculate_mean(vgp: tfp.layers.VariationalGaussianProcess):
+    """Get the mean values from a distribution."""
+    obs_index_points = vgp._index_points
+    obs_index_points = tf.convert_to_tensor(
+        obs_index_points, dtype=obs_index_points._dtype, name="observation_index_points"
+    )
+    return vgp.mean(index_points=obs_index_points)
+
+
+def calculate_stddev(vgp: tfp.layers.VariationalGaussianProcess):
+    """Get the mean values from a distribution."""
+    obs_index_points = vgp._index_points
+    obs_index_points = tf.convert_to_tensor(
+        obs_index_points, dtype=obs_index_points._dtype, name="observation_index_points"
+    )
+    return vgp.stddev(index_points=obs_index_points)
+
+
+class Sharpness(tf.keras.metrics.Metric):
+    """Metric class for sharpness."""
+
+    def __init__(self, name="sharpness", **kwargs):
+        super().__init__(name=name, **kwargs)
+        self.squared_std_devs = self.add_weight(
+            name="squared_stddevs", initializer="zeros"
+        )
+        self.num_data_points = self.add_weight(
+            name="sha_num_data_points", initializer="zeros"
+        )
+
+    def update_state(self, y_true, predicted_distribution, sample_weight=None):
+        std_devs = calculate_stddev(predicted_distribution)
+        self.squared_std_devs.assign_add(np.sum(np.square(std_devs)))
+        self.num_data_points.assign_add(len(std_devs))
+
+    def result(self):
+        return np.sqrt(self.squared_std_devs / self.num_data_points)
+
+    def reset_states(self):
+        self.squared_std_devs.assign(0)
+        self.num_data_points.assign(0)
+
+
 class MetricAnalyser:
     """Handler for metric calculations.
 
@@ -54,7 +97,7 @@ class MetricAnalyser:
     """
 
     # Set of which properties need the mean and standard deviation to be updated
-    REQUIRES_MEAN = {"mae", "calibration_err", "residuals", "pis"}
+    REQUIRES_MEAN = {"mae", "mape", "calibration_err", "residuals", "pis"}
     REQUIRES_STDDEV = {"sharpness", "variation", "calibration_err"}
 
     def __init__(
@@ -104,6 +147,15 @@ class MetricAnalyser:
         return mean_absolute_error(self.val_obs, self.mean)
 
     @property
+    def mape(self) -> float:
+        """Calculate the mean average percentage error of predicted values.
+
+        Returns:
+            mape (float)
+        """
+        return np.mean(np.abs(self.residuals / self.val_obs.numpy())) * 100
+
+    @property
     def sharpness(self) -> float:
         """Calculate the root-mean-squared of predicted standard deviations.
 
@@ -124,8 +176,10 @@ class MetricAnalyser:
 
         """
         stdev_mean = self.stddevs.mean()
-        coeff_var = np.sqrt(np.sum(np.square(self.stddevs - stdev_mean)))
-        coeff_var /= stdev_mean * (len(self.stddevs) - 1)
+        coeff_var = np.sqrt(
+            np.sum(np.square(self.stddevs - stdev_mean)) / (len(self.stddevs) - 1)
+        )
+        coeff_var /= stdev_mean
         return coeff_var
 
     @property
@@ -139,18 +193,18 @@ class MetricAnalyser:
 
         """
         predicted_pi, observed_pi = self.pis
-        return np.sum(np.square(predicted_pi - observed_pi))
+        return np.mean(np.square(predicted_pi - observed_pi))
 
     @property
     def residuals(self) -> np.ndarray:
         """Calculate the residuals.
 
         Returns:
-            residuals (:obj:`np.ndarray`): The difference between the means
-                of the predicted distributions and the true values.
+            residuals (:obj:`np.ndarray`): The difference between the true
+                values and the means of the predicted distributions.
 
         """
-        return self.mean - self.val_obs.numpy()
+        return self.val_obs.numpy() - self.mean
 
     def sharpness_plot(self, fname: Optional[Union[str, Path]] = None):
         """Plot the distribution of standard deviations and the sharpness.
