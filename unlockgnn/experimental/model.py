@@ -3,7 +3,7 @@ import json
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import List, Literal, Optional, Union
+from typing import List, Literal, Optional, Sequence, Union
 
 import tensorflow as tf
 import tensorflow.keras as keras
@@ -18,7 +18,7 @@ def make_probabilistic(
     num_inducing_points: int,
     kernel: KernelLayer = RBFKernelFn(),
     latent_layer: Union[str, int] = -2,
-    ntargets: int = 1,
+    target_shape: Union[Sequence, int] = 1,
 ) -> keras.Model:
     """Make a GNN probabilistic by replacing the final layer(s) with a VGP.
 
@@ -46,10 +46,13 @@ def make_probabilistic(
 
     inputs = gnn.layers[0]
     vgp_input = gnn(inputs)
+    output_shape = (
+        (target_shape,) if isinstance(target_shape, int) else tuple(target_shape)
+    )
     vgp_outputs = tfp.layers.VariationalGaussianProcess(
         num_inducing_points,
         kernel,
-        event_shape=(ntargets,),
+        event_shape=output_shape,
         jitter=1e-06,
         convert_to_tensor_fn=tfp.distributions.Distribution.mean,
     )(vgp_input)
@@ -82,7 +85,7 @@ class ProbGNN(ABC):
         save_path: Path,
         kernel: KernelLayer = RBFKernelFn(),
         latent_layer: Union[str, int] = -2,
-        ntargets: int = 1,
+        target_shape: Union[Sequence, int] = 1,
         metrics: List[Union[str, tf.keras.metrics.Metric]] = ["mae"],
         kl_weight: float = 1.0,
         optimizer: keras.optimizers.Optimizer = tf.optimizers.Adam(),
@@ -91,13 +94,17 @@ class ProbGNN(ABC):
         self.save_path = save_path
         self.weights_path = save_path / "weights.h5"
         self.conf_path = save_path / "config.json"
+        self.kernel_path = save_path / "kernel"
+
+        self.kernel = kernel
+
         # TODO: pre-existing model check and load procedure
         # Save GNN for use in reloading model from disk
         gnn.save(save_path / "gnn", include_optimizer=False)
 
         # Instantiate probabilistic model
         self.model = make_probabilistic(
-            gnn, num_inducing_points, kernel, latent_layer, ntargets
+            gnn, num_inducing_points, self.kernel, latent_layer, target_shape
         )
 
         self.metrics = metrics
@@ -174,6 +181,29 @@ class ProbGNN(ABC):
         self.model.save_weights(self.weights_path)
         with self.conf_path.open("w") as f:
             json.dump(self.config, f)
+        self.save_kernel()
 
     def save_kernel(self):
         """Save the VGP's kernel to disk."""
+        self.kernel.save(self.kernel_path)
+
+
+class MEGNetProbModel(ProbGNN):
+    """ProbGNN for MEGNetModels."""
+
+    def __init__(
+        self,
+        meg_model: MEGNetModel,
+        num_inducing_points: int,
+        save_path: Path,
+        kernel: KernelLayer = RBFKernelFn(),
+        latent_layer: Union[str, int] = -2,
+        target_shape: Optional[int] = None,
+        metrics: List[Union[str, tf.keras.metrics.Metric]] = ["mae"],
+        kl_weight: float = 1.0,
+        optimizer: keras.optimizers.Optimizer = tf.optimizers.Adam(),
+    ) -> None:
+        """Initialize probabilistic model."""
+        if target_shape is None:
+            # Determine output shape based on MEGNetModel
+            target_shape = meg_model.model.layers[-1].output_shape
