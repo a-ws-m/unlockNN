@@ -3,12 +3,16 @@ import json
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import List, Literal, Optional, Sequence, Union
+from typing import List, Literal, Optional, Sequence, Tuple, Union
+from megnet.data.graph import GraphBatchDistanceConvert, GraphBatchGenerator
+from megnet.utils.preprocessing import DummyScaler
 
+import numpy as np
 import tensorflow as tf
 import tensorflow.keras as keras
 import tensorflow_probability as tfp
-from megnet.models.megnet import MEGNetModel
+from megnet.models import GraphModel
+from pymatgen import Structure
 from unlockgnn.gp.kernel_layers import KernelLayer, RBFKernelFn
 from unlockgnn.gp.vgp_trainer import VariationalLoss
 
@@ -93,6 +97,7 @@ class ProbGNN(ABC):
         """Initialize probabilistic model."""
         self.save_path = save_path
         self.weights_path = save_path / "weights.h5"
+        self.ckpt_path = save_path / "checkpoint.h5"
         self.conf_path = save_path / "config.json"
         self.kernel_path = save_path / "kernel"
 
@@ -130,22 +135,26 @@ class ProbGNN(ABC):
         if recompile:
             self.compile(**compilation_kwargs)
 
-    @abstractmethod
-    def train_vgp(self):
+    def train_vgp(self, *args, **kwargs):
         """Train the VGP."""
         if not self.gnn_frozen:
             warnings.warn("GNN layers not frozen during VGP training.", RuntimeWarning)
+        self.train(*args, **kwargs)
 
-    @abstractmethod
-    def train_gnn(self):
+    def train_gnn(self, *args, **kwargs):
         """Train the GNN."""
         if not self.vgp_frozen:
             warnings.warn("VGP layer not frozen during GNN training.", RuntimeWarning)
+        self.train(*args, **kwargs)
 
     @abstractmethod
-    def train_full(self):
+    def train(self, *args, **kwargs):
         """Train the full-stack model."""
         ...
+
+    def predict(self, input):
+        """Predict target values and uncertainties for a given input."""
+        return self.model(input)
 
     @property
     def gnn_frozen(self) -> bool:
@@ -172,6 +181,13 @@ class ProbGNN(ABC):
         )
 
     @property
+    def ckpt_callback(self):
+        """Get the default configuration for a model checkpoint callback."""
+        return tf.keras.callbacks.ModelCheckpoint(
+            self.ckpt_path, save_best_only=True, save_weights_only=True
+        )
+
+    @property
     def config(self) -> dict:
         """Get the configuration parameters needed to save to disk."""
         return {var_name: getattr(self, var_name) for var_name in self.CONFIG_VARS}
@@ -193,7 +209,7 @@ class MEGNetProbModel(ProbGNN):
 
     def __init__(
         self,
-        meg_model: MEGNetModel,
+        meg_model: GraphModel,
         num_inducing_points: int,
         save_path: Path,
         kernel: KernelLayer = RBFKernelFn(),
@@ -207,3 +223,76 @@ class MEGNetProbModel(ProbGNN):
         if target_shape is None:
             # Determine output shape based on MEGNetModel
             target_shape = meg_model.model.layers[-1].output_shape
+        self.meg_model = meg_model
+
+        super().__init__(
+            self.meg_model.model,
+            num_inducing_points,
+            save_path,
+            kernel,
+            latent_layer,
+            target_shape,
+            kl_weight,
+            optimizer,
+        )
+
+    def train(
+        self,
+        structs: List[Structure],
+        targets: List[Union[float, np.ndarray]],
+        epochs: int,
+        val_structs: Optional[List[Structure]] = None,
+        val_targets: Optional[List[Union[float, np.ndarray]]] = None,
+        callbacks: List[tf.keras.callbacks.Callback] = [],
+        use_default_ckpt_handler: bool = True,
+        batch_size: int = 128,
+        scrub_failed_structs: bool = False,
+    ):
+        """Train the model."""
+        # Convert structures to graphs for model input
+        train_gen = self.create_input_generator(
+            structs, targets, batch_size, scrub_failed_structs
+        )
+        val_gen = None
+        if val_structs and val_targets:
+            val_gen = self.create_input_generator(
+                val_structs, val_targets, batch_size, scrub_failed_structs
+            )
+
+        # Configure callbacks
+        if use_default_ckpt_handler:
+            callbacks.append(self.ckpt_callback)
+
+        # Train
+        ...
+
+    def scale_targets(
+        self, targets: List[Union[float, np.ndarray]], num_atoms: List[int]
+    ) -> List[Union[float, np.ndarray]]:
+        """Scale target values using underlying MEGNetModel's scaler."""
+        return [
+            self.meg_model.target_scaler.transform(target, num_atom)
+            for target, num_atom in zip(targets, num_atoms)
+        ]
+
+    def create_input_generator(
+        self,
+        structs: List[Structure],
+        targets: List[Union[float, np.ndarray]],
+        batch_size: int,
+        scrub_failed_structs: bool = False,
+    ) -> Tuple[Union[GraphBatchDistanceConvert, GraphBatchGenerator], List[dict]]:
+        """Create generator for use during training and validation of model."""
+        graphs, trunc_targets = self.meg_model.get_all_graphs_targets(
+            structs, targets, scrub_failed_structs
+        )
+        # Check dimensions of model against converted graphs
+        self.meg_model.check_dimension(graphs[0])
+
+        # Scale targets if necessary
+        if not isinstance(self.meg_model.target_scaler, DummyScaler):
+            num_atoms = [len(graph["atom"]) for graph in graphs]
+            trunc_targets = self.scale_targets(trunc_targets, num_atoms)
+
+        inputs = self.meg_model.graph_converter.get_flat_data(graphs, trunc_targets)
+        return self.meg_model._create_generator(*inputs, batch_size=batch_size), graphs
