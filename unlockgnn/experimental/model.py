@@ -107,6 +107,7 @@ class ProbGNN(ABC):
         metrics: List[Union[str, tf.keras.metrics.Metric]] = ["mae"],
         kl_weight: float = 1.0,
         optimizer: keras.optimizers.Optimizer = tf.optimizers.Adam(),
+        load_ckpt: bool = True,
     ) -> None:
         """Initialize probabilistic model."""
         self.save_path = save_path
@@ -127,6 +128,7 @@ class ProbGNN(ABC):
 
         gnn_path = save_path / "gnn"
         if not gnn_path.exists():
+            loading: bool = False
             if gnn is None:
                 raise IOError(
                     f"{gnn_path} does not exist."
@@ -136,6 +138,7 @@ class ProbGNN(ABC):
             gnn.save(gnn_path, include_optimizer=False)
         else:
             # We're loading from memory
+            loading = True
             gnn = keras.models.load_model(gnn_path, compile=False)
 
             # Load optimizer
@@ -154,6 +157,11 @@ class ProbGNN(ABC):
 
         # Freeze GNN layers and compile, ready to train the VGP
         self.set_frozen("GNN")
+
+        if loading:
+            # Load weights from the relevant source
+            to_load = self.ckpt_path if load_ckpt else self.weights_path
+            self.model.load_weights(to_load)
 
     def set_frozen(
         self,
@@ -257,7 +265,7 @@ class ProbGNN(ABC):
             json.dump(optimizer_conf, f)
 
     @classmethod
-    def load(cls: "ProbGNN", save_path: Path) -> "ProbGNN":
+    def load(cls: "ProbGNN", save_path: Path, load_ckpt: bool = True) -> "ProbGNN":
         """Load a ProbGNN from disk."""
         # Check the save path exists
         if not save_path.exists():
@@ -267,7 +275,7 @@ class ProbGNN(ABC):
         with config_path.open("r") as f:
             config = json.load(f)
 
-        return cls(save_path=save_path, **config)
+        return cls(save_path=save_path, load_ckpt=load_ckpt, **config)
 
 
 class MEGNetProbModel(ProbGNN):
