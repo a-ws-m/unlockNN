@@ -12,7 +12,7 @@ import pickle
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Iterable, List, Literal, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
@@ -372,6 +372,34 @@ class MEGNetProbModel(ProbGNN):
             self.meg_model.target_scaler.transform(target, num_atom)
             for target, num_atom in zip(targets, num_atoms)
         ]
+
+    def predict(
+        self, input: Union[Structure, Iterable[Structure]]
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Predict target values and standard deviations for a given input."""
+        if isinstance(input, Structure):
+            # Just one to predict
+            input = [input]
+
+        graphs = (self.meg_model.graph_converter.convert(inp) for inp in input)
+
+        means = []
+        stddevs = []
+        for graph in graphs:
+            inp = self.meg_model.graph_converter.graph_to_input(graph)
+            mean, stddev = super().predict(inp)
+
+            if not isinstance(self.meg_model.target_scaler, DummyScaler):
+                num_atoms = len(graph["atom"])
+                mean = self.meg_model.target_scaler.inverse_transform(mean, num_atoms)
+                stddev = self.meg_model.target_scaler.inverse_transform(
+                    stddev, num_atoms
+                )
+
+            means.append(mean)
+            stddevs.append(stddev)
+
+        return np.stack(means), np.stack(stddevs)
 
     def create_input_generator(
         self,
