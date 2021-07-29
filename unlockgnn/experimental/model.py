@@ -4,7 +4,7 @@ import pickle
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Literal, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
@@ -26,7 +26,7 @@ def make_probabilistic(
     num_inducing_points: int,
     kernel: KernelLayer = RBFKernelFn(),
     latent_layer: Union[str, int] = -2,
-    target_shape: Union[Sequence, int] = 1,
+    target_shape: Union[Tuple[int], int] = 1,
     use_normalization: bool = True,
 ) -> keras.Model:
     """Make a GNN probabilistic by replacing the final layer(s) with a VGP.
@@ -103,7 +103,7 @@ class ProbGNN(ABC):
         gnn: Optional[keras.Model] = None,
         kernel: KernelLayer = RBFKernelFn(),
         latent_layer: Union[str, int] = -2,
-        target_shape: Union[Sequence, int] = 1,
+        target_shape: Union[Tuple[int], int] = 1,
         metrics: List[Union[str, tf.keras.metrics.Metric]] = ["mae"],
         kl_weight: float = 1.0,
         optimizer: keras.optimizers.Optimizer = tf.optimizers.Adam(),
@@ -288,14 +288,14 @@ class MEGNetProbModel(ProbGNN):
         meg_model: Optional[MEGNetModel] = None,
         kernel: KernelLayer = RBFKernelFn(),
         latent_layer: Union[str, int] = -2,
-        target_shape: Optional[int] = None,
+        target_shape: Optional[Union[Tuple[int], int]] = None,
         metrics: List[Union[str, tf.keras.metrics.Metric]] = ["mae"],
         kl_weight: float = 1.0,
         optimizer: keras.optimizers.Optimizer = tf.optimizers.Adam(),
     ) -> None:
         """Initialize probabilistic model."""
         self.meg_save_path = save_path / "megnet"
-        if save_path.exists():
+        if self.meg_save_path.exists():
             # Load from memory
             self.meg_model = MEGNetModel.from_file(str(self.meg_save_path))
         else:
