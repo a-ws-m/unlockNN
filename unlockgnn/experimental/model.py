@@ -1,18 +1,26 @@
-"""Experimental full-stack MEGNetProbModel code."""
+"""Experimental full-stack MEGNetProbModel code.
+
+TODO:
+    * Intelligently set initial values for inducing index points; add
+        BatchNormalisation, so that normally distributed index points are a decent
+        estimate.
+    * MEGNetProbModel I/O routine.
+
+"""
 import json
 import pickle
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple, Union
-from megnet.data.graph import GraphBatchDistanceConvert, GraphBatchGenerator
-from megnet.utils.preprocessing import DummyScaler
 
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras as keras
 import tensorflow_probability as tfp
-from megnet.models import GraphModel
+from megnet.data.graph import GraphBatchDistanceConvert, GraphBatchGenerator
+from megnet.models import MEGNetModel
+from megnet.utils.preprocessing import DummyScaler
 from pymatgen import Structure
 from unlockgnn.gp.kernel_layers import KernelLayer, RBFKernelFn, load_kernel
 from unlockgnn.gp.vgp_trainer import VariationalLoss
@@ -27,6 +35,7 @@ def make_probabilistic(
     kernel: KernelLayer = RBFKernelFn(),
     latent_layer: Union[str, int] = -2,
     target_shape: Union[Sequence, int] = 1,
+    use_normalization: bool = True,
 ) -> keras.Model:
     """Make a GNN probabilistic by replacing the final layer(s) with a VGP.
 
@@ -54,6 +63,12 @@ def make_probabilistic(
 
     inputs = gnn.layers[0]
     vgp_input = gnn(inputs)
+
+    index_points_init = None
+    if use_normalization:
+        vgp_input = keras.layers.BatchNormalization()(vgp_input)
+        index_points_init = keras.initializers.TruncatedNormal(stddev=1.0)
+
     output_shape = (
         (target_shape,) if isinstance(target_shape, int) else tuple(target_shape)
     )
@@ -61,6 +76,7 @@ def make_probabilistic(
         num_inducing_points,
         kernel,
         event_shape=output_shape,
+        inducing_index_points_initializer=index_points_init,
         jitter=1e-06,
         convert_to_tensor_fn=tfp.distributions.Distribution.mean,
     )(vgp_input)
@@ -267,9 +283,9 @@ class MEGNetProbModel(ProbGNN):
 
     def __init__(
         self,
-        meg_model: GraphModel,
         num_inducing_points: int,
         save_path: Path,
+        meg_model: Optional[MEGNetModel] = None,
         kernel: KernelLayer = RBFKernelFn(),
         latent_layer: Union[str, int] = -2,
         target_shape: Optional[int] = None,
@@ -278,10 +294,22 @@ class MEGNetProbModel(ProbGNN):
         optimizer: keras.optimizers.Optimizer = tf.optimizers.Adam(),
     ) -> None:
         """Initialize probabilistic model."""
+        self.meg_save_path = save_path / "megnet"
+        if save_path.exists():
+            # Load from memory
+            self.meg_model = MEGNetModel.from_file(str(self.meg_save_path))
+        else:
+            if meg_model is None:
+                raise IOError(
+                    f"{self.meg_save_path} does not exist."
+                    " Please check the `save_path` or pass a `meg_model` if creating a new `MEGNetProbModel`."
+                )
+            self.meg_model = meg_model
+            self.meg_model.save_model(str(self.meg_save_path))
+
         if target_shape is None:
             # Determine output shape based on MEGNetModel
-            target_shape = meg_model.model.layers[-1].output_shape
-        self.meg_model = meg_model
+            target_shape = self.meg_model.model.layers[-1].output_shape
 
         super().__init__(
             self.meg_model.model,
