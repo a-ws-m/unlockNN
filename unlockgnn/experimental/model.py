@@ -4,7 +4,7 @@ import pickle
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union, get_args
 
 import numpy as np
 import tensorflow as tf
@@ -19,6 +19,7 @@ from unlockgnn.gp.vgp_trainer import VariationalLoss
 
 MEGNetGraph = Dict[str, Union[np.ndarray, List[Union[int, float]]]]
 Targets = List[Union[float, np.ndarray]]
+LayerName = Literal["GNN", "VGP", "Norm"]
 
 
 def make_probabilistic(
@@ -181,27 +182,36 @@ class ProbGNN(ABC):
 
     def set_frozen(
         self,
-        layers: Literal["GNN", "VGP", "Norm"],
+        layers: Union[LayerName, List[LayerName]],
         freeze: bool = True,
         recompile: bool = True,
         **compilation_kwargs,
     ) -> None:
         """Freeze or thaw probabilistic GNN layers."""
-        if layers == "Norm":
+        if not isinstance(layers, list):
+            layers = [layers]
+
+        # Validation check
+        valid_layers = get_args(LayerName)
+        for name in layers:
+            if name not in valid_layers:
+                raise ValueError(
+                    f"Cannot freeze `{name}`; must be one of {valid_layers}."
+                )
+
+        if "Norm" in layers:
             if not self.use_normalization:
                 raise ValueError(
                     "Cannot freeze normalization layer: `use_normalization` is False."
                 )
             else:
                 self.model.layers[-1].trainable = not freeze
-        if layers == "GNN":
+        if "GNN" in layers:
             last_gnn_index = -2 if self.use_normalization else -1
             for layer in self.model.layers[:last_gnn_index]:
                 layer.trainable = not freeze
-        elif layers == "VGP":
+        if "VGP" in layers:
             self.model.layers[-1].trainable = not freeze
-        else:
-            raise ValueError(f"Expected one of 'GNN' or 'VGP', got {layers=}")
 
         if recompile:
             self.compile(
