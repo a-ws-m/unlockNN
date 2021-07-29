@@ -1,12 +1,4 @@
-"""Experimental full-stack MEGNetProbModel code.
-
-TODO:
-    * Intelligently set initial values for inducing index points; add
-        BatchNormalisation, so that normally distributed index points are a decent
-        estimate.
-    * MEGNetProbModel I/O routine.
-
-"""
+"""Experimental full-stack MEGNetProbModel code."""
 import json
 import pickle
 import warnings
