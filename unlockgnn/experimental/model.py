@@ -51,10 +51,9 @@ def make_probabilistic(
 
     # Remove layers up to the specified one
     for _ in range(num_pops):
-        gnn.layers.pop()
+        gnn._layers.pop()
 
-    inputs = gnn.layers[0]
-    vgp_input = gnn(inputs)
+    vgp_input = gnn.layers[-1].output
 
     index_points_init = None
     if use_normalization:
@@ -73,7 +72,7 @@ def make_probabilistic(
         convert_to_tensor_fn=tfp.distributions.Distribution.mean,
     )(vgp_input)
 
-    return keras.Model(inputs, vgp_outputs)
+    return keras.Model(gnn.inputs, vgp_outputs)
 
 
 class ProbGNN(ABC):
@@ -94,6 +93,7 @@ class ProbGNN(ABC):
         "kl_weight",
         "latent_layer",
         "target_shape",
+        "use_normalization",
     ]
 
     def __init__(
@@ -108,6 +108,7 @@ class ProbGNN(ABC):
         kl_weight: float = 1.0,
         optimizer: keras.optimizers.Optimizer = tf.optimizers.Adam(),
         load_ckpt: bool = True,
+        use_normalization: bool = True,
     ) -> None:
         """Initialize probabilistic model."""
         self.save_path = save_path
@@ -125,6 +126,7 @@ class ProbGNN(ABC):
         self.latent_layer = latent_layer
         self.target_shape = target_shape
         self.num_inducing_index_points = num_inducing_points
+        self.use_normalization = use_normalization
 
         gnn_path = save_path / "gnn"
         if not gnn_path.exists():
@@ -142,17 +144,28 @@ class ProbGNN(ABC):
             gnn = keras.models.load_model(gnn_path, compile=False)
 
             # Load optimizer
-            with self.optimizer_path.open("rb") as f:
-                self.optimizer = pickle.load(f)
-            with self.optimzer_conf_path.open("r") as f:
-                optimizer_conf = json.load(f)
-            self.optimizer = self.optimizer.from_config(optimizer_conf)
+            try:
+                with self.optimizer_path.open("rb") as f:
+                    self.optimizer = pickle.load(f)
+                with self.optimzer_conf_path.open("r") as f:
+                    optimizer_conf = json.load(f)
+                self.optimizer = self.optimizer.from_config(optimizer_conf)
+            except FileNotFoundError:
+                warnings.warn("No saved optimizer found.")
 
-            self.kernel = load_kernel(self.kernel_path)
+            try:
+                self.kernel = load_kernel(self.kernel_path)
+            except FileNotFoundError:
+                warnings.warn("No saved kernel found.")
 
         # Instantiate probabilistic model
         self.model = make_probabilistic(
-            gnn, num_inducing_points, self.kernel, latent_layer, target_shape
+            gnn,
+            num_inducing_points,
+            self.kernel,
+            latent_layer,
+            target_shape,
+            use_normalization,
         )
 
         # Freeze GNN layers and compile, ready to train the VGP
@@ -161,18 +174,29 @@ class ProbGNN(ABC):
         if loading:
             # Load weights from the relevant source
             to_load = self.ckpt_path if load_ckpt else self.weights_path
-            self.model.load_weights(to_load)
+            try:
+                self.model.load_weights(to_load)
+            except OSError:
+                warnings.warn(f"No saved weights found at `{to_load}`.")
 
     def set_frozen(
         self,
-        layers: Literal["GNN", "VGP"],
+        layers: Literal["GNN", "VGP", "Norm"],
         freeze: bool = True,
         recompile: bool = True,
         **compilation_kwargs,
     ) -> None:
         """Freeze or thaw probabilistic GNN layers."""
+        if layers == "Norm":
+            if not self.use_normalization:
+                raise ValueError(
+                    "Cannot freeze normalization layer: `use_normalization` is False."
+                )
+            else:
+                self.model.layers[-1].trainable = not freeze
         if layers == "GNN":
-            for layer in self.model.layers[:-1]:
+            last_gnn_index = -2 if self.use_normalization else -1
+            for layer in self.model.layers[:last_gnn_index]:
                 layer.trainable = not freeze
         elif layers == "VGP":
             self.model.layers[-1].trainable = not freeze
@@ -211,12 +235,21 @@ class ProbGNN(ABC):
     @property
     def gnn_frozen(self) -> bool:
         """Determine whether all GNN layers are frozen."""
-        return all((not layer.trainable for layer in self.model.layers[:-1]))
+        last_gnn_index = -2 if self.use_normalization else -1
+        return all(
+            (not layer.trainable for layer in self.model.layers[:last_gnn_index])
+        )
 
     @property
     def vgp_frozen(self) -> bool:
         """Determine whether the VGP is frozen."""
         return not self.model.layers[-1].trainable
+
+    @property
+    def norm_frozen(self) -> Optional[bool]:
+        """Determine whether the BatchNormalization layer is frozen, if it exists."""
+        if self.use_normalization:
+            return not self.model.layers[-2].trainable
 
     def compile(
         self,
@@ -292,6 +325,8 @@ class MEGNetProbModel(ProbGNN):
         metrics: List[Union[str, tf.keras.metrics.Metric]] = ["mae"],
         kl_weight: float = 1.0,
         optimizer: keras.optimizers.Optimizer = tf.optimizers.Adam(),
+        load_ckpt: bool = True,
+        use_normalization: bool = True,
     ) -> None:
         """Initialize probabilistic model."""
         self.meg_save_path = save_path / "megnet"
@@ -310,17 +345,20 @@ class MEGNetProbModel(ProbGNN):
         if target_shape is None:
             # Determine output shape based on MEGNetModel
             target_shape = self.meg_model.model.layers[-1].output_shape
+            target_shape = tuple(dim for dim in target_shape if dim is not None)
 
         super().__init__(
-            self.meg_model.model,
             num_inducing_points,
             save_path,
+            self.meg_model.model,
             kernel,
             latent_layer,
             target_shape,
             metrics,
             kl_weight,
             optimizer,
+            load_ckpt,
+            use_normalization,
         )
 
     def train(
@@ -343,7 +381,7 @@ class MEGNetProbModel(ProbGNN):
         )
         val_gen = None
         val_graphs = None
-        if val_structs and val_targets:
+        if val_structs is not None and val_targets is not None:
             val_gen, val_graphs = self.create_input_generator(
                 val_structs, val_targets, batch_size, scrub_failed_structs
             )
