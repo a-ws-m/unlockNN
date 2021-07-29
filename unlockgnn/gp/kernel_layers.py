@@ -39,7 +39,6 @@ class KernelLayer(tf.keras.layers.Layer, ABC):
         """Get configuration information for the class."""
         ...
 
-    @abstractmethod
     def save(self, directory: Path):
         """Save the kernel to disk.
 
