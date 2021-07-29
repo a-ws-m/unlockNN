@@ -1,9 +1,10 @@
 """Experimental full-stack MEGNetProbModel code."""
 import json
+import pickle
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple, Union
 from megnet.data.graph import GraphBatchDistanceConvert, GraphBatchGenerator
 from megnet.utils.preprocessing import DummyScaler
 
@@ -13,7 +14,7 @@ import tensorflow.keras as keras
 import tensorflow_probability as tfp
 from megnet.models import GraphModel
 from pymatgen import Structure
-from unlockgnn.gp.kernel_layers import KernelLayer, RBFKernelFn
+from unlockgnn.gp.kernel_layers import KernelLayer, RBFKernelFn, load_kernel
 from unlockgnn.gp.vgp_trainer import VariationalLoss
 
 MEGNetGraph = Dict[str, Union[np.ndarray, List[Union[int, float]]]]
@@ -83,13 +84,15 @@ class ProbGNN(ABC):
         "ntargets",
         "metrics",
         "kl_weight",
+        "latent_layer",
+        "target_shape",
     ]
 
     def __init__(
         self,
-        gnn: keras.Model,
         num_inducing_points: int,
         save_path: Path,
+        gnn: Optional[keras.Model] = None,
         kernel: KernelLayer = RBFKernelFn(),
         latent_layer: Union[str, int] = -2,
         target_shape: Union[Sequence, int] = 1,
@@ -103,21 +106,46 @@ class ProbGNN(ABC):
         self.ckpt_path = save_path / "checkpoint.h5"
         self.conf_path = save_path / "config.json"
         self.kernel_path = save_path / "kernel"
+        self.optimizer_path = save_path / "optimizer.pkl"
+        self.optimzer_conf_path = save_path / "optimizer_config.json"
 
         self.kernel = kernel
+        self.metrics = metrics
+        self.optimizer: keras.optimizers.Optimizer = optimizer
+        self.kl_weight = kl_weight
+        self.latent_layer = latent_layer
+        self.target_shape = target_shape
+        self.num_inducing_index_points = num_inducing_points
 
-        # TODO: pre-existing model check and load procedure
-        # Save GNN for use in reloading model from disk
-        gnn.save(save_path / "gnn", include_optimizer=False)
+        gnn_path = save_path / "gnn"
+        if not gnn_path.exists():
+            if gnn is None:
+                raise IOError(
+                    f"{gnn_path} does not exist."
+                    " Please check the `save_path`, or pass a GNN model if creating a new `ProbGNN`."
+                )
+            # Save GNN for use in reloading model from disk
+            gnn.save(gnn_path, include_optimizer=False)
+        else:
+            # We're loading from memory
+            gnn = keras.models.load_model(gnn_path, compile=False)
+
+            # Load optimizer
+            with self.optimizer_path.open("rb") as f:
+                self.optimizer = pickle.load(f)
+            with self.optimzer_conf_path.open("r") as f:
+                optimizer_conf = json.load(f)
+            self.optimizer = self.optimizer.from_config(optimizer_conf)
+
+            self.kernel = load_kernel(self.kernel_path)
 
         # Instantiate probabilistic model
         self.model = make_probabilistic(
             gnn, num_inducing_points, self.kernel, latent_layer, target_shape
         )
 
-        self.metrics = metrics
         # Freeze GNN layers and compile, ready to train the VGP
-        self.set_frozen("GNN", kl_weight=kl_weight, optimizer=optimizer)
+        self.set_frozen("GNN")
 
     def set_frozen(
         self,
@@ -125,7 +153,7 @@ class ProbGNN(ABC):
         freeze: bool = True,
         recompile: bool = True,
         **compilation_kwargs,
-    ):
+    ) -> None:
         """Freeze or thaw probabilistic GNN layers."""
         if layers == "GNN":
             for layer in self.model.layers[:-1]:
@@ -136,15 +164,17 @@ class ProbGNN(ABC):
             raise ValueError(f"Expected one of 'GNN' or 'VGP', got {layers=}")
 
         if recompile:
-            self.compile(**compilation_kwargs)
+            self.compile(
+                kl_weight=self.kl_weight, optimizer=self.optimizer, **compilation_kwargs
+            )
 
-    def train_vgp(self, *args, **kwargs):
+    def train_vgp(self, *args, **kwargs) -> None:
         """Train the VGP."""
         if not self.gnn_frozen:
             warnings.warn("GNN layers not frozen during VGP training.", RuntimeWarning)
         self.train(*args, **kwargs)
 
-    def train_gnn(self, *args, **kwargs):
+    def train_gnn(self, *args, **kwargs) -> None:
         """Train the GNN."""
         if not self.vgp_frozen:
             warnings.warn("VGP layer not frozen during GNN training.", RuntimeWarning)
@@ -155,9 +185,12 @@ class ProbGNN(ABC):
         """Train the full-stack model."""
         ...
 
-    def predict(self, input):
-        """Predict target values and uncertainties for a given input."""
-        return self.model(input)
+    def predict(self, input) -> Tuple[np.ndarray, np.ndarray]:
+        """Predict target values and standard deviations for a given input."""
+        distribution: tfp.distributions.Distribution = self.model.call(
+            input
+        ).distribution
+        return distribution.mean().numpy(), distribution.stddev().numpy()
 
     @property
     def gnn_frozen(self) -> bool:
@@ -191,7 +224,7 @@ class ProbGNN(ABC):
         )
 
     @property
-    def config(self) -> dict:
+    def config(self) -> Dict[str, Any]:
         """Get the configuration parameters needed to save to disk."""
         return {var_name: getattr(self, var_name) for var_name in self.CONFIG_VARS}
 
@@ -201,10 +234,32 @@ class ProbGNN(ABC):
         with self.conf_path.open("w") as f:
             json.dump(self.config, f)
         self.save_kernel()
+        self.save_optimizer()
 
     def save_kernel(self):
         """Save the VGP's kernel to disk."""
         self.kernel.save(self.kernel_path)
+
+    def save_optimizer(self):
+        """Save the model's optimizer to disk."""
+        with self.optimizer_path.open("wb") as f:
+            pickle.dump(self.optimizer, f)
+        optimizer_conf = self.optimizer.get_config()
+        with self.optimzer_conf_path.open("w") as f:
+            json.dump(optimizer_conf, f)
+
+    @classmethod
+    def load(cls: "ProbGNN", save_path: Path) -> "ProbGNN":
+        """Load a ProbGNN from disk."""
+        # Check the save path exists
+        if not save_path.exists():
+            raise IOError(f"{save_path} does not exist.")
+
+        config_path = save_path / "config.json"
+        with config_path.open("r") as f:
+            config = json.load(f)
+
+        return cls(save_path=save_path, **config)
 
 
 class MEGNetProbModel(ProbGNN):
