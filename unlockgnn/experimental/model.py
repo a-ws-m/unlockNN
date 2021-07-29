@@ -200,7 +200,7 @@ class ProbGNN(ABC):
                     "Cannot freeze normalization layer: `use_normalization` is False."
                 )
             else:
-                self.model.layers[-1].trainable = not freeze
+                self.model.layers[-2].trainable = not freeze
         if "GNN" in layers:
             last_gnn_index = -2 if self.use_normalization else -1
             for layer in self.model.layers[:last_gnn_index]:
