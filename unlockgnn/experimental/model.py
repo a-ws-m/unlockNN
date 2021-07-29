@@ -3,7 +3,7 @@ import json
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import List, Literal, Optional, Sequence, Tuple, Union
+from typing import Dict, List, Literal, Optional, Sequence, Tuple, Union
 from megnet.data.graph import GraphBatchDistanceConvert, GraphBatchGenerator
 from megnet.utils.preprocessing import DummyScaler
 
@@ -15,6 +15,9 @@ from megnet.models import GraphModel
 from pymatgen import Structure
 from unlockgnn.gp.kernel_layers import KernelLayer, RBFKernelFn
 from unlockgnn.gp.vgp_trainer import VariationalLoss
+
+MEGNetGraph = Dict[str, Union[np.ndarray, List[Union[int, float]]]]
+Targets = List[Union[float, np.ndarray]]
 
 
 def make_probabilistic(
@@ -232,6 +235,7 @@ class MEGNetProbModel(ProbGNN):
             kernel,
             latent_layer,
             target_shape,
+            metrics,
             kl_weight,
             optimizer,
         )
@@ -239,23 +243,25 @@ class MEGNetProbModel(ProbGNN):
     def train(
         self,
         structs: List[Structure],
-        targets: List[Union[float, np.ndarray]],
+        targets: Targets,
         epochs: int,
         val_structs: Optional[List[Structure]] = None,
-        val_targets: Optional[List[Union[float, np.ndarray]]] = None,
+        val_targets: Optional[Targets] = None,
         callbacks: List[tf.keras.callbacks.Callback] = [],
         use_default_ckpt_handler: bool = True,
         batch_size: int = 128,
         scrub_failed_structs: bool = False,
+        verbose: Literal[0, 1, 2] = 2,
     ):
         """Train the model."""
         # Convert structures to graphs for model input
-        train_gen = self.create_input_generator(
+        train_gen, train_graphs = self.create_input_generator(
             structs, targets, batch_size, scrub_failed_structs
         )
         val_gen = None
+        val_graphs = None
         if val_structs and val_targets:
-            val_gen = self.create_input_generator(
+            val_gen, val_graphs = self.create_input_generator(
                 val_structs, val_targets, batch_size, scrub_failed_structs
             )
 
@@ -264,11 +270,20 @@ class MEGNetProbModel(ProbGNN):
             callbacks.append(self.ckpt_callback)
 
         # Train
-        ...
+        steps_per_train = int(np.ceil(len(train_graphs) / batch_size))
+        steps_per_val = int(np.ceil(len(val_graphs) / batch_size))
 
-    def scale_targets(
-        self, targets: List[Union[float, np.ndarray]], num_atoms: List[int]
-    ) -> List[Union[float, np.ndarray]]:
+        self.model.fit(
+            train_gen,
+            steps_per_epoch=steps_per_train,
+            validation_data=val_gen,
+            validation_steps=steps_per_val,
+            epochs=epochs,
+            verbose=verbose,
+            callbacks=callbacks,
+        )
+
+    def scale_targets(self, targets: Targets, num_atoms: List[int]) -> Targets:
         """Scale target values using underlying MEGNetModel's scaler."""
         return [
             self.meg_model.target_scaler.transform(target, num_atom)
@@ -278,10 +293,12 @@ class MEGNetProbModel(ProbGNN):
     def create_input_generator(
         self,
         structs: List[Structure],
-        targets: List[Union[float, np.ndarray]],
+        targets: Targets,
         batch_size: int,
         scrub_failed_structs: bool = False,
-    ) -> Tuple[Union[GraphBatchDistanceConvert, GraphBatchGenerator], List[dict]]:
+    ) -> Tuple[
+        Union[GraphBatchDistanceConvert, GraphBatchGenerator], List[MEGNetGraph]
+    ]:
         """Create generator for use during training and validation of model."""
         graphs, trunc_targets = self.meg_model.get_all_graphs_targets(
             structs, targets, scrub_failed_structs
