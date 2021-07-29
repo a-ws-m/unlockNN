@@ -89,7 +89,6 @@ class ProbGNN(ABC):
 
     CONFIG_VARS: List[str] = [
         "num_inducing_points",
-        "ntargets",
         "metrics",
         "kl_weight",
         "latent_layer",
@@ -118,7 +117,6 @@ class ProbGNN(ABC):
         self.conf_path = save_path / "config.json"
         self.kernel_path = save_path / "kernel"
         self.optimizer_path = save_path / "optimizer.pkl"
-        self.optimzer_conf_path = save_path / "optimizer_config.json"
 
         self.kernel = kernel
         self.metrics = metrics
@@ -126,7 +124,7 @@ class ProbGNN(ABC):
         self.kl_weight = kl_weight
         self.latent_layer = latent_layer
         self.target_shape = target_shape
-        self.num_inducing_index_points = num_inducing_points
+        self.num_inducing_points = num_inducing_points
         self.use_normalization = use_normalization
 
         gnn_path = save_path / "gnn"
@@ -148,9 +146,6 @@ class ProbGNN(ABC):
             try:
                 with self.optimizer_path.open("rb") as f:
                     self.optimizer = pickle.load(f)
-                with self.optimzer_conf_path.open("r") as f:
-                    optimizer_conf = json.load(f)
-                self.optimizer = self.optimizer.from_config(optimizer_conf)
             except FileNotFoundError:
                 warnings.warn("No saved optimizer found.")
 
@@ -303,9 +298,6 @@ class ProbGNN(ABC):
         """Save the model's optimizer to disk."""
         with self.optimizer_path.open("wb") as f:
             pickle.dump(self.optimizer, f)
-        optimizer_conf = self.optimizer.get_config()
-        with self.optimzer_conf_path.open("w") as f:
-            json.dump(optimizer_conf, f)
 
     @classmethod
     def load(cls: "ProbGNN", save_path: Path, load_ckpt: bool = True) -> "ProbGNN":
