@@ -3,7 +3,9 @@ import json
 import pickle
 import warnings
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from pathlib import Path
+from pprint import pprint
 from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union, get_args
 
 import numpy as np
@@ -31,6 +33,7 @@ def make_probabilistic(
     latent_layer: Union[str, int] = -2,
     target_shape: Union[Tuple[int], int] = 1,
     use_normalization: bool = True,
+    prediction_mode: bool = False,
 ) -> keras.Model:
     """Make a GNN probabilistic by replacing the final layer(s) with a VGP.
 
@@ -66,13 +69,20 @@ def make_probabilistic(
     output_shape = (
         (target_shape,) if isinstance(target_shape, int) else tuple(target_shape)
     )
+    convert_fn = (
+        tfd.Distribution.mean
+        if not prediction_mode
+        else lambda trans_dist: tf.stack(
+            [trans_dist.distribution.mean(), trans_dist.distribution.stddev()],
+        )
+    )
     vgp_outputs = tfp.layers.VariationalGaussianProcess(
         num_inducing_points,
         kernel,
         event_shape=output_shape,
         inducing_index_points_initializer=index_points_init,
         jitter=1e-06,
-        convert_to_tensor_fn=tfp.distributions.Distribution.mean,
+        convert_to_tensor_fn=convert_fn,
     )(vgp_input)
 
     return keras.Model(gnn.inputs, vgp_outputs)
@@ -114,11 +124,12 @@ class ProbGNN(ABC):
     ) -> None:
         """Initialize probabilistic model."""
         self.save_path = save_path
-        self.weights_path = save_path / "weights.h5"
+        self.weights_path = save_path / "weights"
         self.ckpt_path = save_path / "checkpoint.h5"
         self.conf_path = save_path / "config.json"
         self.kernel_path = save_path / "kernel"
         self.optimizer_path = save_path / "optimizer.pkl"
+        self.gnn_path = save_path / "gnn"
 
         self.kernel = kernel
         self.metrics = metrics
@@ -129,20 +140,21 @@ class ProbGNN(ABC):
         self.num_inducing_points = num_inducing_points
         self.use_normalization = use_normalization
 
-        gnn_path = save_path / "gnn"
-        if not gnn_path.exists():
+        self.pred_model: Optional[keras.Model] = None
+
+        if not self.gnn_path.exists():
             loading: bool = False
             if gnn is None:
                 raise IOError(
-                    f"{gnn_path} does not exist."
+                    f"{self.gnn_path} does not exist."
                     " Please check the `save_path`, or pass a GNN model if creating a new `ProbGNN`."
                 )
             # Save GNN for use in reloading model from disk
-            gnn.save(gnn_path, include_optimizer=False)
+            gnn.save(self.gnn_path, include_optimizer=False)
         else:
             # We're loading from memory
             loading = True
-            gnn = keras.models.load_model(gnn_path, compile=False)
+            gnn = keras.models.load_model(self.gnn_path, compile=False)
 
             # Load optimizer
             try:
@@ -232,11 +244,41 @@ class ProbGNN(ABC):
         """Train the full-stack model."""
         ...
 
+    def update_pred_model(self, force_new: bool = False) -> "ProbGNN":
+        """Instantiate or update the predictor model."""
+        while not force_new:
+            # Check if we need to instantiate the prediction model
+            if self.pred_model is None:
+                force_new = True
+                break
+            current_weights = self.model.get_weights()
+            predictor_weights = self.pred_model.get_weights()
+            force_new = not all(
+                np.allclose(current, predictor, equal_nan=True)
+                for current, predictor in zip(current_weights, predictor_weights)
+            )
+            break
+        if force_new:
+            self.model.save_weights(self.weights_path)
+            gnn = keras.models.load_model(self.gnn_path, compile=False)
+            pred_model = make_probabilistic(
+                gnn,
+                self.num_inducing_points,
+                self.kernel,
+                self.latent_layer,
+                self.target_shape,
+                self.use_normalization,
+                prediction_mode=True,
+            )
+            pred_model.compile()
+            pred_model.load_weights(self.weights_path)
+            self.pred_model = pred_model
+        return self.pred_model
+
     def predict(self, input) -> Tuple[np.ndarray, np.ndarray]:
         """Predict target values and standard deviations for a given input."""
-        # TODO Apparently we have to recompile the model with a different convert_to_tensor_fn...
-        prediction = self.model.predict(input)
-        return prediction
+        self.update_pred_model()
+        return self.pred_model.predict(input)
 
     @property
     def gnn_frozen(self) -> bool:
@@ -433,7 +475,8 @@ class MEGNetProbModel(ProbGNN):
         stddevs = []
         for graph in graphs:
             inputs = self.meg_model.graph_converter.graph_to_input(graph)
-            mean, stddev = super().predict(inputs)
+            prediction = super().predict(inputs)
+            mean, stddev = prediction[0], prediction[1]
 
             if not isinstance(self.meg_model.target_scaler, DummyScaler):
                 num_atoms = len(graph["atom"])
@@ -445,7 +488,7 @@ class MEGNetProbModel(ProbGNN):
             means.append(mean)
             stddevs.append(stddev)
 
-        return np.stack(means), np.stack(stddevs)
+        return np.stack(means).squeeze(), np.stack(stddevs).squeeze()
 
     def create_input_generator(
         self,
