@@ -17,6 +17,8 @@ from pymatgen import Structure
 from unlockgnn.gp.kernel_layers import KernelLayer, RBFKernelFn, load_kernel
 from unlockgnn.gp.vgp_trainer import VariationalLoss
 
+tfd = tfp.distributions
+
 MEGNetGraph = Dict[str, Union[np.ndarray, List[Union[int, float]]]]
 Targets = List[Union[float, np.ndarray]]
 LayerName = Literal["GNN", "VGP", "Norm"]
@@ -232,10 +234,9 @@ class ProbGNN(ABC):
 
     def predict(self, input) -> Tuple[np.ndarray, np.ndarray]:
         """Predict target values and standard deviations for a given input."""
-        distribution: tfp.distributions.Distribution = self.model.call(
-            input
-        ).distribution
-        return distribution.mean().numpy(), distribution.stddev().numpy()
+        # TODO Apparently we have to recompile the model with a different convert_to_tensor_fn...
+        prediction = self.model.predict(input)
+        return prediction
 
     @property
     def gnn_frozen(self) -> bool:
@@ -417,6 +418,11 @@ class MEGNetProbModel(ProbGNN):
         self, input: Union[Structure, Iterable[Structure]]
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Predict target values and standard deviations for a given input."""
+        to_freeze = ["GNN", "VGP"]
+        if self.use_normalization:
+            to_freeze.append("Norm")
+        self.set_frozen(to_freeze)
+
         if isinstance(input, Structure):
             # Just one to predict
             input = [input]
@@ -426,8 +432,8 @@ class MEGNetProbModel(ProbGNN):
         means = []
         stddevs = []
         for graph in graphs:
-            inp = self.meg_model.graph_converter.graph_to_input(graph)
-            mean, stddev = super().predict(inp)
+            inputs = self.meg_model.graph_converter.graph_to_input(graph)
+            mean, stddev = super().predict(inputs)
 
             if not isinstance(self.meg_model.target_scaler, DummyScaler):
                 num_atoms = len(graph["atom"])
