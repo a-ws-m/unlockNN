@@ -38,8 +38,23 @@ def make_probabilistic(
     Caution: This function modifies the GNN in memory. Ensure that the GNN has
     been saved to disk before using.
 
-    Args: gnn: The base GNN model to modify. latent_layer: The name or index of
-        the layer of the GNN to be fed into the VGP.
+    Args:
+        gnn: The base GNN model to modify. latent_layer: The name or index of
+            the layer of the GNN to be fed into the VGP.
+        num_inducing_points: The number of inducing index points for the
+            VGP.
+        kernel: A :class`KernelLayer` for the VGP to use.
+        latent_layer: The index or name of the GNN layer to use as the
+            input for the VGP.
+        target_shape: The shape of the target values.
+        use_normalization: Whether to use a `BatchNormalization` layer before
+            the VGP. Recommended for better training efficiency.
+        prediction_mode: Whether to create a model for predictions _only_.
+            (Resulting model cannot be serialized and loss functions won't work.)
+
+    Returns:
+        A `keras.Model` with the `gnn`'s first layers, but terminating in a
+            VGP.
 
     """
     # Determine how many layers to pop
@@ -90,10 +105,22 @@ class ProbGNN(ABC):
     """Wrapper for creating a probabilistic GNN model.
 
     Args:
+        num_inducing_points: The number of inducing index points for the
+            VGP.
+        save_path: Path to the save directory for the model.
         gnn: The base GNN model to modify.
-        optimizer: The model optimizer, needed for recompilation.
+        kernel: A :class`KernelLayer` for the VGP to use.
         latent_layer: The name or index of the layer of the GNN to be fed into
             the VGP.
+        target_shape: The shape of the target values.
+        metrics: A list of metrics to record during training.
+        kl_weight: The relative weighting of the Kullback-Leibler divergence
+            in the loss function.
+        optimizer: The model optimizer, needed for recompilation.
+        load_ckpt: Whether to load the best checkpoint's weights, instead
+            of those saved at the time of the last :meth:`save`.
+        use_normalization: Whether to use a `BatchNormalization` layer before
+            the VGP. Recommended for better training efficiency.
 
     """
 
@@ -120,7 +147,14 @@ class ProbGNN(ABC):
         load_ckpt: bool = True,
         use_normalization: bool = True,
     ) -> None:
-        """Initialize probabilistic model."""
+        """Initialize the probabilistic model.
+
+        Saves the GNN to disk, loads weights from disk if they exist and then
+        instantiates the probabilistic model. The model's GNN layers are
+        initially frozen by default (but not the VGP and `BatchNormalization`
+        layer, if applicable).
+
+        """
         self.save_path = save_path
         self.weights_path = save_path / "weights"
         self.ckpt_path = save_path / "checkpoint.h5"
@@ -194,7 +228,18 @@ class ProbGNN(ABC):
         recompile: bool = True,
         **compilation_kwargs,
     ) -> None:
-        """Freeze or thaw probabilistic GNN layers."""
+        """Freeze or thaw probabilistic GNN layers.
+
+        Args:
+            layers: Name or list of names of layers to thaw.
+            freeze: Whether to freeze (`True`) or thaw (`False`) the layers.
+            recompile: Whether to recompile the model after the operation.
+            **compilation_kwargs: Keyword arguments to pass to :meth:`compile`.
+
+        Raises:
+            ValueError: If one or more `layers` are invalid names.
+
+        """
         if not isinstance(layers, list):
             layers = [layers]
 
@@ -226,24 +271,55 @@ class ProbGNN(ABC):
             )
 
     def train_vgp(self, *args, **kwargs) -> None:
-        """Train the VGP."""
+        """Train the VGP.
+
+        Positional and keyword arguments are forwarded to :meth:`train`.
+
+        Raises:
+            RuntimeWarning: If the GNN layers are not frozen.
+
+        """
         if not self.gnn_frozen:
             warnings.warn("GNN layers not frozen during VGP training.", RuntimeWarning)
         self.train(*args, **kwargs)
 
     def train_gnn(self, *args, **kwargs) -> None:
-        """Train the GNN."""
+        """Train the GNN.
+
+        Positional and keyword arguments are forwarded to :meth:`train`.
+
+        Raises:
+            RuntimeWarning: If the VGP layers are not frozen.
+
+        """
         if not self.vgp_frozen:
             warnings.warn("VGP layer not frozen during GNN training.", RuntimeWarning)
         self.train(*args, **kwargs)
 
     @abstractmethod
-    def train(self, *args, **kwargs):
+    def train(self, *args, **kwargs) -> None:
         """Train the full-stack model."""
         ...
 
-    def update_pred_model(self, force_new: bool = False) -> "ProbGNN":
-        """Instantiate or update the predictor model."""
+    def update_pred_model(self, force_new: bool = False) -> None:
+        """Instantiate or update the predictor model.
+
+        The predictor model is saved in :attr:`pred_model`. This method is a
+        workaround to reconcile the inability to save or train a model that
+        returns the VGP distribution's mean _and_ standard deviation
+        simultaneously.
+
+        This method creates a clone model and so it must be called before making
+        a prediction whenever the :attr:`model`'s weights have changed. By
+        default, the method checks whether the pre-existing :attr:`pred_model`'s
+        weights are similar to the :attr:`model`'s weights before cloning, and
+        skips execution if they are. Setting `force_new=True` skips this check.
+
+        Args:
+            force_new: Whether to force the creation of a new model, skipping
+                the weights equality check.
+
+        """
         while not force_new:
             # Check if we need to instantiate the prediction model
             if self.pred_model is None:
@@ -271,10 +347,18 @@ class ProbGNN(ABC):
             pred_model.compile()
             pred_model.load_weights(self.weights_path)
             self.pred_model = pred_model
-        return self.pred_model
 
     def predict(self, input) -> np.ndarray:
-        """Predict target values and standard deviations for a given input."""
+        """Predict target values and standard deviations for a given input.
+        
+        Args:
+            input: The input(s) to the model.
+        
+        Returns:
+            predictions: A numpy array containing predicted means and
+                standard deviations.
+        
+        """
         self.update_pred_model()
         return self.pred_model.predict(input)
 
@@ -305,6 +389,11 @@ class ProbGNN(ABC):
         """Compile the probabilistic GNN.
 
         Recompilation is required whenever layers are (un)frozen.
+
+        Args:
+            kl_weight: The relative weighting of the Kullback-Leibler divergence
+                in the loss function.
+            optimizer: The model optimizer, needed for recompilation.
 
         """
         self.model.compile(
@@ -342,7 +431,20 @@ class ProbGNN(ABC):
 
     @classmethod
     def load(cls: "ProbGNN", save_path: Path, load_ckpt: bool = True) -> "ProbGNN":
-        """Load a ProbGNN from disk."""
+        """Load a ProbGNN from disk.
+        
+        Args:
+            save_path: The path to the model's save directory.
+            load_ckpt: Whether to load the best checkpoint's weights, instead
+                of those saved at the time of the last :meth:`save`.
+
+        Returns:
+            The loaded model.
+        
+        Raises:
+            IOError: If the `save_path` does not exist.
+
+        """
         # Check the save path exists
         if not save_path.exists():
             raise IOError(f"{save_path} does not exist.")
