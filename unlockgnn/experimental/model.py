@@ -1,6 +1,7 @@
 """Experimental full-stack MEGNetProbModel code."""
 import json
 import pickle
+from re import I
 import warnings
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
@@ -72,8 +73,8 @@ def make_probabilistic(
     convert_fn = (
         tfd.Distribution.mean
         if not prediction_mode
-        else lambda trans_dist: tf.stack(
-            [trans_dist.distribution.mean(), trans_dist.distribution.stddev()],
+        else lambda trans_dist: tf.concat(
+            [trans_dist.distribution.mean(), trans_dist.distribution.stddev()], axis=-1
         )
     )
     vgp_outputs = tfp.layers.VariationalGaussianProcess(
@@ -275,7 +276,7 @@ class ProbGNN(ABC):
             self.pred_model = pred_model
         return self.pred_model
 
-    def predict(self, input) -> Tuple[np.ndarray, np.ndarray]:
+    def predict(self, input) -> np.ndarray:
         """Predict target values and standard deviations for a given input."""
         self.update_pred_model()
         return self.pred_model.predict(input)
@@ -469,26 +470,21 @@ class MEGNetProbModel(ProbGNN):
             # Just one to predict
             input = [input]
 
-        graphs = (self.meg_model.graph_converter.convert(inp) for inp in input)
+        graphs = [self.meg_model.graph_converter.convert(inp) for inp in input]
+        inputs = (
+            self.meg_model.graph_converter.graph_to_input(graph) for graph in graphs
+        )
+        num_atoms = [len(graph["atom"]) for graph in graphs]
 
-        means = []
-        stddevs = []
-        for graph in graphs:
-            inputs = self.meg_model.graph_converter.graph_to_input(graph)
-            prediction = super().predict(inputs)
-            mean, stddev = prediction[0], prediction[1]
+        prediction = super().predict(inputs)
 
-            if not isinstance(self.meg_model.target_scaler, DummyScaler):
-                num_atoms = len(graph["atom"])
-                mean = self.meg_model.target_scaler.inverse_transform(mean, num_atoms)
-                stddev = self.meg_model.target_scaler.inverse_transform(
-                    stddev, num_atoms
-                )
+        means, stddevs = prediction[:, 0], prediction[:, 1]
 
-            means.append(mean)
-            stddevs.append(stddev)
+        if not isinstance(self.meg_model.target_scaler, DummyScaler):
+            means = self.meg_model.target_scaler.inverse_transform(means, num_atoms)
+            stddevs = self.meg_model.target_scaler.inverse_transform(stddevs, num_atoms)
 
-        return np.stack(means).squeeze(), np.stack(stddevs).squeeze()
+        return means, stddevs
 
     def create_input_generator(
         self,
