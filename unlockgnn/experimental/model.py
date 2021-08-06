@@ -350,14 +350,14 @@ class ProbGNN(ABC):
 
     def predict(self, input) -> np.ndarray:
         """Predict target values and standard deviations for a given input.
-        
+
         Args:
             input: The input(s) to the model.
-        
+
         Returns:
             predictions: A numpy array containing predicted means and
                 standard deviations.
-        
+
         """
         self.update_pred_model()
         return self.pred_model.predict(input)
@@ -432,7 +432,7 @@ class ProbGNN(ABC):
     @classmethod
     def load(cls: "ProbGNN", save_path: Path, load_ckpt: bool = True) -> "ProbGNN":
         """Load a ProbGNN from disk.
-        
+
         Args:
             save_path: The path to the model's save directory.
             load_ckpt: Whether to load the best checkpoint's weights, instead
@@ -440,7 +440,7 @@ class ProbGNN(ABC):
 
         Returns:
             The loaded model.
-        
+
         Raises:
             IOError: If the `save_path` does not exist.
 
@@ -457,7 +457,27 @@ class ProbGNN(ABC):
 
 
 class MEGNetProbModel(ProbGNN):
-    """ProbGNN for MEGNetModels."""
+    """ProbGNN for MEGNetModels.
+
+    Args:
+        num_inducing_points: The number of inducing index points for the
+            VGP.
+        save_path: Path to the save directory for the model.
+        meg_model: The base `MEGNetModel` to modify.
+        kernel: A :class`KernelLayer` for the VGP to use.
+        latent_layer: The name or index of the layer of the GNN to be fed into
+            the VGP.
+        target_shape: The shape of the target values.
+        metrics: A list of metrics to record during training.
+        kl_weight: The relative weighting of the Kullback-Leibler divergence
+            in the loss function.
+        optimizer: The model optimizer, needed for recompilation.
+        load_ckpt: Whether to load the best checkpoint's weights, instead
+            of those saved at the time of the last :meth:`save`.
+        use_normalization: Whether to use a `BatchNormalization` layer before
+            the VGP. Recommended for better training efficiency.
+
+    """
 
     def __init__(
         self,
@@ -519,7 +539,24 @@ class MEGNetProbModel(ProbGNN):
         scrub_failed_structs: bool = False,
         verbose: Literal[0, 1, 2] = 2,
     ):
-        """Train the model."""
+        """Train the model.
+
+        Args:
+            structs: A list of training crystal structures.
+            targets: A list of training target values.
+            epochs: The number of training epochs.
+            val_structs: A list of validation crystal structures.
+            val_targets: A list of validation target values.
+            callbacks: A list of additional callbacks.
+            use_default_ckpt_handler: Whether to use the default
+                checkpoint callback.
+            batch_size: The batch size for training and validation.
+            scrub_failed_structures: Whether to discard structures
+                that could not be converted to graphs.
+            verbose: The level of verbosity. See Keras's documentation
+                on `Model.fit`.
+
+        """
         # Convert structures to graphs for model input
         train_gen, train_graphs = self.create_input_generator(
             structs, targets, batch_size, scrub_failed_structs
@@ -550,7 +587,17 @@ class MEGNetProbModel(ProbGNN):
         )
 
     def scale_targets(self, targets: Targets, num_atoms: List[int]) -> Targets:
-        """Scale target values using underlying MEGNetModel's scaler."""
+        """Scale target values using underlying MEGNetModel's scaler.
+
+        Args:
+            targets: A list of target values.
+            num_atoms: A list of the number of atoms in each structure
+                corresponding to the target values.
+
+        Returns:
+            The scaled target values.
+
+        """
         return [
             self.meg_model.target_scaler.transform(target, num_atom)
             for target, num_atom in zip(targets, num_atoms)
@@ -559,7 +606,17 @@ class MEGNetProbModel(ProbGNN):
     def predict(
         self, input: Union[Structure, Iterable[Structure]], batch_size: int = 128
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """Predict target values and standard deviations for a given input."""
+        """Predict target values and standard deviations for a given input.
+
+        Args:
+            input: The input structure(s).
+            batch_size: The batch size for predictions.
+
+        Returns:
+            means: The mean values of the predicted distribution(s).
+            stddevs: The standard deviations of the predicted distribution(s).
+
+        """
         to_freeze = ["GNN", "VGP"]
         if self.use_normalization:
             to_freeze.append("Norm")
@@ -594,7 +651,22 @@ class MEGNetProbModel(ProbGNN):
     ) -> Tuple[
         Union[GraphBatchDistanceConvert, GraphBatchGenerator], List[MEGNetGraph]
     ]:
-        """Create generator for use during training and validation of model."""
+        """Create generator for model inputs.
+        
+        Args:
+            structs: The input structures.
+            targets: The input targets, if any.
+            batch_size: The batch size for the generator.
+            scrub_failed_structures: Whether to discard structures
+                that could not be converted to graphs.
+            shuffle: Whether the generator should shuffle the order of the
+                structure/target pairs.
+
+        Returns:
+            input_generator: The input generator
+            graphs: A list of the model input graphs.
+
+        """
         # Make some targets up for compatibility
         has_targets = targets is not None
         target_buffer = targets if has_targets else [0.0] * len(structs)
