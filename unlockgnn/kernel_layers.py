@@ -9,6 +9,14 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
+__all__ = [
+    "KernelLayer",
+    "AmpAndLengthScaleFn",
+    "RBFKernelFn",
+    "MaternOneHalfFn",
+    "load_kernel",
+]
+
 
 def config_path(directory: Path) -> Path:
     return directory / "config.json"

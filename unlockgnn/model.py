@@ -14,14 +14,35 @@ from megnet.data.graph import GraphBatchDistanceConvert, GraphBatchGenerator
 from megnet.models import MEGNetModel
 from megnet.utils.preprocessing import DummyScaler
 from pymatgen import Structure
-from unlockgnn.gp.kernel_layers import KernelLayer, RBFKernelFn, load_kernel
-from unlockgnn.gp.vgp_trainer import VariationalLoss
+from tensorflow.python.keras.utils import losses_utils
+
+from .kernel_layers import KernelLayer, RBFKernelFn, load_kernel
 
 tfd = tfp.distributions
 
 MEGNetGraph = Dict[str, Union[np.ndarray, List[Union[int, float]]]]
 Targets = List[Union[float, np.ndarray]]
 LayerName = Literal["GNN", "VGP", "Norm"]
+
+__all__ = ["ProbGNN", "MEGNetProbModel"]
+
+
+class VariationalLoss(keras.losses.Loss):
+    """Implementation of variational loss using keras API."""
+
+    def __init__(
+        self,
+        kl_weight: float,
+        reduction: keras.losses.Reduction = losses_utils.ReductionV2.AUTO,
+        name: str = "variational_loss",
+    ):
+        """Initialize loss function and KL divergence loss scaling factor."""
+        self.kl_weight = kl_weight
+        super().__init__(reduction=reduction, name=name)
+
+    def call(self, y_true, predicted_distribution):
+        """Calculate the variational loss."""
+        return predicted_distribution.variational_loss(y_true, kl_weight=self.kl_weight)
 
 
 def make_probabilistic(
@@ -652,7 +673,7 @@ class MEGNetProbModel(ProbGNN):
         Union[GraphBatchDistanceConvert, GraphBatchGenerator], List[MEGNetGraph]
     ]:
         """Create generator for model inputs.
-        
+
         Args:
             structs: The input structures.
             targets: The input targets, if any.
