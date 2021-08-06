@@ -458,7 +458,7 @@ class MEGNetProbModel(ProbGNN):
         ]
 
     def predict(
-        self, input: Union[Structure, Iterable[Structure]]
+        self, input: Union[Structure, Iterable[Structure]], batch_size: int = 128
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Predict target values and standard deviations for a given input."""
         to_freeze = ["GNN", "VGP"]
@@ -470,15 +470,14 @@ class MEGNetProbModel(ProbGNN):
             # Just one to predict
             input = [input]
 
-        graphs = [self.meg_model.graph_converter.convert(inp) for inp in input]
-        inputs = (
-            self.meg_model.graph_converter.graph_to_input(graph) for graph in graphs
+        n_inputs = len(input)
+        inputs, graphs = self.create_input_generator(
+            structs=input, batch_size=batch_size, shuffle=False
         )
         num_atoms = [len(graph["atom"]) for graph in graphs]
 
-        prediction = super().predict(inputs)
-
-        means, stddevs = prediction[:, 0], prediction[:, 1]
+        prediction = super().predict(inputs).squeeze()
+        means, stddevs = prediction[:n_inputs], prediction[n_inputs:]
 
         if not isinstance(self.meg_model.target_scaler, DummyScaler):
             means = self.meg_model.target_scaler.inverse_transform(means, num_atoms)
@@ -489,23 +488,33 @@ class MEGNetProbModel(ProbGNN):
     def create_input_generator(
         self,
         structs: List[Structure],
-        targets: Targets,
-        batch_size: int,
+        targets: Optional[Targets] = None,
+        batch_size: int = 128,
         scrub_failed_structs: bool = False,
+        shuffle: bool = True,
     ) -> Tuple[
         Union[GraphBatchDistanceConvert, GraphBatchGenerator], List[MEGNetGraph]
     ]:
         """Create generator for use during training and validation of model."""
+        # Make some targets up for compatibility
+        has_targets = targets is not None
+        target_buffer = targets if has_targets else [0.0] * len(structs)
+
         graphs, trunc_targets = self.meg_model.get_all_graphs_targets(
-            structs, targets, scrub_failed_structs
+            structs, target_buffer, scrub_failed_structs
         )
         # Check dimensions of model against converted graphs
         self.meg_model.check_dimension(graphs[0])
 
         # Scale targets if necessary
-        if not isinstance(self.meg_model.target_scaler, DummyScaler):
+        if not isinstance(self.meg_model.target_scaler, DummyScaler) and has_targets:
             num_atoms = [len(graph["atom"]) for graph in graphs]
             trunc_targets = self.scale_targets(trunc_targets, num_atoms)
 
         inputs = self.meg_model.graph_converter.get_flat_data(graphs, trunc_targets)
-        return self.meg_model._create_generator(*inputs, batch_size=batch_size), graphs
+        return (
+            self.meg_model._create_generator(
+                *inputs, batch_size=batch_size, is_shuffle=shuffle
+            ),
+            graphs,
+        )
