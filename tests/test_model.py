@@ -61,7 +61,7 @@ def test_meg_prob(tmp_path: Path, datadir: Path, use_norm: bool):
     """Test creation, training and I/O of a `MEGNetProbModel`."""
     save_dir = tmp_path / ("norm_model" if use_norm else "unnorm_model")
     megnet_e_form_model = MEGNetModel.from_file(str(datadir / "formation_energy.hdf5"))
-    binary_df = pd.read_pickle(datadir / "mp_binary_on_hull.pkl")
+    binary_df = pd.read_pickle(datadir / "mp_binary_on_hull.pkl")[:100]
 
     structures = binary_df["structure"].tolist()
     formation_energies = binary_df["formation_energy_per_atom"].tolist()
@@ -88,14 +88,14 @@ def test_meg_prob(tmp_path: Path, datadir: Path, use_norm: bool):
     init_loss = init_performance["loss"]
 
     # Test training without validation
-    prob_model.train(train_structs, train_targets, 5)
+    prob_model.train(train_structs, train_targets, 1)
     # Test training with validation
-    prob_model.train(train_structs, train_targets, 5, test_structs, test_targets)
+    prob_model.train(train_structs, train_targets, 1, test_structs, test_targets)
 
     # Check performance has improved
     fin_performance = prob_model.evaluate(test_structs, test_targets)
     fin_loss = fin_performance["loss"]
-    assert fin_loss <= 0.9 * init_loss
+    assert fin_loss < init_loss
 
     # Save and reload model from disk
     prob_model.save()
