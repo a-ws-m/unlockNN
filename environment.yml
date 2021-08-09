@@ -3,7 +3,7 @@ channels:
   - defaults
 dependencies:
   - cloudpickle
-  - numpy=1.19.*
+  - numpy
   - pip
   - python=3.8
   - pip:
