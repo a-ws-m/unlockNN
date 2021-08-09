@@ -84,16 +84,7 @@ def make_probabilistic(
     else:
         latent_idx = [layer.name for layer in gnn.layers].index(latent_layer)
 
-    if latent_idx > 0:
-        num_pops = len(gnn.layers) - latent_idx - 1
-    else:
-        num_pops = -latent_idx - 1
-
-    # Remove layers up to the specified one
-    for _ in range(num_pops):
-        gnn._layers.pop()
-
-    vgp_input = gnn.layers[-1].output
+    vgp_input = gnn.layers[latent_idx].output
 
     index_points_init = None
     if use_normalization:
