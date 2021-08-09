@@ -3,18 +3,9 @@ channels:
   - defaults
 dependencies:
   - cloudpickle
-  - matplotlib
   - numpy
-  - pandas
   - pip
-  - pyarrow
   - python=3.8
-  - scipy=1.4.1
-  - seaborn
   - pip:
-      - matminer
       - megnet
-      - pymatgen==2020.4.29
-      - git+https://github.com/WMD-group/SMACT.git
       - tensorflow-probability
-      - tqdm
