@@ -6,7 +6,7 @@ dependencies:
   - black
   - cloudpickle
   - coverage
-  - numpy
+  - numpy=1.19.*
   - pandas
   - pip
   - pydocstyle
@@ -18,7 +18,6 @@ dependencies:
   - pip:
       - bumpversion
       - coveralls
-      - pymatgen=2020.4.29
       - megnet
       - tensorflow-probability
       - twine
