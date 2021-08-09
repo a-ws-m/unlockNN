@@ -291,32 +291,6 @@ class ProbGNN(ABC):
                 kl_weight=self.kl_weight, optimizer=self.optimizer, **compilation_kwargs
             )
 
-    def train_vgp(self, *args, **kwargs) -> None:
-        """Train the VGP.
-
-        Positional and keyword arguments are forwarded to :meth:`train`.
-
-        Raises:
-            RuntimeWarning: If the GNN layers are not frozen.
-
-        """
-        if not self.gnn_frozen:
-            warnings.warn("GNN layers not frozen during VGP training.", RuntimeWarning)
-        self.train(*args, **kwargs)
-
-    def train_gnn(self, *args, **kwargs) -> None:
-        """Train the GNN.
-
-        Positional and keyword arguments are forwarded to :meth:`train`.
-
-        Raises:
-            RuntimeWarning: If the VGP layers are not frozen.
-
-        """
-        if not self.vgp_frozen:
-            warnings.warn("VGP layer not frozen during GNN training.", RuntimeWarning)
-        self.train(*args, **kwargs)
-
     @abstractmethod
     def train(self, *args, **kwargs) -> None:
         """Train the full-stack model."""
