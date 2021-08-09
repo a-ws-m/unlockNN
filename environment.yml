@@ -3,9 +3,10 @@ channels:
   - defaults
 dependencies:
   - cloudpickle
-  - numpy
+  - numpy=1.19.*
   - pip
   - python=3.8
   - pip:
+      - pymatgen==2020.0.4
       - megnet
       - tensorflow-probability
