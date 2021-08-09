@@ -29,15 +29,8 @@ setup(
     install_requires=[
         "cloudpickle",
         "numpy",
-        "pandas",
-        "pyarrow",
         "pymatgen",
-        "matminer",
-        "matplotlib",
         "megnet",
-        "scipy",
-        "seaborn",
-        "smact",
         "tensorflow-probability",
     ],
     extras_require={
