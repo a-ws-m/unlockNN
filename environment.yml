@@ -7,6 +7,6 @@ dependencies:
   - pip
   - python=3.8
   - pip:
-      - pymatgen==2020.0.4
+      - pymatgen==2020.4.29
       - megnet
       - tensorflow-probability

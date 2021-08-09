@@ -17,7 +17,7 @@ dependencies:
   - pip:
       - bumpversion
       - coveralls
-      - pymatgen==2020.0.4
+      - pymatgen==2020.4.29
       - megnet
       - tensorflow-probability
       - twine
