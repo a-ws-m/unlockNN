@@ -7,6 +7,7 @@ dependencies:
   - cloudpickle
   - coverage
   - numpy
+  - pandas
   - pip
   - pydocstyle
   - pytest

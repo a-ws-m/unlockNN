@@ -582,21 +582,22 @@ class MEGNetProbModel(ProbGNN):
         train_gen, train_graphs = self.create_input_generator(
             structs, targets, batch_size, scrub_failed_structs
         )
+        steps_per_train = int(np.ceil(len(train_graphs) / batch_size))
+
         val_gen = None
         val_graphs = None
+        steps_per_val = None
         if val_structs is not None and val_targets is not None:
             val_gen, val_graphs = self.create_input_generator(
                 val_structs, val_targets, batch_size, scrub_failed_structs
             )
+            steps_per_val = int(np.ceil(len(val_graphs) / batch_size))
 
         # Configure callbacks
         if use_default_ckpt_handler:
             callbacks.append(self.ckpt_callback)
 
         # Train
-        steps_per_train = int(np.ceil(len(train_graphs) / batch_size))
-        steps_per_val = int(np.ceil(len(val_graphs) / batch_size))
-
         self.model.fit(
             train_gen,
             steps_per_epoch=steps_per_train,
@@ -605,6 +606,34 @@ class MEGNetProbModel(ProbGNN):
             epochs=epochs,
             verbose=verbose,
             callbacks=callbacks,
+        )
+
+    def evaluate(
+        self,
+        eval_structs: List[Structure],
+        eval_targets: Targets,
+        batch_size: int = 128,
+        scrub_failed_structs: bool = False,
+    ) -> Dict[str, float]:
+        """Evaluate model metrics.
+
+        Args:
+            eval_structs: Structures on which to evaluate performance.
+            eval_targets: True target values for structures.
+            batch_size: The batch size for training and validation.
+            scrub_failed_structures: Whether to discard structures
+                that could not be converted to graphs.
+
+        Returns:
+            Dictionary of {metric: value}.
+
+        """
+        eval_gen, eval_graphs = self.create_input_generator(
+            eval_structs, eval_targets, batch_size, scrub_failed_structs
+        )
+        steps = int(np.ceil(len(eval_graphs) / batch_size))
+        return self.model.evaluate(
+            eval_gen, batch_size=batch_size, steps=steps, return_dict=True
         )
 
     def scale_targets(self, targets: Targets, num_atoms: List[int]) -> Targets:
