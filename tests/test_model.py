@@ -61,7 +61,16 @@ def test_meg_prob(tmp_path: Path, datadir: Path, use_norm: bool):
     """Test creation, training and I/O of a `MEGNetProbModel`."""
     save_dir = tmp_path / ("norm_model" if use_norm else "unnorm_model")
     megnet_e_form_model = MEGNetModel.from_file(str(datadir / "formation_energy.hdf5"))
-    binary_df = pd.read_pickle(datadir / "mp_binary_on_hull.pkl")[:100]
+    binary_dir = datadir / "mp_binary_on_hull.pkl"
+
+    try:
+        binary_df = pd.read_pickle(binary_dir)[:100]
+    except ValueError:
+        # Older python version
+        import pickle5 as pkl
+
+        with binary_dir.open("rb") as f:
+            binary_df = pkl.load(f)
 
     structures = binary_df["structure"].tolist()
     formation_energies = binary_df["formation_energy_per_atom"].tolist()

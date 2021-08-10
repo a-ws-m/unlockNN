@@ -2,11 +2,11 @@ name: unlockGNN
 channels:
   - defaults
 dependencies:
-  - cloudpickle
   - numpy=1.19.*
   - pip
   - python=3.8
   - pip:
       - pymatgen==2020.4.29
       - megnet
+      - tensorflow
       - tensorflow-probability

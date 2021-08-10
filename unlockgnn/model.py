@@ -1,10 +1,15 @@
 """Experimental full-stack MEGNetProbModel code."""
 import json
-import pickle
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union, get_args
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+
+try:
+    from typing import Literal, get_args
+except ImportError:
+    from typish import Literal, get_args
+
 
 import numpy as np
 import tensorflow as tf
@@ -13,7 +18,7 @@ import tensorflow_probability as tfp
 from megnet.data.graph import GraphBatchDistanceConvert, GraphBatchGenerator
 from megnet.models import MEGNetModel
 from megnet.utils.preprocessing import DummyScaler
-from pymatgen import Structure
+from pymatgen.core import Structure
 from tensorflow.python.keras.utils import losses_utils
 
 from .kernel_layers import KernelLayer, RBFKernelFn, load_kernel
@@ -172,7 +177,6 @@ class ProbGNN(ABC):
         self.ckpt_path = save_path / "checkpoint.h5"
         self.conf_path = save_path / "config.json"
         self.kernel_path = save_path / "kernel"
-        self.optimizer_path = save_path / "optimizer.pkl"
         self.gnn_path = save_path / "gnn"
 
         self.kernel = kernel
@@ -199,13 +203,6 @@ class ProbGNN(ABC):
             # We're loading from memory
             loading = True
             gnn = keras.models.load_model(self.gnn_path, compile=False)
-
-            # Load optimizer
-            try:
-                with self.optimizer_path.open("rb") as f:
-                    self.optimizer = pickle.load(f)
-            except FileNotFoundError:
-                warnings.warn("No saved optimizer found.")
 
             try:
                 self.kernel = load_kernel(self.kernel_path)
@@ -404,16 +401,10 @@ class ProbGNN(ABC):
         with self.conf_path.open("w") as f:
             json.dump(self.config, f)
         self.save_kernel()
-        self.save_optimizer()
 
     def save_kernel(self):
         """Save the VGP's kernel to disk."""
         self.kernel.save(self.kernel_path)
-
-    def save_optimizer(self):
-        """Save the model's optimizer to disk."""
-        with self.optimizer_path.open("wb") as f:
-            pickle.dump(self.optimizer, f)
 
     @classmethod
     def load(cls: "ProbGNN", save_path: Path, load_ckpt: bool = True) -> "ProbGNN":

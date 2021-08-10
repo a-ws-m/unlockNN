@@ -11,13 +11,17 @@ dependencies:
   - pip
   - pydocstyle
   - pytest
+  - pytest-cov
   - python=3.8
   - sphinx
   - sphinx_rtd_theme
+  - virtualenv
   - pip:
       - bumpversion
       - coveralls
       - pymatgen==2020.4.29
       - megnet
+      - tensorflow
       - tensorflow-probability
+      - tox
       - twine
