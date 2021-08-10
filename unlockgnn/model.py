@@ -111,7 +111,6 @@ def make_probabilistic(
         kernel,
         event_shape=output_shape,
         inducing_index_points_initializer=index_points_init,
-        jitter=1e-06,
         convert_to_tensor_fn=convert_fn,
     )(vgp_input)
 
