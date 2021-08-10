@@ -27,7 +27,7 @@ tfd = tfp.distributions
 
 MEGNetGraph = Dict[str, Union[np.ndarray, List[Union[int, float]]]]
 Targets = List[Union[float, np.ndarray]]
-LayerName = Literal["GNN", "VGP", "Norm"]
+LayerName = Literal["GNN", "VGP"]
 
 __all__ = ["ProbGNN", "MEGNetProbModel"]
 
@@ -56,7 +56,6 @@ def make_probabilistic(
     kernel: KernelLayer = RBFKernelFn(),
     latent_layer: Union[str, int] = -2,
     target_shape: Union[Tuple[int], int] = 1,
-    use_normalization: bool = True,
     prediction_mode: bool = False,
 ) -> keras.Model:
     """Make a GNN probabilistic by replacing the final layer(s) with a VGP.
@@ -73,8 +72,6 @@ def make_probabilistic(
         latent_layer: The index or name of the GNN layer to use as the
             input for the VGP.
         target_shape: The shape of the target values.
-        use_normalization: Whether to use a `BatchNormalization` layer before
-            the VGP. Recommended for better training efficiency.
         prediction_mode: Whether to create a model for predictions _only_.
             (Resulting model cannot be serialized and loss functions won't work.)
 
@@ -91,11 +88,6 @@ def make_probabilistic(
 
     vgp_input = gnn.layers[latent_idx].output
 
-    index_points_init = None
-    if use_normalization:
-        vgp_input = keras.layers.BatchNormalization()(vgp_input)
-        index_points_init = keras.initializers.TruncatedNormal(stddev=1.0)
-
     output_shape = (
         (target_shape,) if isinstance(target_shape, int) else tuple(target_shape)
     )
@@ -110,7 +102,7 @@ def make_probabilistic(
         num_inducing_points,
         kernel,
         event_shape=output_shape,
-        inducing_index_points_initializer=index_points_init,
+        inducing_index_points_initializer=None,  # TODO: Clever clustering initialization
         convert_to_tensor_fn=convert_fn,
     )(vgp_input)
 
@@ -135,8 +127,6 @@ class ProbGNN(ABC):
         optimizer: The model optimizer, needed for recompilation.
         load_ckpt: Whether to load the best checkpoint's weights, instead
             of those saved at the time of the last :meth:`save`.
-        use_normalization: Whether to use a `BatchNormalization` layer before
-            the VGP. Recommended for better training efficiency.
 
     """
 
@@ -146,7 +136,6 @@ class ProbGNN(ABC):
         "kl_weight",
         "latent_layer",
         "target_shape",
-        "use_normalization",
     ]
 
     def __init__(
@@ -161,14 +150,12 @@ class ProbGNN(ABC):
         kl_weight: float = 1.0,
         optimizer: keras.optimizers.Optimizer = tf.optimizers.Adam(),
         load_ckpt: bool = True,
-        use_normalization: bool = True,
     ) -> None:
         """Initialize the probabilistic model.
 
         Saves the GNN to disk, loads weights from disk if they exist and then
         instantiates the probabilistic model. The model's GNN layers are
-        initially frozen by default (but not the VGP and `BatchNormalization`
-        layer, if applicable).
+        initially frozen by default (but not the VGP).
 
         """
         self.save_path = save_path
@@ -185,7 +172,6 @@ class ProbGNN(ABC):
         self.latent_layer = latent_layer
         self.target_shape = target_shape
         self.num_inducing_points = num_inducing_points
-        self.use_normalization = use_normalization
 
         self.pred_model: Optional[keras.Model] = None
 
@@ -215,7 +201,6 @@ class ProbGNN(ABC):
             self.kernel,
             latent_layer,
             target_shape,
-            use_normalization,
         )
 
         # Freeze GNN layers and compile, ready to train the VGP
@@ -259,15 +244,8 @@ class ProbGNN(ABC):
                     f"Cannot freeze `{name}`; must be one of {valid_layers}."
                 )
 
-        if "Norm" in layers:
-            if not self.use_normalization:
-                raise ValueError(
-                    "Cannot freeze normalization layer: `use_normalization` is False."
-                )
-            else:
-                self.model.layers[-2].trainable = not freeze
         if "GNN" in layers:
-            last_gnn_index = -2 if self.use_normalization else -1
+            last_gnn_index = -1
             for layer in self.model.layers[:last_gnn_index]:
                 layer.trainable = not freeze
         if "VGP" in layers:
@@ -323,7 +301,6 @@ class ProbGNN(ABC):
                 self.kernel,
                 self.latent_layer,
                 self.target_shape,
-                self.use_normalization,
                 prediction_mode=True,
             )
             pred_model.compile()
@@ -347,7 +324,7 @@ class ProbGNN(ABC):
     @property
     def gnn_frozen(self) -> bool:
         """Determine whether all GNN layers are frozen."""
-        last_gnn_index = -2 if self.use_normalization else -1
+        last_gnn_index = -1
         return all(
             (not layer.trainable for layer in self.model.layers[:last_gnn_index])
         )
@@ -356,12 +333,6 @@ class ProbGNN(ABC):
     def vgp_frozen(self) -> bool:
         """Determine whether the VGP is frozen."""
         return not self.model.layers[-1].trainable
-
-    @property
-    def norm_frozen(self) -> Optional[bool]:
-        """Determine whether the BatchNormalization layer is frozen, if it exists."""
-        if self.use_normalization:
-            return not self.model.layers[-2].trainable
 
     def compile(
         self,
@@ -450,8 +421,6 @@ class MEGNetProbModel(ProbGNN):
         optimizer: The model optimizer, needed for recompilation.
         load_ckpt: Whether to load the best checkpoint's weights, instead
             of those saved at the time of the last :meth:`save`.
-        use_normalization: Whether to use a `BatchNormalization` layer before
-            the VGP. Recommended for better training efficiency.
 
     """
 
@@ -467,7 +436,6 @@ class MEGNetProbModel(ProbGNN):
         kl_weight: float = 1.0,
         optimizer: keras.optimizers.Optimizer = tf.optimizers.Adam(),
         load_ckpt: bool = True,
-        use_normalization: bool = True,
     ) -> None:
         """Initialize probabilistic model."""
         self.meg_save_path = save_path / "megnet"
@@ -499,7 +467,6 @@ class MEGNetProbModel(ProbGNN):
             kl_weight,
             optimizer,
             load_ckpt,
-            use_normalization,
         )
 
     def train(
@@ -623,8 +590,6 @@ class MEGNetProbModel(ProbGNN):
 
         """
         to_freeze = ["GNN", "VGP"]
-        if self.use_normalization:
-            to_freeze.append("Norm")
         self.set_frozen(to_freeze)
 
         if isinstance(input, Structure):

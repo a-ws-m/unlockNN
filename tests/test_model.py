@@ -56,10 +56,9 @@ def train_test_split(
     )
 
 
-@pytest.mark.parametrize("use_norm", [True, False])
-def test_meg_prob(tmp_path: Path, datadir: Path, use_norm: bool):
+def test_meg_prob(tmp_path: Path, datadir: Path):
     """Test creation, training and I/O of a `MEGNetProbModel`."""
-    save_dir = tmp_path / ("norm_model" if use_norm else "unnorm_model")
+    save_dir = tmp_path / "model"
     megnet_e_form_model = MEGNetModel.from_file(str(datadir / "formation_energy.hdf5"))
     binary_dir = datadir / "mp_binary_on_hull.pkl"
 
@@ -78,12 +77,10 @@ def test_meg_prob(tmp_path: Path, datadir: Path, use_norm: bool):
     (train_structs, train_targets), (test_structs, test_targets) = train_test_split(
         structures, formation_energies
     )
-    prob_model = MEGNetProbModel(
-        10, save_dir, megnet_e_form_model, use_normalization=use_norm
-    )
+    prob_model = MEGNetProbModel(10, save_dir, megnet_e_form_model)
 
     # Test weights equality
-    last_gnn_idx = -2 if use_norm else -1
+    last_gnn_idx = -1
     meg_gnn_weights = [
         layer.get_weights() for layer in megnet_e_form_model.model.layers[:-1]
     ]
