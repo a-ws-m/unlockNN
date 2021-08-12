@@ -90,10 +90,10 @@ def make_probabilistic(
 
     vgp_input = gnn.layers[latent_idx].output
 
-    index_points_init = None
     if use_normalization:
         vgp_input = keras.layers.BatchNormalization()(vgp_input)
-        index_points_init = keras.initializers.TruncatedNormal(stddev=1.0)
+        if index_initializer is None:
+            index_initializer = keras.initializers.TruncatedNormal(stddev=1.0)
 
     output_shape = (
         (target_shape,) if isinstance(target_shape, int) else tuple(target_shape)
