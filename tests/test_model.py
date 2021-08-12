@@ -12,6 +12,7 @@ import pytest
 import tensorflow as tf
 from megnet.models import MEGNetModel
 from unlockgnn import MEGNetProbModel
+from unlockgnn.initializers import SampleInitializer
 
 np.random.seed(123)
 python_random.seed(123)
@@ -56,6 +57,30 @@ def train_test_split(
     )
 
 
+def test_sample_init(tmp_path: Path, datadir: Path):
+    """Test the SampleInitializer."""
+    save_dir = tmp_path / "model"
+    megnet_e_form_model = MEGNetModel.from_file(str(datadir / "formation_energy.hdf5"))
+    binary_dir = datadir / "mp_binary_on_hull.pkl"
+
+    try:
+        binary_df = pd.read_pickle(binary_dir)[:100]
+    except ValueError:
+        # Older python version
+        import pickle5 as pkl
+
+        with binary_dir.open("rb") as f:
+            binary_df = pkl.load(f)
+
+    structures = binary_df["structure"].tolist()
+    formation_energies = binary_df["formation_energy_per_atom"].tolist()
+
+    (train_structs, _), (_, _) = train_test_split(structures, formation_energies)
+    initializer = SampleInitializer(train_structs, megnet_e_form_model, batch_size=32)
+    MEGNetProbModel(10, save_dir, megnet_e_form_model, index_initializer=initializer)
+    # If this works without any errors, we're doing OK
+
+
 def test_meg_prob(tmp_path: Path, datadir: Path):
     """Test creation, training and I/O of a `MEGNetProbModel`."""
     save_dir = tmp_path / "model"
@@ -94,9 +119,11 @@ def test_meg_prob(tmp_path: Path, datadir: Path):
     init_loss = init_performance["loss"]
 
     # Test training without validation
-    prob_model.train(train_structs, train_targets, 1)
+    prob_model.train(train_structs, train_targets, 1, batch_size=32)
     # Test training with validation
-    prob_model.train(train_structs, train_targets, 1, test_structs, test_targets)
+    prob_model.train(
+        train_structs, train_targets, 1, test_structs, test_targets, batch_size=32
+    )
 
     # Check performance has improved
     fin_performance = prob_model.evaluate(test_structs, test_targets)
@@ -109,3 +136,6 @@ def test_meg_prob(tmp_path: Path, datadir: Path):
     assert weights_equal(
         prob_model.model.get_weights(), loaded_model.model.get_weights()
     )
+
+    # Test prediction
+    prob_model.predict(train_structs, batch_size=32)
