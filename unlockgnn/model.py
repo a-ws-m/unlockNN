@@ -1,4 +1,4 @@
-"""Experimental full-stack MEGNetProbModel code."""
+"""ProbGNN model code and implementation for MEGNet."""
 import json
 import warnings
 from abc import ABC, abstractmethod
@@ -15,18 +15,16 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.keras as keras
 import tensorflow_probability as tfp
-from megnet.data.graph import GraphBatchDistanceConvert, GraphBatchGenerator
 from megnet.models import MEGNetModel
 from megnet.utils.preprocessing import DummyScaler
 from pymatgen.core import Structure
 from tensorflow.python.keras.utils import losses_utils
 
 from .kernel_layers import KernelLayer, RBFKernelFn, load_kernel
+from .megnet_utils import create_megnet_input, Targets
 
 tfd = tfp.distributions
 
-MEGNetGraph = Dict[str, Union[np.ndarray, List[Union[int, float]]]]
-Targets = List[Union[float, np.ndarray]]
 LayerName = Literal["GNN", "VGP"]
 
 __all__ = ["ProbGNN", "MEGNetProbModel"]
@@ -57,6 +55,7 @@ def make_probabilistic(
     latent_layer: Union[str, int] = -2,
     target_shape: Union[Tuple[int], int] = 1,
     prediction_mode: bool = False,
+    index_initializer: Optional[keras.initializers.Initializer] = None,
 ) -> keras.Model:
     """Make a GNN probabilistic by replacing the final layer(s) with a VGP.
 
@@ -74,13 +73,13 @@ def make_probabilistic(
         target_shape: The shape of the target values.
         prediction_mode: Whether to create a model for predictions _only_.
             (Resulting model cannot be serialized and loss functions won't work.)
+        index_initializer: A custom initializer to use for the VGP index points.
 
     Returns:
         A `keras.Model` with the `gnn`'s first layers, but terminating in a
             VGP.
 
     """
-    # Determine how many layers to pop
     if isinstance(latent_layer, int):
         latent_idx = latent_layer
     else:
@@ -102,7 +101,7 @@ def make_probabilistic(
         num_inducing_points,
         kernel,
         event_shape=output_shape,
-        inducing_index_points_initializer=None,  # TODO: Clever clustering initialization
+        inducing_index_points_initializer=index_initializer,
         convert_to_tensor_fn=convert_fn,
     )(vgp_input)
 
@@ -127,6 +126,7 @@ class ProbGNN(ABC):
         optimizer: The model optimizer, needed for recompilation.
         load_ckpt: Whether to load the best checkpoint's weights, instead
             of those saved at the time of the last :meth:`save`.
+        index_initializer: A custom initializer to use for the VGP index points.
 
     """
 
@@ -150,6 +150,7 @@ class ProbGNN(ABC):
         kl_weight: float = 1.0,
         optimizer: keras.optimizers.Optimizer = tf.optimizers.Adam(),
         load_ckpt: bool = True,
+        index_initializer: Optional[keras.initializers.Initializer] = None,
     ) -> None:
         """Initialize the probabilistic model.
 
@@ -188,6 +189,7 @@ class ProbGNN(ABC):
             # We're loading from memory
             loading = True
             gnn = keras.models.load_model(self.gnn_path, compile=False)
+            index_initializer = None
 
             try:
                 self.kernel = load_kernel(self.kernel_path)
@@ -201,6 +203,7 @@ class ProbGNN(ABC):
             self.kernel,
             latent_layer,
             target_shape,
+            index_initializer=index_initializer,
         )
 
         # Freeze GNN layers and compile, ready to train the VGP
@@ -349,9 +352,8 @@ class ProbGNN(ABC):
             optimizer: The model optimizer, needed for recompilation.
 
         """
-        self.model.compile(
-            optimizer, loss=VariationalLoss(kl_weight), metrics=self.metrics
-        )
+        loss = VariationalLoss(kl_weight)
+        self.model.compile(optimizer, loss=loss, metrics=self.metrics)
 
     @property
     def ckpt_callback(self):
@@ -421,6 +423,7 @@ class MEGNetProbModel(ProbGNN):
         optimizer: The model optimizer, needed for recompilation.
         load_ckpt: Whether to load the best checkpoint's weights, instead
             of those saved at the time of the last :meth:`save`.
+        index_initializer: A custom initializer to use for the VGP index points.
 
     """
 
@@ -436,6 +439,7 @@ class MEGNetProbModel(ProbGNN):
         kl_weight: float = 1.0,
         optimizer: keras.optimizers.Optimizer = tf.optimizers.Adam(),
         load_ckpt: bool = True,
+        index_initializer: Optional[keras.initializers.Initializer] = None,
     ) -> None:
         """Initialize probabilistic model."""
         self.meg_save_path = save_path / "megnet"
@@ -467,6 +471,7 @@ class MEGNetProbModel(ProbGNN):
             kl_weight,
             optimizer,
             load_ckpt,
+            index_initializer,
         )
 
     def train(
@@ -501,8 +506,8 @@ class MEGNetProbModel(ProbGNN):
 
         """
         # Convert structures to graphs for model input
-        train_gen, train_graphs = self.create_input_generator(
-            structs, targets, batch_size, scrub_failed_structs
+        train_gen, train_graphs = create_megnet_input(
+            self.meg_model, structs, targets, batch_size, scrub_failed_structs
         )
         steps_per_train = int(np.ceil(len(train_graphs) / batch_size))
 
@@ -510,8 +515,12 @@ class MEGNetProbModel(ProbGNN):
         val_graphs = None
         steps_per_val = None
         if val_structs is not None and val_targets is not None:
-            val_gen, val_graphs = self.create_input_generator(
-                val_structs, val_targets, batch_size, scrub_failed_structs
+            val_gen, val_graphs = create_megnet_input(
+                self.meg_model,
+                val_structs,
+                val_targets,
+                batch_size,
+                scrub_failed_structs,
             )
             steps_per_val = int(np.ceil(len(val_graphs) / batch_size))
 
@@ -550,30 +559,13 @@ class MEGNetProbModel(ProbGNN):
             Dictionary of {metric: value}.
 
         """
-        eval_gen, eval_graphs = self.create_input_generator(
-            eval_structs, eval_targets, batch_size, scrub_failed_structs
+        eval_gen, eval_graphs = create_megnet_input(
+            self.meg_model, eval_structs, eval_targets, batch_size, scrub_failed_structs
         )
         steps = int(np.ceil(len(eval_graphs) / batch_size))
         return self.model.evaluate(
             eval_gen, batch_size=batch_size, steps=steps, return_dict=True
         )
-
-    def scale_targets(self, targets: Targets, num_atoms: List[int]) -> Targets:
-        """Scale target values using underlying MEGNetModel's scaler.
-
-        Args:
-            targets: A list of target values.
-            num_atoms: A list of the number of atoms in each structure
-                corresponding to the target values.
-
-        Returns:
-            The scaled target values.
-
-        """
-        return [
-            self.meg_model.target_scaler.transform(target, num_atom)
-            for target, num_atom in zip(targets, num_atoms)
-        ]
 
     def predict(
         self, input: Union[Structure, Iterable[Structure]], batch_size: int = 128
@@ -589,73 +581,32 @@ class MEGNetProbModel(ProbGNN):
             stddevs: The standard deviations of the predicted distribution(s).
 
         """
-        to_freeze = ["GNN", "VGP"]
-        self.set_frozen(to_freeze)
+        self.update_pred_model()
 
         if isinstance(input, Structure):
             # Just one to predict
             input = [input]
 
         n_inputs = len(input)
-        inputs, graphs = self.create_input_generator(
-            structs=input, batch_size=batch_size, shuffle=False
+        inputs, graphs = create_megnet_input(
+            self.meg_model, structs=input, batch_size=batch_size, shuffle=False
         )
         num_atoms = [len(graph["atom"]) for graph in graphs]
 
-        prediction = super().predict(inputs).squeeze()
-        means, stddevs = prediction[:n_inputs], prediction[n_inputs:]
+        means = []
+        stddevs = []
+        for inp in inputs:
+            prediction = self.pred_model.predict(inp[:-1]).squeeze()
+            print(f"{prediction=}")
+            n_batch = int(len(prediction) / 2)
+            means.append(prediction[:n_batch])
+            stddevs.append(prediction[n_batch:])
+
+        means = np.concatenate(means)
+        stddevs = np.concatenate(stddevs)
 
         if not isinstance(self.meg_model.target_scaler, DummyScaler):
             means = self.meg_model.target_scaler.inverse_transform(means, num_atoms)
             stddevs = self.meg_model.target_scaler.inverse_transform(stddevs, num_atoms)
 
         return means, stddevs
-
-    def create_input_generator(
-        self,
-        structs: List[Structure],
-        targets: Optional[Targets] = None,
-        batch_size: int = 128,
-        scrub_failed_structs: bool = False,
-        shuffle: bool = True,
-    ) -> Tuple[
-        Union[GraphBatchDistanceConvert, GraphBatchGenerator], List[MEGNetGraph]
-    ]:
-        """Create generator for model inputs.
-
-        Args:
-            structs: The input structures.
-            targets: The input targets, if any.
-            batch_size: The batch size for the generator.
-            scrub_failed_structures: Whether to discard structures
-                that could not be converted to graphs.
-            shuffle: Whether the generator should shuffle the order of the
-                structure/target pairs.
-
-        Returns:
-            input_generator: The input generator
-            graphs: A list of the model input graphs.
-
-        """
-        # Make some targets up for compatibility
-        has_targets = targets is not None
-        target_buffer = targets if has_targets else [0.0] * len(structs)
-
-        graphs, trunc_targets = self.meg_model.get_all_graphs_targets(
-            structs, target_buffer, scrub_failed_structs
-        )
-        # Check dimensions of model against converted graphs
-        self.meg_model.check_dimension(graphs[0])
-
-        # Scale targets if necessary
-        if not isinstance(self.meg_model.target_scaler, DummyScaler) and has_targets:
-            num_atoms = [len(graph["atom"]) for graph in graphs]
-            trunc_targets = self.scale_targets(trunc_targets, num_atoms)
-
-        inputs = self.meg_model.graph_converter.get_flat_data(graphs, trunc_targets)
-        return (
-            self.meg_model._create_generator(
-                *inputs, batch_size=batch_size, is_shuffle=shuffle
-            ),
-            graphs,
-        )
