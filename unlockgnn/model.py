@@ -597,7 +597,6 @@ class MEGNetProbModel(ProbGNN):
         stddevs = []
         for inp in inputs:
             prediction = self.pred_model.predict(inp[:-1]).squeeze()
-            print(f"{prediction=}")
             n_batch = int(len(prediction) / 2)
             means.append(prediction[:n_batch])
             stddevs.append(prediction[n_batch:])
