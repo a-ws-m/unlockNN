@@ -44,7 +44,7 @@ def variation(
     Indicates dispersion of uncertainty estimates.
 
     """
-    stddev_mean = np.mean(stddevs.mean)
+    stddev_mean = np.mean(stddevs)
     coeff_var = np.sqrt(np.sum(np.square(stddevs - stddev_mean)) / (len(stddevs) - 1))
     coeff_var /= stddev_mean
     return coeff_var
