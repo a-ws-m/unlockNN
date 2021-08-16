@@ -2,6 +2,7 @@
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
+from megnet.data.crystal import CrystalGraph
 from megnet.data.graph import GraphBatchDistanceConvert, GraphBatchGenerator
 from megnet.models.megnet import MEGNetModel
 from megnet.utils.preprocessing import DummyScaler
@@ -9,6 +10,28 @@ from pymatgen.core.structure import Structure
 
 MEGNetGraph = Dict[str, Union[np.ndarray, List[Union[int, float]]]]
 Targets = List[Union[float, np.ndarray]]
+
+
+def default_megnet_config(
+    nfeat_bond: int = 100, r_cutoff: float = 5.0, gaussian_width: float = 0.5
+) -> dict:
+    """Get sensible defaults for MEGNetModel configuration.
+
+    These arguments are taken from the MEGNet README file:
+    <https://github.com/materialsvirtuallab/megnet#training-a-new-megnetmodel-from-structures>.
+
+    Examples:
+        Create a MEGNetModel using these defaults:
+        >>> model = MEGNetModel(**default_megnet_config())
+
+    """
+    gaussian_centres = np.linspace(0, r_cutoff + 1, nfeat_bond)
+    graph_converter = CrystalGraph(cutoff=r_cutoff)
+    return {
+        "graph_converter": graph_converter,
+        "centers": gaussian_centres,
+        "width": gaussian_width,
+    }
 
 
 def scale_targets(
@@ -75,3 +98,9 @@ def create_megnet_input(
         meg_model._create_generator(*inputs, batch_size=batch_size, is_shuffle=shuffle),
         graphs,
     )
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
