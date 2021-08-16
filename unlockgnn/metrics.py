@@ -2,12 +2,25 @@
 from typing import Callable, Dict, List, Optional
 
 import numpy as np
-from pymatgen.core.structure import Structure
 import tensorflow as tf
+import tensorflow.keras as keras
 import tensorflow_probability as tfp
+from pymatgen.core.structure import Structure
 
-from .model import ProbGNN
 from .megnet_utils import Targets
+from .model import ProbGNN
+
+
+class NLL(keras.losses.Loss):
+    """Negative log likelihood loss."""
+
+    def __init__(self, name: str = "negative_log_likelihood"):
+        """Initialize loss function and KL divergence loss scaling factor."""
+        super().__init__(reduction=keras.losses.Reduction.SUM, name=name)
+
+    def call(self, y_true, predicted_distribution):
+        """Calculate the negative log likelihood."""
+        return -predicted_distribution.distribution.log_prob(y_true)
 
 
 def neg_log_likelihood(
