@@ -26,6 +26,7 @@ from .megnet_utils import create_megnet_input, Targets
 tfd = tfp.distributions
 
 LayerName = Literal["GNN", "VGP", "Norm"]
+Metrics = List[Union[str, tf.keras.metrics.Metric]]
 
 __all__ = ["ProbGNN", "MEGNetProbModel"]
 
@@ -157,7 +158,7 @@ class ProbGNN(ABC):
         kernel: KernelLayer = RBFKernelFn(),
         latent_layer: Union[str, int] = -2,
         target_shape: Union[Tuple[int], int] = 1,
-        metrics: List[Union[str, tf.keras.metrics.Metric]] = ["mae"],
+        metrics: Metrics = [],
         kl_weight: float = 1.0,
         optimizer: keras.optimizers.Optimizer = tf.optimizers.Adam(),
         load_ckpt: bool = True,
@@ -370,6 +371,7 @@ class ProbGNN(ABC):
         self,
         kl_weight: float = 1.0,
         optimizer: keras.optimizers.Optimizer = tf.optimizers.Adam(),
+        new_metrics: Optional[Metrics] = None,
     ):
         """Compile the probabilistic GNN.
 
@@ -379,9 +381,12 @@ class ProbGNN(ABC):
             kl_weight: The relative weighting of the Kullback-Leibler divergence
                 in the loss function.
             optimizer: The model optimizer, needed for recompilation.
+            new_metrics: New metrics with which to compile.
 
         """
         loss = VariationalLoss(kl_weight)
+        if new_metrics is not None:
+            self.metrics = new_metrics
         self.model.compile(optimizer, loss=loss, metrics=self.metrics)
 
     @property
