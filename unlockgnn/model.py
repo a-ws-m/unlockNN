@@ -471,7 +471,7 @@ class MEGNetProbModel(ProbGNN):
         kernel: KernelLayer = RBFKernelFn(),
         latent_layer: Union[str, int] = -2,
         target_shape: Optional[Union[Tuple[int], int]] = None,
-        metrics: List[Union[str, tf.keras.metrics.Metric]] = ["mae"],
+        metrics: List[Union[str, tf.keras.metrics.Metric]] = [],
         kl_weight: float = 1.0,
         optimizer: keras.optimizers.Optimizer = tf.optimizers.Adam(),
         load_ckpt: bool = True,
