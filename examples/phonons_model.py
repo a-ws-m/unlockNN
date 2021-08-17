@@ -191,7 +191,7 @@ def main() -> None:
             prob_model: MEGNetProbModel = MEGNetProbModel.load(PROB_MODEL_DIR)
         except FileNotFoundError:
             prob_model = MEGNetProbModel(
-                num_inducing, PROB_MODEL_DIR, meg_model, metrics=["MAE", NLL()]
+                num_inducing, PROB_MODEL_DIR, meg_model, metrics=["MAE"]
             )
 
         if do_train:

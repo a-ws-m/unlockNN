@@ -11,18 +11,6 @@ from .megnet_utils import Targets
 from .model import ProbGNN
 
 
-class NLL(keras.losses.Loss):
-    """Negative log likelihood loss."""
-
-    def __init__(self, name: str = "negative_log_likelihood"):
-        """Initialize loss function and KL divergence loss scaling factor."""
-        super().__init__(reduction=keras.losses.Reduction.SUM, name=name)
-
-    def call(self, y_true, predicted_distribution):
-        """Calculate the negative log likelihood."""
-        return -predicted_distribution.distribution.log_prob(y_true)
-
-
 def neg_log_likelihood(
     predictions: Targets,
     stddevs: Targets,
