@@ -163,6 +163,7 @@ def main() -> None:
                 epochs=epochs,
                 callbacks=[tf_callback],
             )
+            meg_model.save_model(str(MEGNET_MODEL_DIR))
         if do_eval:
             train_predicted = meg_model.predict_structures(train_structs)
             train_mae = MAE(train_predicted, None, train_targets)
@@ -197,6 +198,7 @@ def main() -> None:
                 test_targets,
                 callbacks=[tf_callback],
             )
+            prob_model.save()
         if do_eval:
             train_metrics = evaluate_uq_metrics(
                 prob_model, train_structs, train_targets
