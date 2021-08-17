@@ -28,6 +28,7 @@ PROB_GNN_LOGS = HERE / "prob_logs"
 MEGNET_MODEL_DIR = HERE / "meg_model"
 PROB_MODEL_DIR = HERE / "prob_model"
 METRICS_LOGS = HERE / "metrics.log"
+VERBOSITY: int = 2
 
 for log_dir in [MEGNET_LOGS, PROB_GNN_LOGS]:
     if not log_dir.exists():
@@ -162,6 +163,7 @@ def main() -> None:
                 dirname="meg_checkpoints",
                 epochs=epochs,
                 callbacks=[tf_callback],
+                verbose=VERBOSITY,
             )
             meg_model.save_model(str(MEGNET_MODEL_DIR))
         if do_eval:
@@ -197,6 +199,7 @@ def main() -> None:
                 test_structs,
                 test_targets,
                 callbacks=[tf_callback],
+                verbose=VERBOSITY,
             )
             prob_model.save()
         if do_eval:
