@@ -34,9 +34,16 @@ for log_dir in [MEGNET_LOGS, PROB_GNN_LOGS]:
     if not log_dir.exists():
         os.mkdir(log_dir)
 
-logging.basicConfig(
-    filename=METRICS_LOGS, level=logging.INFO, style="%(asctime)s %(message)s"
-)
+metric_logger = logging.getLogger("metrics_logger")
+metric_logger.setLevel(logging.INFO)
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+fh = logging.FileHandler(METRICS_LOGS)
+metric_formatter = logging.Formatter("%(asctime)s %(message)s")
+ch.setFormatter(metric_formatter)
+fh.setFormatter(metric_formatter)
+metric_logger.addHandler(ch)
+metric_logger.addHandler(fh)
 
 
 def download_data(url: str, save_dir: Path) -> pd.DataFrame:
@@ -77,7 +84,7 @@ def download_data(url: str, save_dir: Path) -> pd.DataFrame:
 def log_metrics(metrics: Dict[str, float], data_name: str):
     """Log all metrics from a dictionary."""
     for metric_name, value in metrics.items():
-        logging.info("ProbGNN %s %s = %f", data_name, metric_name, value)
+        metric_logger.info("ProbGNN %s %s = %f", data_name, metric_name, value)
 
 
 def main() -> None:
@@ -167,13 +174,13 @@ def main() -> None:
             )
             meg_model.save_model(str(MEGNET_MODEL_DIR))
         if do_eval:
-            train_predicted = meg_model.predict_structures(train_structs)
+            train_predicted = meg_model.predict_structures(train_structs).flatten()
             train_mae = MAE(train_predicted, None, train_targets)
-            logging.info("MEGNet train MAE = %f", train_mae)
+            metric_logger.info("MEGNet train MAE = %f", train_mae)
 
-            test_predicted = meg_model.predict_structures(test_structs)
+            test_predicted = meg_model.predict_structures(test_structs).flatten()
             test_mae = MAE(test_predicted, None, test_targets)
-            logging.info("MEGNet test MAE = %f", test_mae)
+            metric_logger.info("MEGNet test MAE = %f", test_mae)
     else:
         # Load the ProbGNN into memory
         try:
