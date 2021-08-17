@@ -17,7 +17,7 @@ from pymatgen.core.structure import Structure
 from unlockgnn import MEGNetProbModel
 from tensorflow.keras.callbacks import TensorBoard
 from unlockgnn.megnet_utils import default_megnet_config
-from unlockgnn.metrics import MAE, NLL, evaluate_uq_metrics
+from unlockgnn.metrics import MAE, evaluate_uq_metrics
 
 HERE = Path(__file__).parent
 PHONONS_URL = "https://ml.materialsproject.org/projects/matbench_phonons.json.gz"
