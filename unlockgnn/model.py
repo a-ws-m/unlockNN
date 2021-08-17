@@ -425,7 +425,7 @@ class ProbGNN(ABC):
             The loaded model.
 
         Raises:
-            IOError: If the `save_path` does not exist.
+            FileNotFoundError: If the `save_path` does not exist.
 
         """
         # Check the save path exists
