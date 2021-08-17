@@ -430,7 +430,7 @@ class ProbGNN(ABC):
         """
         # Check the save path exists
         if not save_path.exists():
-            raise IOError(f"{save_path} does not exist.")
+            raise FileNotFoundError(f"{save_path} does not exist.")
 
         config_path = save_path / "config.json"
         with config_path.open("r") as f:
@@ -485,7 +485,7 @@ class MEGNetProbModel(ProbGNN):
             self.meg_model = MEGNetModel.from_file(str(self.meg_save_path))
         else:
             if meg_model is None:
-                raise IOError(
+                raise FileNotFoundError(
                     f"{self.meg_save_path} does not exist."
                     " Please check the `save_path` or pass a `meg_model` if creating a new `MEGNetProbModel`."
                 )
