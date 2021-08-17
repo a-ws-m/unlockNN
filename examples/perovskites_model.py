@@ -7,14 +7,14 @@ from datetime import datetime
 from argparse import ArgumentParser
 from math import floor
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 import pandas as pd
 import requests
 from pymatgen.core.structure import Structure
 from unlockgnn import MEGNetProbModel
 from unlockgnn.megnet_utils import default_megnet_config
-from unlockgnn.metrics import NLL, MAE
+from unlockgnn.metrics import NLL, MAE, evaluate_uq_metrics
 from megnet.models import MEGNetModel
 
 HERE = Path(__file__).parent
@@ -66,6 +66,12 @@ def download_data(url: str, save_dir: Path) -> pd.Dataframe:
     df.to_pickle(save_dir)
     print("Done!", flush=True)
     return df
+
+
+def log_metrics(metrics: Dict[str, float], data_name: str):
+    """Log all metrics from a dictionary."""
+    for metric_name, value in metrics.items():
+        logging.info("ProbGNN %s %s = %f", data_name, metric_name, value)
 
 
 def main() -> None:
@@ -162,8 +168,31 @@ def main() -> None:
     else:
         # Load the ProbGNN into memory
         try:
-            prob_model = MEGNetProbModel.load(PROB_MODEL_DIR)
+            prob_model: MEGNetProbModel = MEGNetProbModel.load(PROB_MODEL_DIR)
         except FileNotFoundError:
             prob_model = MEGNetProbModel(
                 num_inducing, PROB_MODEL_DIR, meg_model, metrics=["mae", NLL()]
             )
+
+        if do_train:
+            if which_model == "VGP":
+                prob_model.set_frozen("GNN", recompile=False)
+                prob_model.set_frozen(["VGP", "Norm"], freeze=False)
+            else:
+                prob_model.set_frozen("GNN", freeze=False, recompile=False)
+                prob_model.set_frozen(["VGP", "Norm"])
+            prob_model.train(
+                train_structs,
+                train_targets,
+                epochs,
+                test_structs,
+                test_targets,
+                [NLL()],
+            )
+        if do_eval:
+            train_metrics = evaluate_uq_metrics(
+                prob_model, train_structs, train_targets
+            )
+            log_metrics(train_metrics, "training")
+            test_metrics = evaluate_uq_metrics(prob_model, test_structs, test_targets)
+            log_metrics(test_metrics, "test")
