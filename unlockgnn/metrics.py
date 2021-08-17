@@ -114,7 +114,7 @@ def evaluate_uq_metrics(
     prob_model: ProbGNN,
     test_structs: List[Structure],
     test_targets: Targets,
-    metrics: List[str] = ["nll"],
+    metrics: List[str] = AVAILABLE_METRICS.keys(),
 ) -> Dict[str, float]:
     """Evaluate probabilistic model metrics."""
     metrics_dict = {metric: AVAILABLE_METRICS[metric] for metric in metrics}
