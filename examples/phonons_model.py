@@ -38,7 +38,7 @@ logging.basicConfig(
 )
 
 
-def download_data(url: str, save_dir: Path) -> pd.Dataframe:
+def download_data(url: str, save_dir: Path) -> pd.DataFrame:
     """Download and extract data from the URL.
 
     Expects a `matbench` dataset URL.
@@ -96,7 +96,6 @@ def main() -> None:
     )
     parser.add_argument(
         "--which",
-        nargs="+",
         choices=["MEGNet", "VGP", "ProbGNN"],
         required=("--train" in sys.argv),
         help=(
