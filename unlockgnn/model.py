@@ -100,7 +100,7 @@ def make_probabilistic(
         (target_shape,) if isinstance(target_shape, int) else tuple(target_shape)
     )
     convert_fn = (
-        tfd.Distribution.mean
+        "mean"
         if not prediction_mode
         else lambda trans_dist: tf.concat(
             [trans_dist.distribution.mean(), trans_dist.distribution.stddev()], axis=-1
