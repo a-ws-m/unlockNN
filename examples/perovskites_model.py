@@ -1,9 +1,9 @@
 """Example script for training a model to predict optical phonon modes."""
 import gzip
 import json
-import sys
 import logging
-from datetime import datetime
+import os
+import sys
 from argparse import ArgumentParser
 from math import floor
 from pathlib import Path
@@ -11,11 +11,12 @@ from typing import Dict, List, Tuple
 
 import pandas as pd
 import requests
+from megnet.models import MEGNetModel
 from pymatgen.core.structure import Structure
 from unlockgnn import MEGNetProbModel
+from tensorflow.keras.callbacks import TensorBoard
 from unlockgnn.megnet_utils import default_megnet_config
-from unlockgnn.metrics import NLL, MAE, evaluate_uq_metrics
-from megnet.models import MEGNetModel
+from unlockgnn.metrics import MAE, NLL, evaluate_uq_metrics
 
 HERE = Path(__file__).parent
 PHONONS_URL = "https://ml.materialsproject.org/projects/matbench_phonons.json.gz"
@@ -27,6 +28,10 @@ PROB_GNN_LOGS = HERE / "prob_logs"
 MEGNET_MODEL_DIR = HERE / "meg_model"
 PROB_MODEL_DIR = HERE / "prob_model"
 METRICS_LOGS = HERE / "metrics.log"
+
+for log_dir in [MEGNET_LOGS, PROB_GNN_LOGS]:
+    if not log_dir.exists():
+        os.mkdir(log_dir)
 
 logging.basicConfig(
     filename=METRICS_LOGS, level=logging.INFO, style="%(asctime)s %(message)s"
@@ -148,6 +153,7 @@ def main() -> None:
 
     if which_model == "MEGNet":
         if do_train:
+            tf_callback = TensorBoard(MEGNET_LOGS, write_graph=False)
             meg_model.train(
                 train_structs,
                 train_targets,
@@ -156,6 +162,7 @@ def main() -> None:
                 automatic_correction=False,
                 dirname="meg_checkpoints",
                 epochs=epochs,
+                callbacks=[tf_callback],
             )
         if do_eval:
             train_predicted = meg_model.predict_structures(train_structs)
@@ -171,23 +178,25 @@ def main() -> None:
             prob_model: MEGNetProbModel = MEGNetProbModel.load(PROB_MODEL_DIR)
         except FileNotFoundError:
             prob_model = MEGNetProbModel(
-                num_inducing, PROB_MODEL_DIR, meg_model, metrics=["mae", NLL()]
+                num_inducing, PROB_MODEL_DIR, meg_model, metrics=["MAE", NLL()]
             )
 
         if do_train:
             if which_model == "VGP":
                 prob_model.set_frozen("GNN", recompile=False)
                 prob_model.set_frozen(["VGP", "Norm"], freeze=False)
+                tf_callback = TensorBoard(PROB_GNN_LOGS / "vgp_only", write_graph=False)
             else:
                 prob_model.set_frozen("GNN", freeze=False, recompile=False)
                 prob_model.set_frozen(["VGP", "Norm"])
+                tf_callback = TensorBoard(PROB_GNN_LOGS / "probgnn", write_graph=False)
             prob_model.train(
                 train_structs,
                 train_targets,
                 epochs,
                 test_structs,
                 test_targets,
-                [NLL()],
+                callbacks=[tf_callback],
             )
         if do_eval:
             train_metrics = evaluate_uq_metrics(
