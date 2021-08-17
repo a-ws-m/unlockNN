@@ -205,3 +205,7 @@ def main() -> None:
             log_metrics(train_metrics, "training")
             test_metrics = evaluate_uq_metrics(prob_model, test_structs, test_targets)
             log_metrics(test_metrics, "test")
+
+
+if __name__ == "__main__":
+    main()
