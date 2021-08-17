@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 from argparse import ArgumentParser
+from datetime import datetime
 from math import floor
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -22,27 +23,30 @@ HERE = Path(__file__).parent
 PHONONS_URL = "https://ml.materialsproject.org/projects/matbench_phonons.json.gz"
 
 TRAINING_RATIO: float = 0.8
+VERBOSITY: int = 2
 PHONONS_SAVE_DIR = HERE / "phonons.pkl"
+
 MEGNET_LOGS = HERE / "megnet_logs"
 PROB_GNN_LOGS = HERE / "prob_logs"
+VGP_LOGS = PROB_GNN_LOGS / "vgp_only"
+FULL_MODEL_LOGS = PROB_GNN_LOGS / "probgnn"
+
 MEGNET_MODEL_DIR = HERE / "meg_model"
 PROB_MODEL_DIR = HERE / "prob_model"
-METRICS_LOGS = HERE / "metrics.log"
-VERBOSITY: int = 2
 
-for log_dir in [MEGNET_LOGS, PROB_GNN_LOGS]:
+METRICS_LOGS = HERE / "metrics.log"
+
+NOW: str = datetime.now().strftime("%Y%m%d-%H%M%S")
+
+for log_dir in [MEGNET_LOGS, PROB_GNN_LOGS, VGP_LOGS, FULL_MODEL_LOGS]:
     if not log_dir.exists():
         os.mkdir(log_dir)
 
 metric_logger = logging.getLogger("metrics_logger")
 metric_logger.setLevel(logging.INFO)
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
 fh = logging.FileHandler(METRICS_LOGS)
 metric_formatter = logging.Formatter("%(asctime)s %(message)s")
-ch.setFormatter(metric_formatter)
 fh.setFormatter(metric_formatter)
-metric_logger.addHandler(ch)
 metric_logger.addHandler(fh)
 
 
@@ -160,7 +164,7 @@ def main() -> None:
 
     if which_model == "MEGNet":
         if do_train:
-            tf_callback = TensorBoard(MEGNET_LOGS, write_graph=False)
+            tf_callback = TensorBoard(MEGNET_LOGS / NOW, write_graph=False)
             meg_model.train(
                 train_structs,
                 train_targets,
@@ -194,11 +198,10 @@ def main() -> None:
             if which_model == "VGP":
                 prob_model.set_frozen("GNN", recompile=False)
                 prob_model.set_frozen(["VGP", "Norm"], freeze=False)
-                tf_callback = TensorBoard(PROB_GNN_LOGS / "vgp_only", write_graph=False)
+                tf_callback = TensorBoard(VGP_LOGS / NOW, write_graph=False)
             else:
-                prob_model.set_frozen("GNN", freeze=False, recompile=False)
-                prob_model.set_frozen(["VGP", "Norm"])
-                tf_callback = TensorBoard(PROB_GNN_LOGS / "probgnn", write_graph=False)
+                prob_model.set_frozen(["VGP", "GNN", "Norm"], freeze=False)
+                tf_callback = TensorBoard(FULL_MODEL_LOGS / NOW, write_graph=False)
             prob_model.train(
                 train_structs,
                 train_targets,
