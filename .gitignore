@@ -183,3 +183,7 @@ make_*
 
 ### Config files ###
 .config
+
+## Example notebook files ###
+examples/binary_e_form_model
+examples/logs
