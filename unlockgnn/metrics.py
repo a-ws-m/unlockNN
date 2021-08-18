@@ -29,7 +29,7 @@ def sharpness(
 ) -> float:
     """Calculate the sharpness of predictions.
 
-    Sharpness is the RMS of the predicted standard deviations.
+    Sharpness is the root-mean-squared of the predicted standard deviations.
 
     """
     return np.sqrt(np.mean(np.square(stddevs)))
@@ -40,9 +40,15 @@ def variation(
     stddevs: Targets,
     true_vals: Optional[Targets],
 ) -> float:
-    """Calculate the coefficient of variation of predictions.
+    r"""Calculate the coefficient of variation of predictions.
 
     Indicates dispersion of uncertainty estimates.
+
+    Let :math:`\sigma` be predicted standard deviations, :math:`\bar{\sigma}` be
+    the mean of the standard deviations and :math:`N` be the number of
+    predictions. The coefficient of variation is given by:
+
+    .. math:: C_v = \sqrt{\frac{\sum_i^N{(\sigma_i - \bar{\sigma})^2}}{N - 1}}
 
     """
     stddev_mean = np.mean(stddevs)
@@ -96,15 +102,32 @@ AVAILABLE_METRICS: Dict[str, Callable[[Targets, Targets, Targets], float]] = {
     "mse": MSE,
     "rmse": RMSE,
 }
+"""Indicates the mapping between a metric name (a potential argument to
+:func:`evaluate_uq_metrics`) and the function it calls."""
 
 
 def evaluate_uq_metrics(
     prob_model: ProbGNN,
     test_structs: List[Structure],
     test_targets: Targets,
-    metrics: List[str] = AVAILABLE_METRICS.keys(),
+    metrics: List[str] = list(AVAILABLE_METRICS.keys()),
 ) -> Dict[str, float]:
-    """Evaluate probabilistic model metrics."""
+    """Evaluate probabilistic model metrics.
+
+    Args:
+        prob_model: The probabilistic model to evaluate.
+        test_structs: The input structures.
+        test_targets: The target values for the structures.
+        metrics: A list of metrics to compute. Defaults
+            to computing all of the currently implemented
+            metrics.
+
+    Currently implemented metrics are given in :const:`AVAILABLE_METRICS`.
+
+    Returns:
+        Dictionary of ``{metric_name: value}``.
+
+    """
     metrics_dict = {metric: AVAILABLE_METRICS[metric] for metric in metrics}
     predictions, stddevs = prob_model.predict(test_structs)
     return {

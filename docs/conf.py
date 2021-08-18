@@ -36,9 +36,10 @@ extensions = [
     "sphinx.ext.doctest",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
+    "sphinx.ext.autosectionlabel",
 ]
 
-# master_doc = "index"
+master_doc = "index"
 
 
 # Add any paths that contain templates here, relative to this directory.

@@ -36,6 +36,11 @@ Or simply install using ``pip`` exclusively::
 
    $ pip install .
 
+.. toctree::
+   :hidden:
+
+   Home <self>
+   quickstart
 
 .. toctree::
    :hidden:
@@ -43,6 +48,6 @@ Or simply install using ``pip`` exclusively::
 
    modules/unlockgnn.model
    modules/unlockgnn.kernel_layers
-   modules/unlockgnn.megnet_utils
    modules/unlockgnn.metrics
+   modules/unlockgnn.megnet_utils
    modules/unlockgnn.initializers

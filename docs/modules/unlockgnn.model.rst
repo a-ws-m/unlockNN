@@ -17,7 +17,7 @@ this distribution is the *de facto* "prediction" and the standard
 deviation indicates uncertainty. For example, two standard deviations
 gives the 95% confidence interval.
 
-.. note::
+.. important::
     The caveat of using a VGP is that the probabilistic model must undergo
     further training to determine the inducing index point
     locations and the kernel parameters, which can be expensive!

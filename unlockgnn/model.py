@@ -624,8 +624,9 @@ class MEGNetProbModel(ProbGNN):
             batch_size: The batch size for predictions.
 
         Returns:
-            means: The mean values of the predicted distribution(s).
-            stddevs: The standard deviations of the predicted distribution(s).
+            The mean values of the predicted distribution(s).
+
+            The standard deviations of the predicted distribution(s).
 
         """
         self.update_pred_model()

@@ -17,11 +17,12 @@ def default_megnet_config(
 ) -> dict:
     """Get sensible defaults for MEGNetModel configuration.
 
-    These arguments are taken from the MEGNet README file:
-    <https://github.com/materialsvirtuallab/megnet#training-a-new-megnetmodel-from-structures>.
+    These arguments are taken from the `MEGNet README file
+    <https://github.com/materialsvirtuallab/megnet#training-a-new-megnetmodel-from-structures>`_.
 
     Examples:
         Create a MEGNetModel using these defaults:
+
         >>> model = MEGNetModel(**default_megnet_config())
 
     """
@@ -37,9 +38,10 @@ def default_megnet_config(
 def scale_targets(
     meg_model: MEGNetModel, targets: Targets, num_atoms: List[int]
 ) -> Targets:
-    """Scale target values using underlying MEGNetModel's scaler.
+    """Scale target values using given MEGNetModel's scaler.
 
     Args:
+        meg_model: The :class:`MEGNetModel` whose scaler to use.
         targets: A list of target values.
         num_atoms: A list of the number of atoms in each structure
             corresponding to the target values.
@@ -65,6 +67,7 @@ def create_megnet_input(
     """Create generator for model inputs.
 
     Args:
+        meg_model: The :class:`MEGNetModel` whose graph converter to use.
         structs: The input structures.
         targets: The input targets, if any.
         batch_size: The batch size for the generator.
@@ -74,8 +77,9 @@ def create_megnet_input(
             structure/target pairs.
 
     Returns:
-        input_generator: The input generator
-        graphs: A list of the model input graphs.
+        The input generator.
+
+        A list of the model input graphs.
 
     """
     # Make some targets up for compatibility
