@@ -13,14 +13,14 @@ dependencies:
   - pytest
   - pytest-cov
   - python=3.8
-  - sphinx
-  - sphinx_rtd_theme
   - virtualenv
   - pip:
       - bumpversion
       - coveralls
+      - insegel
       - pymatgen==2021.2.8
       - megnet
+      - sphinx
       - tensorflow
       - tensorflow-probability
       - tox

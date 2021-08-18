@@ -56,7 +56,7 @@ class MeanErrorMetric:
 
     Args:
         mean_what_func: What type of mean we're calculating.
-            For example, 'mean absolute error' -> `np.abs`.
+            For example, 'mean absolute error' -> ``np.abs``.
         take_root: Whether to take the square root of the mean.
 
     """

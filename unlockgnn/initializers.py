@@ -11,7 +11,7 @@ from .megnet_utils import Targets, create_megnet_input
 
 
 class SampleInitializer(keras.initializers.Initializer):
-    """Sample index points from training data."""
+    """Initializer that samples index points from training data."""
 
     def __init__(
         self,

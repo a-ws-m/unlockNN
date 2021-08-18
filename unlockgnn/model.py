@@ -69,18 +69,18 @@ def make_probabilistic(
             the layer of the GNN to be fed into the VGP.
         num_inducing_points: The number of inducing index points for the
             VGP.
-        kernel: A :class`KernelLayer` for the VGP to use.
+        kernel: A :class:`KernelLayer` for the VGP to use.
         latent_layer: The index or name of the GNN layer to use as the
             input for the VGP.
         target_shape: The shape of the target values.
-        use_normalization: Whether to use a `BatchNormalization` layer before
+        use_normalization: Whether to use a ``BatchNormalization`` layer before
             the VGP. Recommended for better training efficiency.
         prediction_mode: Whether to create a model for predictions _only_.
             (Resulting model cannot be serialized and loss functions won't work.)
         index_initializer: A custom initializer to use for the VGP index points.
 
     Returns:
-        A `keras.Model` with the `gnn`'s first layers, but terminating in a
+        A :class:`keras.Model` with the ``gnn``'s first layers, but terminating in a
             VGP.
 
     """
@@ -125,7 +125,7 @@ class ProbGNN(ABC):
             VGP.
         save_path: Path to the save directory for the model.
         gnn: The base GNN model to modify.
-        kernel: A :class`KernelLayer` for the VGP to use.
+        kernel: A :class:`KernelLayer` for the VGP to use.
         latent_layer: The name or index of the layer of the GNN to be fed into
             the VGP.
         target_shape: The shape of the target values.
@@ -136,7 +136,7 @@ class ProbGNN(ABC):
         load_ckpt: Whether to load the best checkpoint's weights, instead
             of those saved at the time of the last :meth:`save`.
         index_initializer: A custom initializer to use for the VGP index points.
-        use_normalization: Whether to use a `BatchNormalization` layer before
+        use_normalization: Whether to use a ``BatchNormalization`` layer before
             the VGP. Recommended for better training efficiency.
 
     """
@@ -169,7 +169,7 @@ class ProbGNN(ABC):
 
         Saves the GNN to disk, loads weights from disk if they exist and then
         instantiates the probabilistic model. The model's GNN layers are
-        initially frozen by default (but not the VGP and `BatchNormalization`
+        initially frozen by default (but not the VGP and ``BatchNormalization``
         layer, if applicable).
 
         """
@@ -244,12 +244,12 @@ class ProbGNN(ABC):
 
         Args:
             layers: Name or list of names of layers to thaw.
-            freeze: Whether to freeze (`True`) or thaw (`False`) the layers.
+            freeze: Whether to freeze (``True``) or thaw (``False``) the layers.
             recompile: Whether to recompile the model after the operation.
             **compilation_kwargs: Keyword arguments to pass to :meth:`compile`.
 
         Raises:
-            ValueError: If one or more `layers` are invalid names.
+            ValueError: If one or more ``layers`` are invalid names.
 
         """
         if not isinstance(layers, list):
@@ -299,7 +299,7 @@ class ProbGNN(ABC):
         a prediction whenever the :attr:`model`'s weights have changed. By
         default, the method checks whether the pre-existing :attr:`pred_model`'s
         weights are similar to the :attr:`model`'s weights before cloning, and
-        skips execution if they are. Setting `force_new=True` skips this check.
+        skips execution if they are. Setting ``force_new=True`` skips this check.
 
         Args:
             force_new: Whether to force the creation of a new model, skipping
@@ -425,7 +425,7 @@ class ProbGNN(ABC):
             The loaded model.
 
         Raises:
-            FileNotFoundError: If the `save_path` does not exist.
+            FileNotFoundError: If the ``save_path`` does not exist.
 
         """
         # Check the save path exists
@@ -446,8 +446,8 @@ class MEGNetProbModel(ProbGNN):
         num_inducing_points: The number of inducing index points for the
             VGP.
         save_path: Path to the save directory for the model.
-        meg_model: The base `MEGNetModel` to modify.
-        kernel: A :class`KernelLayer` for the VGP to use.
+        meg_model: The base :class:`MEGNetModel` to modify.
+        kernel: A :class:`~unlockgnn.kernel_layers.KernelLayer` for the VGP to use.
         latent_layer: The name or index of the layer of the GNN to be fed into
             the VGP.
         target_shape: The shape of the target values.
@@ -458,8 +458,13 @@ class MEGNetProbModel(ProbGNN):
         load_ckpt: Whether to load the best checkpoint's weights, instead
             of those saved at the time of the last :meth:`save`.
         index_initializer: A custom initializer to use for the VGP index points.
-        use_normalization: Whether to use a `BatchNormalization` layer before
+            See also :mod:`unlockgnn.initializers`.
+        use_normalization: Whether to use a ``BatchNormalization`` layer before
             the VGP. Recommended for better training efficiency.
+
+    .. warning::
+        :attr:`metrics` are malfunctional and may give vastly incorrect
+        values -- use :func:`unlockgnn.metrics.evaluate_uq_metrics` instead!
 
     """
 
@@ -540,7 +545,7 @@ class MEGNetProbModel(ProbGNN):
             scrub_failed_structures: Whether to discard structures
                 that could not be converted to graphs.
             verbose: The level of verbosity. See Keras's documentation
-                on `Model.fit`.
+                on ``Model.fit``.
 
         """
         # Convert structures to graphs for model input
@@ -586,6 +591,10 @@ class MEGNetProbModel(ProbGNN):
     ) -> Dict[str, float]:
         """Evaluate model metrics.
 
+        .. warning::
+            This method is malfunctional and may give vastly incorrect
+            values -- use :func:`unlockgnn.metrics.evaluate_uq_metrics` instead!
+
         Args:
             eval_structs: Structures on which to evaluate performance.
             eval_targets: True target values for structures.
@@ -594,7 +603,7 @@ class MEGNetProbModel(ProbGNN):
                 that could not be converted to graphs.
 
         Returns:
-            Dictionary of {metric: value}.
+            Dictionary of ``{metric: value}``.
 
         """
         eval_gen, eval_graphs = create_megnet_input(

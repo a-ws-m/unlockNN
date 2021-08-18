@@ -1,9 +1,9 @@
 """Kernel layer implementations for use with VariationalGaussianProcesses."""
 from abc import ABC, abstractmethod
 import json
-from os import mkdir
+from os import PathLike, mkdir
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Optional, Type
 
 import numpy as np
 import tensorflow as tf
@@ -29,6 +29,17 @@ def params_path(directory: Path) -> Path:
 class KernelLayer(tf.keras.layers.Layer, ABC):
     """An ABC for kernel function implementations that work with keras."""
 
+    def __init__(self, trainable=True, name=None, dtype=None, dynamic=False, **kwargs):
+        """Initialize kernel parameters.
+
+        Subclasses should use :meth:`add_weight` to initialize kernel layer
+        weights during initialization.
+
+        """
+        super().__init__(
+            trainable=trainable, name=name, dtype=dtype, dynamic=dynamic, **kwargs
+        )
+
     def call(self, x):
         """Do nothing -- a placeholder for keras."""
         # Never called -- this is just a layer so it can hold variables
@@ -44,16 +55,27 @@ class KernelLayer(tf.keras.layers.Layer, ABC):
     @property
     @abstractmethod
     def config(self) -> dict:
-        """Get configuration information for the class."""
+        """Get configuration information for the class.
+
+        This configuration information is used by :func:`load_kernel` to
+        determine what type of kernel to load. For built-in kernels, this
+        configuration dictionary specifies ``{"type": type}``, where ``type`` is
+        one of the keys in :const:`KERNEL_TYPES`.
+
+        For custom kernels, this dictionary should return any keyword arguments
+        to be passed during kernel initialization.
+
+        """
         ...
 
-    def save(self, directory: Path):
+    def save(self, directory: PathLike):
         """Save the kernel to disk.
 
         Subclasses should update this method to save configuration information
-        as well. See also :func:`load_kernel`.
+        as well (c.f. :meth:`config`). See also :func:`load_kernel`.
 
         """
+        directory = Path(directory)
         if not directory.exists():
             mkdir(directory)
         weights = self.get_weights()
@@ -73,7 +95,7 @@ class AmpAndLengthScaleFn(KernelLayer, ABC):
     """
 
     def __init__(self, **kwargs):
-        """Initialize layer and parameters."""
+        """Initialize the layer, its amplitude and its length scale."""
         super().__init__(**kwargs)
         dtype = kwargs.get("dtype", tf.float64)
 
@@ -133,7 +155,9 @@ class MaternOneHalfFn(AmpAndLengthScaleFn):
 KERNEL_TYPES = {"rbf": RBFKernelFn, "matern": MaternOneHalfFn}
 
 
-def load_kernel(directory: Path, kernel_type: Optional[Callable] = None) -> KernelLayer:
+def load_kernel(
+    directory: PathLike, kernel_type: Optional[Type[KernelLayer]] = None
+) -> KernelLayer:
     """Load a kernel from the disk.
 
     Args:
@@ -141,23 +165,40 @@ def load_kernel(directory: Path, kernel_type: Optional[Callable] = None) -> Kern
         kernel_type: A specific class to force the model to load.
             Useful for custom kernels which don't appear in this module.
 
+    Examples:
+        Create an :class:`RBFKernelFn`, save it, then reload from disk:
+
+        >>> from tempfile import TemporaryDirectory
+        >>> rbf = RBFKernelFn()
+        >>> with TemporaryDirectory() as tmpdirname:
+        ...     rbf.save(tmpdirname)
+        ...     new_rbf = load_kernel(tmpdirname)
+
     """
+    directory = Path(directory)
     with config_path(directory).open("r") as f:
         config = json.load(f)
     params = np.load(params_path(directory))
 
     if kernel_type:
-        raise NotImplementedError()
+        kernel = kernel_type(**config)
+        kernel.set_weights(params)
     else:
-        kernel_type = config["type"]
+        kernel_name = config["type"]
         try:
-            to_load = KERNEL_TYPES[kernel_type]
+            to_load = KERNEL_TYPES[kernel_name]
         except KeyError:
             raise KeyError(
-                f"Found no kernel with type {kernel_type}. "
+                f"Found no kernel with type {kernel_name}. "
                 "Specify a reference to the kernel's class using the `kernel_type` argument."
             )
 
         kernel = to_load()
         kernel.set_weights(params)
     return kernel
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

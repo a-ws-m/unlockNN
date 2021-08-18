@@ -1,4 +1,4 @@
-"""Utilities for dealing with `MEGNetModel`s."""
+"""Utilities for dealing with ``MEGNetModel``s."""
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
