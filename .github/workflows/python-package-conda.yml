@@ -33,7 +33,7 @@ jobs:
           conda install pytest
           pip install pytest-cov
           pytest --cov=unlockgnn
-      - name: Coveralls
-        uses: coverallsapp/github-action@master
+      - name: "Upload coverage to Codecov"
+        uses: codecov/codecov-action@v1
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          fail_ci_if_error: true

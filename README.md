@@ -5,7 +5,7 @@
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Coverage Status](https://coveralls.io/repos/github/a-ws-m/unlockGNN/badge.svg?branch=master)](https://coveralls.io/github/a-ws-m/unlockGNN?branch=master)
+[![codecov](https://codecov.io/gh/a-ws-m/unlockGNN/branch/master/graph/badge.svg?token=TBDX3P6OZ3)](https://codecov.io/gh/a-ws-m/unlockGNN)
 
 A Python package for interpreting and extracting uncertainties in graph neural network models of chemical systems based upon Gaussian processes.
 
