@@ -8,5 +8,6 @@ dependencies:
   - pip:
       - pymatgen==2021.2.8
       - megnet
+      - requests
       - tensorflow
       - tensorflow-probability

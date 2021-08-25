@@ -20,6 +20,7 @@ dependencies:
       - insegel
       - pymatgen==2021.2.8
       - megnet
+      - requests
       - sphinx
       - tensorflow
       - tensorflow-probability

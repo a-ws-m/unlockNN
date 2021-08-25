@@ -42,6 +42,7 @@ setup(
         "numpy<=1.19.5",
         "pymatgen<=2021.2.8",
         "megnet>=1.1.4",
+        "requests",
         "tensorflow>=2.2",
         "tensorflow-probability>=0.10.1",
         "typish; python_version < '3.8'",
