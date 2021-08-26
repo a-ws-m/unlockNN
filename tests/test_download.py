@@ -5,12 +5,21 @@ from pathlib import Path
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
-from unlockgnn.download import load_pretrained
+from unlockgnn.download import load_data, load_pretrained
 
 
-def test_load(tmp_path: Path):
-    """Test downloading phonons dataset."""
+def test_load_model(tmp_path: Path):
+    """Test downloading formation energies model."""
     orig_model = load_pretrained("binary_e_form", branch="urop-2021", save_dir=tmp_path)
     reload_model = load_pretrained(
         "binary_e_form", branch="urop-2021", save_dir=tmp_path
     )
+
+
+def test_load_data(tmp_path: Path):
+    """Test downloading formation energies data."""
+    orig_data = load_data("binary_e_form", branch="urop-2021", save_dir=tmp_path)
+    reload_data = load_data("binary_e_form", branch="urop-2021", save_dir=tmp_path)
+
+    assert orig_data.loc[0, "formation_energy_per_atom"] == -0.7374389025000001
+    assert reload_data.loc[0, "formation_energy_per_atom"] == -0.7374389025000001
