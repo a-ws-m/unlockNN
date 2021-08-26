@@ -2,19 +2,12 @@ name: unlockGNN
 channels:
   - defaults
 dependencies:
-  - cloudpickle
-  - matplotlib
-  - numpy
-  - pandas
+  - numpy=1.19.*
   - pip
-  - pyarrow
   - python=3.8
-  - scipy=1.4.1
-  - seaborn
   - pip:
-      - matminer
+      - pymatgen==2021.2.8
       - megnet
-      - pymatgen==2020.4.29
-      - git+https://github.com/WMD-group/SMACT.git
+      - requests
+      - tensorflow
       - tensorflow-probability
-      - tqdm

@@ -181,5 +181,12 @@ models/*
 ### Make utils ###
 make_*
 
-### MLFlow files from building docs ###
-mlruns/*
+### Config files ###
+.config
+
+## Example notebook files ###
+examples/binary_e_form_model
+examples/logs
+
+### Models ###
+!models/*

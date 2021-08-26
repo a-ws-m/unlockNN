@@ -1,0 +1,7 @@
+megnet>=1.1.4
+tensorflow>=2.5
+tensorflow-probability>=0.10.1
+pymatgen<=2021.2.8
+numpy<=1.19.5
+requests
+typish; python_version < "3.8"

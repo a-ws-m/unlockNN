@@ -1,4 +1,5 @@
 """Tools for adding uncertainty quantification to neural networks."""
-from .base import ProbGNN, MEGNetProbModel
+from .kernel_layers import *
+from .model import *
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"
