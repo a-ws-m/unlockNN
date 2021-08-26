@@ -1,12 +1,13 @@
 """Uncertainty quantification metrics and evaluation utilities."""
+from pprint import pprint
 from typing import Callable, Dict, List, Optional
 
 import numpy as np
 import tensorflow as tf
-import tensorflow.keras as keras
 import tensorflow_probability as tfp
 from pymatgen.core.structure import Structure
 
+from .download import load_data, load_pretrained
 from .megnet_utils import Targets
 from .model import ProbGNN
 
@@ -127,6 +128,23 @@ def evaluate_uq_metrics(
     Returns:
         Dictionary of ``{metric_name: value}``.
 
+    Example:
+        Compute the metrics of the example ``MEGNetProbModel`` for
+        predicting binary compounds' formation energies:
+
+        >>> binary_model = load_pretrained("binary_e_form")
+        >>> binary_data = load_data("binary_e_form")
+        >>> metrics = evaluate_uq_metrics(binary_model, binary_data["structure"], binary_data["formation_energy_per_atom"])
+        >>> for metric_name, value in metrics.items():
+        ...     print(f"{metric_name} = {value:.3f}")
+        nll = -8922.768
+        sharpness = 0.032
+        variation = 0.514
+        mae = 0.027
+        mse = 0.002
+        rmse = 0.041
+
+
     """
     metrics_dict = {metric: AVAILABLE_METRICS[metric] for metric in metrics}
     predictions, stddevs = prob_model.predict(test_structs)
@@ -134,3 +152,9 @@ def evaluate_uq_metrics(
         metric: func(predictions, stddevs, test_targets)
         for metric, func in metrics_dict.items()
     }
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
