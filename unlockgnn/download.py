@@ -47,7 +47,8 @@ def _download_file(
     if not save_dir.exists():
         save_dir.mkdir()
 
-    specific_dir = save_dir / f"{fname}-{branch}"
+    specific_dir = save_dir / (f"{fname}-{branch}" + (".pkl" if type == "data" else ""))
+    # Add .pkl extension only if we're downloading data
     url = MODELS_URL if type == "model" else DATA_URL
     download_url = url.format(branch=branch, fname=fname)
 
