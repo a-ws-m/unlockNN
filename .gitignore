@@ -175,9 +175,6 @@ saved_gp/*
 ### Dev utilities ###
 misc/*
 
-### Trained models ###
-models/*
-
 ### Make utils ###
 make_*
 
@@ -190,3 +187,7 @@ examples/logs
 
 ### Models ###
 !models/*
+
+### Downloaded files ###
+unlockgnn/models
+unlockgnn/data
