@@ -32,9 +32,8 @@ meg_model = MEGNetModel.from_mvl_models("Eform_MP_2019")
 # 2. Make probabilistic model
 kl_weight = BATCH_SIZE / num_training
 prob_model = MEGNetProbModel(
-    num_inducing_points=NUM_INDUCING_POINTS,
-    save_path=MODEL_SAVE_DIR,
     meg_model=meg_model,
+    num_inducing_points=NUM_INDUCING_POINTS,
     kl_weight=kl_weight,
 )
 
@@ -48,7 +47,7 @@ def train_model():
         val_structs=val_structs,
         val_targets=val_targets,
     )
-    prob_model.save()
+    prob_model.save(MODEL_SAVE_DIR)
 
 
 # 3. First training run is to approximate correct inducing points locations
