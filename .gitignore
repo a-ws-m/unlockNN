@@ -175,9 +175,6 @@ saved_gp/*
 ### Dev utilities ###
 misc/*
 
-### Trained models ###
-models/*
-
 ### Make utils ###
 make_*
 
@@ -187,6 +184,11 @@ make_*
 ## Example notebook files ###
 examples/binary_e_form_model
 examples/logs
+examples/checkpoint.h5
 
 ### Models ###
 !models/*
+
+### Downloaded files ###
+unlockgnn/models
+unlockgnn/data

@@ -190,9 +190,7 @@ def main() -> None:
         try:
             prob_model: MEGNetProbModel = MEGNetProbModel.load(PROB_MODEL_DIR)
         except FileNotFoundError:
-            prob_model = MEGNetProbModel(
-                num_inducing, PROB_MODEL_DIR, meg_model, metrics=["MAE"]
-            )
+            prob_model = MEGNetProbModel(meg_model, num_inducing, metrics=["MAE"])
 
         if do_train:
             if which_model == "VGP":
@@ -211,7 +209,7 @@ def main() -> None:
                 callbacks=[tf_callback],
                 verbose=VERBOSITY,
             )
-            prob_model.save()
+            prob_model.save(PROB_MODEL_DIR)
         if do_eval:
             train_metrics = evaluate_uq_metrics(
                 prob_model, train_structs, train_targets

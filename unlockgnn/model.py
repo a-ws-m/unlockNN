@@ -1,5 +1,7 @@
 """ProbGNN model code and implementation for MEGNet."""
 import json
+from shutil import copyfile
+from os import PathLike
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -29,6 +31,27 @@ LayerName = Literal["GNN", "VGP", "Norm"]
 Metrics = List[Union[str, tf.keras.metrics.Metric]]
 
 __all__ = ["ProbGNN", "MEGNetProbModel"]
+
+
+def _get_save_paths(root_dir: Path) -> Dict[str, Path]:
+    """Get default save paths for model components.
+
+    Args:
+        save_dir: The root save directory.
+
+    Returns:
+        Dictionary of ``{component: path}``.
+
+    """
+    rel_paths: Dict[str, str] = dict(
+        weights_path="weights",
+        conf_path="config.json",
+        ckpt_path="checkpoint.h5",
+        kernel_path="kernel",
+        gnn_path="gnn",
+        meg_path="megnet",
+    )
+    return {component: root_dir / rel_path for component, rel_path in rel_paths.items()}
 
 
 class VariationalLoss(keras.losses.Loss):
@@ -121,10 +144,9 @@ class ProbGNN(ABC):
     """Wrapper for creating a probabilistic GNN model.
 
     Args:
+        gnn: The base GNN model to modify.
         num_inducing_points: The number of inducing index points for the
             VGP.
-        save_path: Path to the save directory for the model.
-        gnn: The base GNN model to modify.
         kernel: A :class:`KernelLayer` for the VGP to use.
         latent_layer: The name or index of the layer of the GNN to be fed into
             the VGP.
@@ -133,8 +155,6 @@ class ProbGNN(ABC):
         kl_weight: The relative weighting of the Kullback-Leibler divergence
             in the loss function.
         optimizer: The model optimizer, needed for recompilation.
-        load_ckpt: Whether to load the best checkpoint's weights, instead
-            of those saved at the time of the last :meth:`save`.
         index_initializer: A custom initializer to use for the VGP index points.
         use_normalization: Whether to use a ``BatchNormalization`` layer before
             the VGP. Recommended for better training efficiency.
@@ -152,70 +172,39 @@ class ProbGNN(ABC):
 
     def __init__(
         self,
+        gnn: keras.Model,
         num_inducing_points: int,
-        save_path: Path,
-        gnn: Optional[keras.Model] = None,
         kernel: KernelLayer = RBFKernelFn(),
         latent_layer: Union[str, int] = -2,
         target_shape: Union[Tuple[int], int] = 1,
         metrics: Metrics = [],
         kl_weight: float = 1.0,
         optimizer: keras.optimizers.Optimizer = tf.optimizers.Adam(),
-        load_ckpt: bool = True,
         index_initializer: Optional[keras.initializers.Initializer] = None,
         use_normalization: bool = True,
     ) -> None:
         """Initialize the probabilistic model.
 
-        Saves the GNN to disk, loads weights from disk if they exist and then
-        instantiates the probabilistic model. The model's GNN layers are
-        initially frozen by default (but not the VGP and ``BatchNormalization``
-        layer, if applicable).
+        The model's GNN layers are initially frozen by default (but not the VGP
+        and ``BatchNormalization`` layer, if applicable).
 
         """
-        self.save_path = save_path
-        self.weights_path = save_path / "weights"
-        self.ckpt_path = save_path / "checkpoint.h5"
-        self.conf_path = save_path / "config.json"
-        self.kernel_path = save_path / "kernel"
-        self.gnn_path = save_path / "gnn"
-
+        self.gnn = gnn
+        self.num_inducing_points = num_inducing_points
         self.kernel = kernel
-        self.metrics = metrics
-        self.optimizer: keras.optimizers.Optimizer = optimizer
-        self.kl_weight = kl_weight
         self.latent_layer = latent_layer
         self.target_shape = target_shape
-        self.num_inducing_points = num_inducing_points
+        self.metrics = metrics
+        self.kl_weight = kl_weight
+        self.optimizer: keras.optimizers.Optimizer = optimizer
         self.use_normalization = use_normalization
-
         self.pred_model: Optional[keras.Model] = None
-
-        if not self.gnn_path.exists():
-            loading: bool = False
-            if gnn is None:
-                raise IOError(
-                    f"{self.gnn_path} does not exist."
-                    " Please check the `save_path`, or pass a GNN model if creating a new `ProbGNN`."
-                )
-            # Save GNN for use in reloading model from disk
-            gnn.save(self.gnn_path, include_optimizer=False)
-        else:
-            # We're loading from memory
-            loading = True
-            gnn = keras.models.load_model(self.gnn_path, compile=False)
-            index_initializer = None
-
-            try:
-                self.kernel = load_kernel(self.kernel_path)
-            except FileNotFoundError:
-                warnings.warn("No saved kernel found.")
 
         # Instantiate probabilistic model
         self.model = make_probabilistic(
             gnn,
             num_inducing_points,
-            self.kernel,
+            kernel,
             latent_layer,
             target_shape,
             index_initializer=index_initializer,
@@ -223,15 +212,7 @@ class ProbGNN(ABC):
         )
 
         # Freeze GNN layers and compile, ready to train the VGP
-        self.set_frozen("GNN")
-
-        if loading:
-            # Load weights from the relevant source
-            to_load = self.ckpt_path if load_ckpt else self.weights_path
-            try:
-                self.model.load_weights(to_load)
-            except OSError:
-                warnings.warn(f"No saved weights found at `{to_load}`.")
+        self.set_frozen("GNN", recompile=True)
 
     def set_frozen(
         self,
@@ -287,6 +268,22 @@ class ProbGNN(ABC):
         """Train the full-stack model."""
         ...
 
+    def _update_pred_model(self) -> None:
+        """Handle updating predictor model once checks have been done."""
+        weights = self.model.get_weights()
+        pred_model = make_probabilistic(
+            self.gnn,
+            self.num_inducing_points,
+            self.kernel,
+            self.latent_layer,
+            self.target_shape,
+            use_normalization=self.use_normalization,
+            prediction_mode=True,
+        )
+        pred_model.compile()
+        pred_model.set_weights(weights)
+        self.pred_model = pred_model
+
     def update_pred_model(self, force_new: bool = False) -> None:
         """Instantiate or update the predictor model.
 
@@ -306,33 +303,18 @@ class ProbGNN(ABC):
                 the weights equality check.
 
         """
-        while not force_new:
+        if force_new or self.pred_model is None:
+            self._update_pred_model()
+        else:
             # Check if we need to instantiate the prediction model
-            if self.pred_model is None:
-                force_new = True
-                break
             current_weights = self.model.get_weights()
             predictor_weights = self.pred_model.get_weights()
-            force_new = not all(
+            needs_update = not all(
                 np.allclose(current, predictor, equal_nan=True)
                 for current, predictor in zip(current_weights, predictor_weights)
             )
-            break
-        if force_new:
-            self.model.save_weights(self.weights_path)
-            gnn = keras.models.load_model(self.gnn_path, compile=False)
-            pred_model = make_probabilistic(
-                gnn,
-                self.num_inducing_points,
-                self.kernel,
-                self.latent_layer,
-                self.target_shape,
-                use_normalization=self.use_normalization,
-                prediction_mode=True,
-            )
-            pred_model.compile()
-            pred_model.load_weights(self.weights_path)
-            self.pred_model = pred_model
+            if needs_update:
+                self._update_pred_model()
 
     def predict(self, input) -> np.ndarray:
         """Predict target values and standard deviations for a given input.
@@ -389,11 +371,10 @@ class ProbGNN(ABC):
             self.metrics = new_metrics
         self.model.compile(optimizer, loss=loss, metrics=self.metrics)
 
-    @property
-    def ckpt_callback(self):
+    def ckpt_callback(self, ckpt_path: PathLike = "checkpoint.h5"):
         """Get the default configuration for a model checkpoint callback."""
-        return tf.keras.callbacks.ModelCheckpoint(
-            self.ckpt_path, save_best_only=True, save_weights_only=True
+        return keras.callbacks.ModelCheckpoint(
+            ckpt_path, save_best_only=True, save_weights_only=True
         )
 
     @property
@@ -401,52 +382,92 @@ class ProbGNN(ABC):
         """Get the configuration parameters needed to save to disk."""
         return {var_name: getattr(self, var_name) for var_name in self.CONFIG_VARS}
 
-    def save(self):
-        """Save the model to disk."""
-        self.model.save_weights(self.weights_path)
-        with self.conf_path.open("w") as f:
-            json.dump(self.config, f)
-        self.save_kernel()
+    def save(self, save_path: Path, ckpt_path: Optional[PathLike] = "checkpoint.h5"):
+        """Save the model to disk.
 
-    def save_kernel(self):
+        Args:
+            save_path: The directory in which to save the model.
+            ckpt_path: Where to look for checkpoints, which will be
+                copied over to the save directory for future usage.
+                Specify ``ckpt_path=None`` if no checkpoints exist.
+
+        """
+        paths = _get_save_paths(save_path)
+
+        self.model.save_weights(paths["weights_path"])
+
+        with paths["conf_path"].open("w") as f:
+            json.dump(self.config, f)
+
+        self.save_kernel(paths["kernel_path"])
+
+        self.gnn.save(paths["gnn_path"], include_optimizer=False)
+
+        # Copy checkpoints
+        if ckpt_path is not None:
+            ckpt_path = Path(ckpt_path)
+            copyfile(ckpt_path, paths["ckpt_path"])
+
+    def save_kernel(self, kernel_save_path: Path):
         """Save the VGP's kernel to disk."""
-        self.kernel.save(self.kernel_path)
+        self.kernel.save(kernel_save_path)
 
     @classmethod
-    def load(cls: "ProbGNN", save_path: Path, load_ckpt: bool = True) -> "ProbGNN":
+    def load(
+        cls: "ProbGNN", save_path: Path, load_ckpt: bool = True, **kwargs
+    ) -> "ProbGNN":
         """Load a ProbGNN from disk.
 
         Args:
             save_path: The path to the model's save directory.
             load_ckpt: Whether to load the best checkpoint's weights, instead
                 of those saved at the time of the last :meth:`save`.
+            **kwargs: Keyword arguments required by subclasses.
 
         Returns:
             The loaded model.
 
         Raises:
-            FileNotFoundError: If the ``save_path`` does not exist.
+            FileNotFoundError: If the ``save_path`` or any components do not exist.
 
         """
         # Check the save path exists
         if not save_path.exists():
-            raise FileNotFoundError(f"{save_path} does not exist.")
+            raise FileNotFoundError(f"`{save_path}` does not exist.")
 
-        config_path = save_path / "config.json"
-        with config_path.open("r") as f:
-            config = json.load(f)
+        paths = _get_save_paths(save_path)
 
-        return cls(save_path=save_path, load_ckpt=load_ckpt, **config)
+        # Load configuration info
+        with paths["conf_path"].open("r") as f:
+            config: Dict[str, Any] = json.load(f)
+
+        # Load GNN
+        try:
+            gnn = keras.models.load_model(paths["gnn_path"], compile=False)
+        except OSError:
+            raise FileNotFoundError(f"Couldn't load GNN at `{paths['gnn_path']}`.")
+
+        # Initialize...
+        config.update(kwargs)
+        prob_model: ProbGNN = cls(gnn=gnn, **config)
+
+        # ...and load weights
+        to_load = paths["ckpt_path"] if load_ckpt else paths["weights_path"]
+        try:
+            prob_model.model.load_weights(to_load)
+        except OSError:
+            warnings.warn(f"No saved weights found at `{to_load}`.")
+
+        return prob_model
 
 
 class MEGNetProbModel(ProbGNN):
     """ProbGNN for MEGNetModels.
 
     Args:
+        meg_model: The base :class:`MEGNetModel` to modify.
         num_inducing_points: The number of inducing index points for the
             VGP.
-        save_path: Path to the save directory for the model.
-        meg_model: The base :class:`MEGNetModel` to modify.
         kernel: A :class:`~unlockgnn.kernel_layers.KernelLayer` for the VGP to use.
         latent_layer: The name or index of the layer of the GNN to be fed into
             the VGP.
@@ -455,8 +476,6 @@ class MEGNetProbModel(ProbGNN):
         kl_weight: The relative weighting of the Kullback-Leibler divergence
             in the loss function.
         optimizer: The model optimizer, needed for recompilation.
-        load_ckpt: Whether to load the best checkpoint's weights, instead
-            of those saved at the time of the last :meth:`save`.
         index_initializer: A custom initializer to use for the VGP index points.
             See also :mod:`unlockgnn.initializers`.
         use_normalization: Whether to use a ``BatchNormalization`` layer before
@@ -470,49 +489,34 @@ class MEGNetProbModel(ProbGNN):
 
     def __init__(
         self,
+        meg_model: MEGNetModel,
         num_inducing_points: int,
-        save_path: Path,
-        meg_model: Optional[MEGNetModel] = None,
         kernel: KernelLayer = RBFKernelFn(),
         latent_layer: Union[str, int] = -2,
         target_shape: Optional[Union[Tuple[int], int]] = None,
         metrics: List[Union[str, tf.keras.metrics.Metric]] = [],
         kl_weight: float = 1.0,
         optimizer: keras.optimizers.Optimizer = tf.optimizers.Adam(),
-        load_ckpt: bool = True,
         index_initializer: Optional[keras.initializers.Initializer] = None,
         use_normalization: bool = True,
+        **kwargs,
     ) -> None:
         """Initialize probabilistic model."""
-        self.meg_save_path = save_path / "megnet"
-        if self.meg_save_path.exists():
-            # Load from memory
-            self.meg_model = MEGNetModel.from_file(str(self.meg_save_path))
-        else:
-            if meg_model is None:
-                raise FileNotFoundError(
-                    f"{self.meg_save_path} does not exist."
-                    " Please check the `save_path` or pass a `meg_model` if creating a new `MEGNetProbModel`."
-                )
-            self.meg_model = meg_model
-            self.meg_model.save_model(str(self.meg_save_path))
-
+        self.meg_model = meg_model
         if target_shape is None:
             # Determine output shape based on MEGNetModel
             target_shape = self.meg_model.model.layers[-1].output_shape
             target_shape = tuple(dim for dim in target_shape if dim is not None)
 
         super().__init__(
-            num_inducing_points,
-            save_path,
             self.meg_model.model,
+            num_inducing_points,
             kernel,
             latent_layer,
             target_shape,
             metrics,
             kl_weight,
             optimizer,
-            load_ckpt,
             index_initializer,
             use_normalization,
         )
@@ -526,6 +530,7 @@ class MEGNetProbModel(ProbGNN):
         val_targets: Optional[Targets] = None,
         callbacks: List[tf.keras.callbacks.Callback] = [],
         use_default_ckpt_handler: bool = True,
+        ckpt_path: PathLike = "checkpoint.h5",
         batch_size: int = 128,
         scrub_failed_structs: bool = False,
         verbose: Literal[0, 1, 2] = 2,
@@ -541,6 +546,8 @@ class MEGNetProbModel(ProbGNN):
             callbacks: A list of additional callbacks.
             use_default_ckpt_handler: Whether to use the default
                 checkpoint callback.
+            ckpt_path: Where to save checkpoints, if
+                ``use_default_ckpt_handler=True``.
             batch_size: The batch size for training and validation.
             scrub_failed_structures: Whether to discard structures
                 that could not be converted to graphs.
@@ -569,7 +576,7 @@ class MEGNetProbModel(ProbGNN):
 
         # Configure callbacks
         if use_default_ckpt_handler:
-            callbacks.append(self.ckpt_callback)
+            callbacks.append(self.ckpt_callback(ckpt_path))
 
         # Train
         self.model.fit(
@@ -635,7 +642,6 @@ class MEGNetProbModel(ProbGNN):
             # Just one to predict
             input = [input]
 
-        n_inputs = len(input)
         inputs, graphs = create_megnet_input(
             self.meg_model, structs=input, batch_size=batch_size, shuffle=False
         )
@@ -657,3 +663,44 @@ class MEGNetProbModel(ProbGNN):
             stddevs = self.meg_model.target_scaler.inverse_transform(stddevs, num_atoms)
 
         return means, stddevs
+
+    def save(
+        self, save_path: Path, ckpt_path: Optional[PathLike] = "checkpoint.h5"
+    ) -> None:
+        """Save the model to disk.
+
+        Args:
+            save_path: The directory in which to save the model.
+            ckpt_path: Where to look for checkpoints, which will be
+                copied over to the save directory for future usage.
+                Specify ``ckpt_path=None`` if no checkpoints exist.
+
+        """
+        paths = _get_save_paths(save_path)
+        self.meg_model.save_model(str(paths["meg_path"]))
+        return super().save(save_path, ckpt_path=ckpt_path)
+
+    @classmethod
+    def load(
+        cls: "MEGNetProbModel", save_path: Path, load_ckpt: bool = True
+    ) -> "MEGNetProbModel":
+        """Load a MEGNetProbModel from disk.
+
+        Args:
+            save_path: The path to the model's save directory.
+            load_ckpt: Whether to load the best checkpoint's weights, instead
+                of those saved at the time of the last :meth:`save`.
+
+        Returns:
+            The loaded model.
+
+        Raises:
+            FileNotFoundError: If the ``save_path`` or any components do not exist.
+
+        """
+        paths = _get_save_paths(save_path)
+        try:
+            meg_model = MEGNetModel.from_file(str(paths["meg_path"]))
+        except OSError:
+            raise FileNotFoundError(f"No saved MEGNetModel at `{paths['meg_path']}`.")
+        return super().load(save_path, load_ckpt, meg_model=meg_model)

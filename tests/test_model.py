@@ -61,9 +61,8 @@ def train_test_split(
     )
 
 
-def test_sample_init(tmp_path: Path, datadir: Path):
+def test_sample_init(datadir: Path):
     """Test the SampleInitializer."""
-    save_dir = tmp_path / "model"
     megnet_e_form_model = MEGNetModel.from_file(str(datadir / "formation_energy.hdf5"))
     binary_dir = datadir / "mp_binary_on_hull.pkl"
 
@@ -81,7 +80,7 @@ def test_sample_init(tmp_path: Path, datadir: Path):
 
     (train_structs, _), (_, _) = train_test_split(structures, formation_energies)
     initializer = SampleInitializer(train_structs, megnet_e_form_model, batch_size=32)
-    MEGNetProbModel(10, save_dir, megnet_e_form_model, index_initializer=initializer)
+    MEGNetProbModel(megnet_e_form_model, 10, index_initializer=initializer)
     # If this works without any errors, we're doing OK
 
 
@@ -89,6 +88,7 @@ def test_sample_init(tmp_path: Path, datadir: Path):
 def test_meg_prob(tmp_path: Path, datadir: Path, use_norm: bool):
     """Test creation, training and I/O of a `MEGNetProbModel`."""
     save_dir = tmp_path / ("norm_model" if use_norm else "unnorm_model")
+    ckpt_path = tmp_path / "checkpoint.h5"
     megnet_e_form_model = MEGNetModel.from_file(str(datadir / "formation_energy.hdf5"))
     binary_dir = datadir / "mp_binary_on_hull.pkl"
 
@@ -107,9 +107,7 @@ def test_meg_prob(tmp_path: Path, datadir: Path, use_norm: bool):
     (train_structs, train_targets), (test_structs, test_targets) = train_test_split(
         structures, formation_energies
     )
-    prob_model = MEGNetProbModel(
-        10, save_dir, megnet_e_form_model, use_normalization=use_norm
-    )
+    prob_model = MEGNetProbModel(megnet_e_form_model, 10, use_normalization=use_norm)
 
     # Test weights equality
     last_gnn_idx = -2 if use_norm else -1
@@ -126,19 +124,22 @@ def test_meg_prob(tmp_path: Path, datadir: Path, use_norm: bool):
     init_loss = init_performance["loss"]
 
     # Test training without validation
-    prob_model.train(train_structs, train_targets, 1, batch_size=32)
+    prob_model.train(
+        train_structs, train_targets, 1, batch_size=32, ckpt_path=ckpt_path
+    )
     # Test training with validation
     prob_model.train(
-        train_structs, train_targets, 1, test_structs, test_targets, batch_size=32
+        train_structs,
+        train_targets,
+        1,
+        test_structs,
+        test_targets,
+        batch_size=32,
+        ckpt_path=ckpt_path,
     )
 
-    # Check performance has improved
-    fin_performance = prob_model.evaluate(test_structs, test_targets)
-    fin_loss = fin_performance["loss"]
-    assert fin_loss < init_loss
-
     # Save and reload model from disk
-    prob_model.save()
+    prob_model.save(save_dir, ckpt_path=ckpt_path)
     loaded_model = MEGNetProbModel.load(save_dir, load_ckpt=False)
     assert weights_equal(
         prob_model.model.get_weights(), loaded_model.model.get_weights()
