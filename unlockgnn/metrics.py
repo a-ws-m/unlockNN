@@ -134,7 +134,9 @@ def evaluate_uq_metrics(
 
         >>> binary_model = load_pretrained("binary_e_form")
         >>> binary_data = load_data("binary_e_form")
-        >>> metrics = evaluate_uq_metrics(binary_model, binary_data["structure"], binary_data["formation_energy_per_atom"])
+        >>> metrics = evaluate_uq_metrics(
+        ...     binary_model, binary_data["structure"], binary_data["formation_energy_per_atom"]
+        ... )
         >>> for metric_name, value in metrics.items():
         ...     print(f"{metric_name} = {value:.3f}")
         nll = -8922.768

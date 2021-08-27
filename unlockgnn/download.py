@@ -55,9 +55,9 @@ def _download_file(
     if not specific_dir.exists():
         r = requests.get(download_url)
         if type == "model":
-            tf = tarfile.open(fileobj=BytesIO(r.content))
-            tf.extractall(specific_dir)
-            tf.close()
+            tar_f = tarfile.open(fileobj=BytesIO(r.content))
+            tar_f.extractall(specific_dir)
+            tar_f.close()
         else:
             specific_dir.write_bytes(r.content)
 
