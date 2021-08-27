@@ -184,6 +184,7 @@ make_*
 ## Example notebook files ###
 examples/binary_e_form_model
 examples/logs
+examples/checkpoint.h5
 
 ### Models ###
 !models/*
