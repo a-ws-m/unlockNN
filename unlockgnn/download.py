@@ -103,4 +103,11 @@ def load_data(
 
     """
     data_dir = _download_file(data_name, branch, save_dir, "data")
-    return pd.read_pickle(data_dir)
+    try:
+        return pd.read_pickle(data_dir)
+    except ValueError:
+        # Older Python version
+        import pickle5 as pkl
+
+        with data_dir.open("rb") as f:
+            return pkl.load(f)
