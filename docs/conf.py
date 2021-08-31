@@ -26,6 +26,8 @@ author = "Alexander Moriarty"
 # The full version, including alpha/beta/rc tags
 release = "2.0.0"
 
+releases_github_path = "a-ws-m/unlockGNN"
+
 
 # -- General configuration ---------------------------------------------------
 
@@ -65,3 +67,4 @@ html_theme = "insegel"
 html_static_path = ["_static"]
 
 html_logo = "_static/unlockgnn_icon.svg"
+html_last_updated_fmt = "%d %b %Y"

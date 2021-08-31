@@ -41,6 +41,7 @@ Or simply install using ``pip`` exclusively::
 
    Home <self>
    quickstart
+   GitHub <https://github.com/a-ws-m/unlockGNN/>
 
 .. toctree::
    :hidden:
