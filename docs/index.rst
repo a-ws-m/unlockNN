@@ -51,4 +51,5 @@ Or simply install using ``pip`` exclusively::
    modules/unlockgnn.kernel_layers
    modules/unlockgnn.metrics
    modules/unlockgnn.megnet_utils
+   modules/unlockgnn.download
    modules/unlockgnn.initializers

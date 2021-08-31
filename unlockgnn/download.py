@@ -71,6 +71,9 @@ def load_pretrained(
 ) -> MEGNetProbModel:
     """Download a pre-trained model.
 
+    A list of available models and their descriptions can be
+    found at https://github.com/a-ws-m/unlockGNN/tree/master/models.
+
     Args:
         model_name: The name of the model to download.
         branch: Which branch of the unlockGNN repository to download from.
@@ -79,6 +82,11 @@ def load_pretrained(
 
     Returns:
         The downloaded model.
+
+    Examples:
+        Download model for predicting binary compounds' formation energies:
+
+        >>> model = load_pretrained("binary_e_form")
 
     """
     model_dir = _download_file(model_name, branch, save_dir, "model")
@@ -92,6 +100,9 @@ def load_data(
 ):
     """Download sample data.
 
+    A list of available data, their sources and descriptions can be
+    found at https://github.com/a-ws-m/unlockGNN/tree/master/data.
+
     Args:
         data_name: The name of the data to download.
         branch: Which branch of the unlockGNN repository to download from.
@@ -100,6 +111,16 @@ def load_data(
 
     Returns:
         The downloaded data.
+
+    Examples:
+        Download binary compounds and their formation energies, then print
+        the first dataset entry:
+
+        >>> data = load_data("binary_e_form")
+        >>> print(data.iloc[0])
+        structure                    [[ 1.982598   -4.08421341  3.2051745 ] La, [1....
+        formation_energy_per_atom                                            -0.737439
+        Name: 0, dtype: object
 
     """
     data_dir = _download_file(data_name, branch, save_dir, "data")
@@ -111,3 +132,9 @@ def load_data(
 
         with data_dir.open("rb") as f:
             return pkl.load(f)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
