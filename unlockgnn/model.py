@@ -725,7 +725,7 @@ class MEGNetProbModel(ProbGNN):
         return super().load(save_path, load_ckpt, meg_model=meg_model)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import doctest
 
     doctest.testmod()

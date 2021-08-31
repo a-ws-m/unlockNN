@@ -134,7 +134,7 @@ def load_data(
             return pkl.load(f)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import doctest
 
     doctest.testmod()
