@@ -26,6 +26,8 @@ author = "Alexander Moriarty"
 # The full version, including alpha/beta/rc tags
 release = "2.0.0"
 
+releases_github_path = "a-ws-m/unlockGNN"
+
 
 # -- General configuration ---------------------------------------------------
 
@@ -63,3 +65,6 @@ html_theme = "insegel"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+
+html_logo = "_static/unlockgnn_icon.svg"
+html_last_updated_fmt = "%d %b %Y"

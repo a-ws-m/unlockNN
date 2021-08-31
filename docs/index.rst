@@ -41,6 +41,7 @@ Or simply install using ``pip`` exclusively::
 
    Home <self>
    quickstart
+   GitHub <https://github.com/a-ws-m/unlockGNN/>
 
 .. toctree::
    :hidden:
@@ -50,4 +51,5 @@ Or simply install using ``pip`` exclusively::
    modules/unlockgnn.kernel_layers
    modules/unlockgnn.metrics
    modules/unlockgnn.megnet_utils
+   modules/unlockgnn.download
    modules/unlockgnn.initializers

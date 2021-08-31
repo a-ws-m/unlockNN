@@ -3,7 +3,7 @@
 Inducing index points initializers
 ==================================
 
-This experimental module contains work-in-progress algorithms for more intelligently
+The ``initializers`` module contains work-in-progress algorithms for more intelligently
 initializing the locations of inducing index points
 for the variational Gaussian process (VGP).
 As per the `TensorFlow documentation <https://www.tensorflow.org/probability/api_docs/python/tfp/layers/VariationalGaussianProcess#args>`_,
