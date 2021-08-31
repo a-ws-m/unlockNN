@@ -33,7 +33,7 @@ Metrics = List[Union[str, tf.keras.metrics.Metric]]
 __all__ = ["ProbGNN", "MEGNetProbModel"]
 
 
-def _get_save_paths(root_dir: Path) -> Dict[str, Path]:
+def _get_save_paths(root_dir: PathLike) -> Dict[str, Path]:
     """Get default save paths for model components.
 
     Args:
@@ -43,6 +43,7 @@ def _get_save_paths(root_dir: Path) -> Dict[str, Path]:
         Dictionary of ``{component: path}``.
 
     """
+    root_dir = Path(root_dir)
     rel_paths: Dict[str, str] = dict(
         weights_path="weights",
         conf_path="config.json",
@@ -382,7 +383,9 @@ class ProbGNN(ABC):
         """Get the configuration parameters needed to save to disk."""
         return {var_name: getattr(self, var_name) for var_name in self.CONFIG_VARS}
 
-    def save(self, save_path: Path, ckpt_path: Optional[PathLike] = "checkpoint.h5"):
+    def save(
+        self, save_path: PathLike, ckpt_path: Optional[PathLike] = "checkpoint.h5"
+    ):
         """Save the model to disk.
 
         Args:
@@ -681,7 +684,7 @@ class MEGNetProbModel(ProbGNN):
         return means, stddevs
 
     def save(
-        self, save_path: Path, ckpt_path: Optional[PathLike] = "checkpoint.h5"
+        self, save_path: PathLike, ckpt_path: Optional[PathLike] = "checkpoint.h5"
     ) -> None:
         """Save the model to disk.
 
@@ -698,7 +701,7 @@ class MEGNetProbModel(ProbGNN):
 
     @classmethod
     def load(
-        cls: "MEGNetProbModel", save_path: Path, load_ckpt: bool = True
+        cls: "MEGNetProbModel", save_path: PathLike, load_ckpt: bool = True
     ) -> "MEGNetProbModel":
         """Load a MEGNetProbModel from disk.
 
