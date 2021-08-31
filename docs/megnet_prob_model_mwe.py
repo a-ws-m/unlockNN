@@ -5,10 +5,8 @@ from megnet.models import MEGNetModel
 from unlockgnn.download import load_data
 from unlockgnn.model import MEGNetProbModel
 
-MP_API_KEY: str = ""  # Set this to a Materials Project API key
-
 TRAINING_RATIO: float = 0.8
-NUM_INDUCING_POINTS: int = 500
+NUM_INDUCING_POINTS: int = 500  # Number of inducing index points for VGP
 BATCH_SIZE: int = 128
 MODEL_SAVE_DIR: Path = Path("binary_e_form_model")
 
@@ -30,7 +28,9 @@ val_targets = val_df["formation_energy_per_atom"]
 meg_model = MEGNetModel.from_mvl_models("Eform_MP_2019")
 
 # 2. Make probabilistic model
+# Specify Kullback-Leibler divergence weighting in loss function:
 kl_weight = BATCH_SIZE / num_training
+# Then make the model:
 prob_model = MEGNetProbModel(
     meg_model=meg_model,
     num_inducing_points=NUM_INDUCING_POINTS,
