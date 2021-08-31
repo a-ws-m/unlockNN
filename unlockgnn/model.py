@@ -635,6 +635,22 @@ class MEGNetProbModel(ProbGNN):
 
             The standard deviations of the predicted distribution(s).
 
+        Examples:
+            Predict the formation energy of a binary compound with a
+            95% confidence interval (two standard deviations) uncertainty
+            estimate:
+
+            >>> from unlockgnn.download import load_data, load_pretrained
+            >>> binary_model = load_pretrained("binary_e_form")
+            >>> binary_data = load_data("binary_e_form")
+            >>> example_struct = binary_data.loc[0, "structure"]
+            >>> prediction, stddev = binary_model.predict(example_struct)
+            >>> print(
+            ...     "Predicted formation energy = "
+            ...     f"{prediction.item():.3f} ± {stddev.item() * 2:.3f} eV."
+            ... )
+            Predicted formation energy = -0.736 ± 0.054 eV.
+
         """
         self.update_pred_model()
 
@@ -704,3 +720,9 @@ class MEGNetProbModel(ProbGNN):
         except OSError:
             raise FileNotFoundError(f"No saved MEGNetModel at `{paths['meg_path']}`.")
         return super().load(save_path, load_ckpt, meg_model=meg_model)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
