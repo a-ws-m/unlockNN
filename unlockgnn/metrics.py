@@ -7,7 +7,6 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from pymatgen.core.structure import Structure
 
-from .download import load_data, load_pretrained
 from .megnet_utils import Targets
 from .model import ProbGNN
 
@@ -132,6 +131,7 @@ def evaluate_uq_metrics(
         Compute the metrics of the example ``MEGNetProbModel`` for
         predicting binary compounds' formation energies:
 
+        >>> from unlockgnn.download import load_data, load_pretrained
         >>> binary_model = load_pretrained("binary_e_form")
         >>> binary_data = load_data("binary_e_form")
         >>> metrics = evaluate_uq_metrics(
