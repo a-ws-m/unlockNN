@@ -15,6 +15,7 @@ dependencies:
   - python=3.8
   - virtualenv
   - pip:
+      - build
       - bumpversion
       - coveralls
       - insegel

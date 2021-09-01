@@ -18,7 +18,7 @@ Knowledge of the certainty in an estimate is particularly important for data-dri
 as the reliability of a prediction depends on the existence of functionally similar structures in the
 training dataset, which cannot be readily determined.
 
-`UnlockGNN` contains utilities for training a neural network-fed Gaussian process as an uncertainty quantifier.
+UnlockGNN contains utilities for training a neural network-fed Gaussian process as an uncertainty quantifier.
 The framework enables the training of a precursor GNN, which functions as a representation learning algorithm.
 A layer of the GNN can then be selected to serve as the input (index points) for a Gaussian process.
 The model can be saved and reloaded in a bundled format and used to perform predictions and confidence intervals
@@ -29,17 +29,16 @@ on unseen structures.
 
 The package can be installed by cloning this repository and building it using either anaconda or pip,
 or it can be downloaded directly from PyPi.
-In addition, `tensorflow` must be installed as a separate dependency.
-This is to give the user the choice of installing GPU support.
-TensorFlow may be installed using either `pip install tensorflow` or `pip install tensorflow-cpu`.
 
 To install from PyPi, run `pip install unlockGNN`.
+To install from source:
 
-To install from this repository, in the root directory of the package, run one of either
-
-```pip install .``` or
-
-```conda env create -f environment.yml```
+```bash
+git clone https://github.com/a-ws-m/unlockGNN.git
+cd unlockGNN
+conda env create -f environment.yml  # Optional: create a virtual environment with conda
+pip install .
+```
 
 The `dev_environment.yml` contains additional dependencies for development, testing and building documentation.
 It can be installed using `conda env create -f dev_environment.yml`.
@@ -64,7 +63,7 @@ Contributions are very welcome as we look to make unlockGNN more flexible and ef
 Please use the [Fork and Pull](https://guides.github.com/activities/forking/) workflow to make contributions and follow the contribution guidelines:
 
 - Use the environment defined in `dev_environment.yml`. This installs `black`, the formatter used for this project, as well as utilities for building documentation, enabling the testing suite and publishing to PyPi.
-- Write tests for new features in the appropriate directory. Use `@pytest.mark.slow` for slow tests.
+- Write tests for new features in the appropriate directory.
 - Use [Google-style Docstrings](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html). Check docstrings with `pydocstyle`.
 - Feel free to clean up others' code as you go along.
 

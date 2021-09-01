@@ -5,12 +5,10 @@ from megnet.models import MEGNetModel
 from unlockgnn.download import load_data
 from unlockgnn.model import MEGNetProbModel
 
-MP_API_KEY: str = ""  # Set this to a Materials Project API key
-
 TRAINING_RATIO: float = 0.8
-NUM_INDUCING_POINTS: int = 500
+NUM_INDUCING_POINTS: int = 500  # Number of inducing index points for VGP
 BATCH_SIZE: int = 128
-MODEL_SAVE_DIR: Path = Path("binary_e_form_model")
+MODEL_SAVE_DIR: Path = Path("binary_e_form_example")
 
 # Data preprocessing:
 # Load binary compounds' formation energies example data,
@@ -30,7 +28,9 @@ val_targets = val_df["formation_energy_per_atom"]
 meg_model = MEGNetModel.from_mvl_models("Eform_MP_2019")
 
 # 2. Make probabilistic model
+# Specify Kullback-Leibler divergence weighting in loss function:
 kl_weight = BATCH_SIZE / num_training
+# Then make the model:
 prob_model = MEGNetProbModel(
     meg_model=meg_model,
     num_inducing_points=NUM_INDUCING_POINTS,
@@ -56,3 +56,15 @@ train_model()
 prob_model.set_frozen("GNN", freeze=False)
 train_model()
 # 5. ``train_model`` also handles saving.
+
+# We can then load the model from disk and perform some predictions
+loaded_model = MEGNetProbModel.load(MODEL_SAVE_DIR)
+example_struct, example_energy = train_structs[0], train_targets[0]
+predicted, stddev = loaded_model.predict(example_struct)
+# Two standard deviations is the 95% confidence interval
+print(f"{example_struct.composition}: ")
+print(f"Predicted E_f: {predicted.item():.3f} ± {stddev.item() * 2:.3f} eV")
+print(f"Actual E_f: {example_energy:.3f} eV")
+"""La2 Rh2: 
+Predicted E_f: -0.739 ± 0.063 eV
+Actual E_f: -0.737 eV"""
