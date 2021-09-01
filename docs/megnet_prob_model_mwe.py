@@ -8,7 +8,7 @@ from unlockgnn.model import MEGNetProbModel
 TRAINING_RATIO: float = 0.8
 NUM_INDUCING_POINTS: int = 500  # Number of inducing index points for VGP
 BATCH_SIZE: int = 128
-MODEL_SAVE_DIR: Path = Path("binary_e_form_model")
+MODEL_SAVE_DIR: Path = Path("binary_e_form_example")
 
 # Data preprocessing:
 # Load binary compounds' formation energies example data,
@@ -56,3 +56,12 @@ train_model()
 prob_model.set_frozen("GNN", freeze=False)
 train_model()
 # 5. ``train_model`` also handles saving.
+
+# We can then load the model from disk and perform some predictions
+loaded_model = MEGNetProbModel.load(MODEL_SAVE_DIR)
+example_struct, example_energy = train_structs[0], train_targets[0]
+predicted, stddev = loaded_model.predict(example_struct)
+# Two standard deviations is the 95% confidence interval
+print(f"{example_struct.composition}: ")
+print(f"Predicted E_f: {predicted.item():.3f} ± {stddev.item() * 2:.3f} eV")
+print(f"Actual E_f: {example_energy} eV")
