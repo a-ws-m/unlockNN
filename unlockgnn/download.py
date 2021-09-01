@@ -21,7 +21,7 @@ DEFAULT_DATA_PATH = Path(__file__).parent / "data"
 MODELS_URL: str = (
     "https://github.com/a-ws-m/unlockGNN/raw/{branch}/models/{fname}.tar.gz"
 )
-DATA_URL: str = "https://github.com/a-ws-m/unlockGNN/raw/{branch}/data/{fname}.pkl"
+DATA_URL: str = "https://github.com/a-ws-m/unlockGNN/raw/{branch}/data/{fname}.parquet"
 AVAILABLE_MODELS = Literal["binary_e_form"]
 AVAILABLE_DATA = Literal["binary_e_form"]
 
