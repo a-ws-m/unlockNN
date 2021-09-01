@@ -12,6 +12,8 @@ except ImportError:
 
 import pandas as pd
 import requests
+from pymatgen.core.structure import Structure
+
 from .model import MEGNetProbModel
 
 DEFAULT_MODEL_PATH = Path(__file__).parent / "models"
@@ -124,14 +126,45 @@ def load_data(
 
     """
     data_dir = _download_file(data_name, branch, save_dir, "data")
-    try:
-        return pd.read_pickle(data_dir)
-    except ValueError:
-        # Older Python version
-        import pickle5 as pkl
+    return _load_struct_data(data_dir)
 
-        with data_dir.open("rb") as f:
-            return pkl.load(f)
+
+def _load_struct_data(fname: PathLike) -> pd.DataFrame:
+    """Load data containing ``Structure``s from a file.
+
+    Deserializes the "structure" column to a string.
+    The converse of :func:`save_struct_data`.
+
+    Args:
+        fname: Whence to load the file.
+
+    Returns:
+        The deserialized ``DataFrame``.
+
+    """
+    serial_df = pd.read_parquet(fname)
+    serial_df["structure"] = serial_df["structure"].map(
+        lambda string: Structure.from_str(string, "json")
+    )
+    return serial_df
+
+
+def _save_struct_data(df: pd.DataFrame, fname: PathLike):
+    """Save data containing ``Structure``s to a file.
+
+    Serializes the "structure" column to a string.
+    The converse of :func:`load_struct_data`.
+
+    Args:
+        df: The :class:`pd.DataFrame` to serialize.
+        fname: Where to save the file.
+
+    """
+    serial_df = df.copy()
+    serial_df["structure"] = serial_df["structure"].map(
+        lambda struct: struct.to("json")
+    )
+    serial_df.to_parquet(fname)
 
 
 if __name__ == "__main__":  # pragma: no cover

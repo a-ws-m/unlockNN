@@ -6,6 +6,7 @@ dependencies:
   - pip
   - python=3.8
   - pip:
+      - pyarrow
       - pymatgen==2021.2.8
       - megnet
       - requests

@@ -19,6 +19,7 @@ dependencies:
       - bumpversion
       - coveralls
       - insegel
+      - pyarrow
       - pymatgen==2021.2.8
       - megnet
       - requests
