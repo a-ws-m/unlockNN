@@ -64,4 +64,7 @@ predicted, stddev = loaded_model.predict(example_struct)
 # Two standard deviations is the 95% confidence interval
 print(f"{example_struct.composition}: ")
 print(f"Predicted E_f: {predicted.item():.3f} ± {stddev.item() * 2:.3f} eV")
-print(f"Actual E_f: {example_energy} eV")
+print(f"Actual E_f: {example_energy:.3f} eV")
+"""La2 Rh2: 
+Predicted E_f: -0.739 ± 0.063 eV
+Actual E_f: -0.737 eV"""
