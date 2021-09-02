@@ -70,5 +70,5 @@ html_logo = "_static/unlocknn_icon.svg"
 html_last_updated_fmt = "%d %b %Y"
 
 html_theme_options = {
-    "navigation_depth": 1
+    # "navigation_depth": 1
 }

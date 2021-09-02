@@ -23,7 +23,12 @@ loaded using :func:`load_kernel`:
 Extending the kernels API
 -------------------------
 
-All kernels must inherit from the :class:`KernelLayer` abstract base class:
+All kernels should:
+
+* Inherit from the :class:`KernelLayer` abstract base class
+* Implement the :meth:`KernelLayer.kernel` property
+* Add appropriate "weights" (kernel parameters) during :meth:`KernelLayer.__init__`
+* Implement :meth:`KernelLayer.config` for compatibility with :func:`load_kernel`
 
 .. autoclass:: KernelLayer
    :members:

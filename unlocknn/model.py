@@ -148,7 +148,7 @@ class ProbNN(ABC):
         nn: The base NN model to modify.
         num_inducing_points: The number of inducing index points for the
             VGP.
-        kernel: A :class:`KernelLayer` for the VGP to use.
+        kernel: A :class:`~unlocknn.kernel_layers.KernelLayer` for the VGP to use.
         latent_layer: The name or index of the layer of the NN to be fed into
             the VGP.
         target_shape: The shape of the target values.
@@ -159,6 +159,12 @@ class ProbNN(ABC):
         index_initializer: A custom initializer to use for the VGP index points.
         use_normalization: Whether to use a ``BatchNormalization`` layer before
             the VGP. Recommended for better training efficiency.
+    
+    Attributes:
+        CONFIG_VARS: A list of attribute names, as strings, to include in metadata
+            when saving. These variables will be saved in a ``config.json`` file
+            and used when re-instantiating the model upon loading with
+            :meth:`load`: they are passed as keyword arguments.
 
     """
 
@@ -266,7 +272,12 @@ class ProbNN(ABC):
 
     @abstractmethod
     def train(self, *args, **kwargs) -> None:
-        """Train the full-stack model."""
+        """Train the model.
+
+        This method should handle data processing, then call ``self.model.fit``
+        to train the underlying model.
+
+        """
         ...
 
     def _update_pred_model(self) -> None:
@@ -290,7 +301,7 @@ class ProbNN(ABC):
 
         The predictor model is saved in :attr:`pred_model`. This method is a
         workaround to reconcile the inability to save or train a model that
-        returns the VGP distribution's mean _and_ standard deviation
+        returns the VGP distribution's mean *and* standard deviation
         simultaneously.
 
         This method creates a clone model and so it must be called before making
@@ -324,8 +335,7 @@ class ProbNN(ABC):
             input: The input(s) to the model.
 
         Returns:
-            predictions: A numpy array containing predicted means and
-                standard deviations.
+            A numpy array containing predicted means and standard deviations.
 
         """
         self.update_pred_model()
@@ -463,7 +473,7 @@ class ProbNN(ABC):
 
 
 class MEGNetProbModel(ProbNN):
-    """ProbNN for MEGNetModels.
+    """:class:`ProbNN` for MEGNetModels.
 
     Args:
         meg_model: The base :class:`MEGNetModel` to modify.

@@ -1,7 +1,7 @@
 .. currentmodule:: unlocknn.metrics
 
-Uncertainty quantification metrics
-==================================
+Evaluating metrics
+==================
 
 Although the probabilistic models implemented in unlockNN use
 the keras API, currently there is poor support for models

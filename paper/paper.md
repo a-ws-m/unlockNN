@@ -38,19 +38,14 @@ their ability to predict materials' properties accurately and faster than
 first-principles calculations based on physical laws, particularly for complex
 systems with many possible configurations
 [@butlerMachineLearningMolecular2018;@ramprasadMachineLearningMaterials2017;@xueAcceleratedSearchMaterials2016].
+In particular, neural networks (NNs) have been shown to achieve predictive accuracies
+on the order of chemical accuracy.
 
-Graph neural networks (GNNs) [@battagliaRelationalInductiveBiases2018] provide a
-data-driven approach for learning materials' properties based on their
-_structure_. This is more general than previous approaches; in particular, it
-can be used for molecules as well as crystals and achieve highly accurate
-predictions for both
-[@xieCrystalGraphConvolutional2018;@chenGraphNetworksUniversal2019].
-
-However, current implementations of NNs lack _uncertainty quantification_, a
-measure of the confidence of a prediction. This is especially detrimental to a
-machine learning model, as its reliability is contingent upon the existence of
-"similar" materials in the training data set. To the end user, there is no easy
-way to tell whether this is the case.
+However, most current implementations of NNs for materials property prediction
+lack _uncertainty quantification_, a measure of the confidence of a prediction.
+This is especially detrimental to a machine learning model, as its reliability
+is contingent upon the existence of "similar" materials in the training data
+set. To the end user, there is no easy way to tell whether this is the case.
 
 ## Statement of need
 
@@ -78,12 +73,12 @@ the training iterations needed to train the base NN it is modifying.
 
 The primary interface for unlockNN is the `model` module, which contains an
 extensible `ProbNN` class for adding uncertainty quantification to arbitrary
-Keras models, and a `MEGNetProbModel` class for adding uncertainty
-quantification to `MEGNetModel`s. 
+Keras models. It also contains a `MEGNetProbModel` class for adding uncertainty
+quantification to MEGNet models [@chenGraphNetworksUniversal2019].
 
-Graph network-fed VGPs share a similar principle to the convolution-fed Gaussian
-processes formulated by @tranMethodsComparingUncertainty2020. UnlockNN also
-implements tools for calculating the performance metrics suggested by
+Neural network-fed VGPs share a similar principle to the convolution-fed
+Gaussian processes formulated by @tranMethodsComparingUncertainty2020. UnlockNN
+also implements tools for calculating the performance metrics suggested by
 @tranMethodsComparingUncertainty2020, including sharpness and calibration error,
 via its `metrics` module.
 

@@ -24,12 +24,25 @@ gives the 95% confidence interval.
 
 The module also contains a specific implementation for use with
 `MEGNet <https://github.com/materialsvirtuallab/megnet>`_, a highly performant
-graph neural network model for materials property prediction.
+graph neural network model for materials property prediction, with the
+:class:`MEGNetProbModel`.
+
+The ProbNN API
+^^^^^^^^^^^^^^
+
+To add uncertainty quantification to an arbitrary Keras model,
+you should create a class that inherits from :class:`ProbNN`
+and implements :meth:`ProbNN.train`, as well as appending
+any variables that are necessary for reloading the model
+to :attr:`ProbNN.CONFIG_VARS`.
+
+.. autoclass:: ProbNN
+    :members:
 
 MEGNet probabilistic model
 --------------------------
 
-The bread and butter of unlockNN, use :class:`MEGNetProbModel` to add uncertainty quantification
+Use :class:`MEGNetProbModel` to add uncertainty quantification
 to a :class:`MEGNetModel`:
 
 .. autoclass:: MEGNetProbModel
