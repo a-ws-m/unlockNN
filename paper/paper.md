@@ -82,6 +82,7 @@ processes formulated by @tranMethodsComparingUncertainty2020. UnlockGNN also
 implements tools for calculating the performance metrics suggested by
 @tranMethodsComparingUncertainty2020, including sharpness and calibration error,
 via its `metrics` module.
+
 ## Acknowledgements
 
 This project was proposed by [Keith Butler](https://github.com/keeeto) and has
