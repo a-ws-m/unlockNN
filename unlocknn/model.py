@@ -83,10 +83,10 @@ def make_probabilistic(
     index_initializer: Optional[keras.initializers.Initializer] = None,
     use_normalization: bool = False,
 ) -> keras.Model:
-    """Make a NN probabilistic by replacing the final layer(s) with a VGP.
+    """Make a neural network probabilistic by replacing the final layer(s) with a VGP.
 
-    Caution: This function modifies the NN in memory. Ensure that the NN has
-    been saved to disk before using.
+    Caution: This function modifies the neural network (NN) in memory.
+    Ensure that the NN has been saved to disk before using.
 
     Args:
         nn: The base NN model to modify. latent_layer: The name or index of
