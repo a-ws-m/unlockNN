@@ -1,8 +1,8 @@
 # Example models
 
-These models are included as a convenience for testing unlockGNN and demonstrating
+These models are included as a convenience for testing unlockNN and demonstrating
 its usage with more minimalist examples. They can be loaded using
-`unlockgnn.download.load_model(fname)`, where `fname` is the name of the model
+`unlocknn.download.load_model(fname)`, where `fname` is the name of the model
 file _without the file extensions_.
 
 Currently, the only included model is `binary_e_form`, which was trained to

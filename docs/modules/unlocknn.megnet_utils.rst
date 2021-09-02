@@ -1,9 +1,9 @@
-.. currentmodule:: unlockgnn.megnet_utils
+.. currentmodule:: unlocknn.megnet_utils
 
 MEGNet utilities
 ================
 
-This module provides some convenience utilities used in the unlockGNN backend.
+This module provides some convenience utilities used in the unlockNN backend.
 For most end users, the only function of interest here is:
 
 .. autofunction:: default_megnet_config

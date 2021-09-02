@@ -190,5 +190,5 @@ examples/checkpoint.h5
 !models/*
 
 ### Downloaded files ###
-unlockgnn/models
-unlockgnn/data
+unlocknn/models
+unlocknn/data

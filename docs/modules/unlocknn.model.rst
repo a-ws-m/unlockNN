@@ -1,9 +1,9 @@
-.. currentmodule:: unlockgnn.model
+.. currentmodule:: unlocknn.model
 
 Probabilistic models
 ====================
 
-UnlockGNN includes an extensible interface for adding uncertainty quantification
+UnlockNN includes an extensible interface for adding uncertainty quantification
 to any trained keras model using a
 `variational Gaussian process <https://www.tensorflow.org/probability/api_docs/python/tfp/distributions/VariationalGaussianProcess>`_
 (VGP). A VGP is a modification of a `Gaussian process <https://distill.pub/2019/visual-exploration-gaussian-processes>`_
@@ -29,8 +29,8 @@ graph neural network model for materials property prediction.
 MEGNet probabilistic model
 --------------------------
 
-The bread and butter of unlockGNN, use :class:`MEGNetProbModel` to add uncertainty quantification
+The bread and butter of unlockNN, use :class:`MEGNetProbModel` to add uncertainty quantification
 to a :class:`MEGNetModel`:
 
 .. autoclass:: MEGNetProbModel
-    :members: train, predict, evaluate, save, load, set_frozen, gnn_frozen, norm_frozen, vgp_frozen
+    :members: train, predict, evaluate, save, load, set_frozen, nn_frozen, norm_frozen, vgp_frozen

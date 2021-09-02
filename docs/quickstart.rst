@@ -1,16 +1,16 @@
-.. currentmodule:: unlockgnn.model
+.. currentmodule:: unlocknn.model
 
 Quickstart for MEGNet users
 ===========================
 
-UnlockGNN currently contains implementations for adding uncertainty
+UnlockNN currently contains implementations for adding uncertainty
 quantification to a :class:`MEGNetModel` with minimal overhead. After
-installing unlockGNN (see :ref:`installation`), you can easily
+installing unlockNN (see :ref:`installation`), you can easily
 add uncertainty quantification to a trained :class:`MEGNetModel`.
-See also the example scripts on `GitHub <https://github.com/a-ws-m/unlockGNN/tree/master/examples>`_.
+See also the example scripts on `GitHub <https://github.com/a-ws-m/unlockNN/tree/master/examples>`_.
 
 This document will demonstrate how to add uncertainty quantification
-to MEGNet's pre-trained formation energies model. UnlockGNN's method
+to MEGNet's pre-trained formation energies model. UnlockNN's method
 for adding this uncertainty quantification is explained in
 :ref:`probabilistic models`.
 The essential steps to adding uncertainty quantification are:
@@ -21,7 +21,7 @@ The essential steps to adding uncertainty quantification are:
 
 #. A first run of training using :meth:`MEGNetProbModel.train`.
 
-#. Fine tuning the model: unfreezing its ``"GNN"`` layers, using :meth:`MEGNetProbModel.set_frozen`, then training again.
+#. Fine tuning the model: unfreezing its ``"NN"`` layers, using :meth:`MEGNetProbModel.set_frozen`, then training again.
 
 #. Saving the model using :meth:`MEGNetProbModel.save`.
 
@@ -30,7 +30,7 @@ The model can then be reloaded using :meth:`MEGNetProbModel.load`.
 In order to train the uncertainty quantifier,
 we will use an example dataset of binary compounds that lie on the
 convex hull, which we will download from the Materials Project.
-This example is also available in notebook format on unlockGNN's
+This example is also available in notebook format on unlockNN's
 GitHub page.
 
 Running this example script takes approximately 15

@@ -8,7 +8,7 @@ import tensorflow_probability as tfp
 from pymatgen.core.structure import Structure
 
 from .megnet_utils import Targets
-from .model import ProbGNN
+from .model import ProbNN
 
 
 def neg_log_likelihood(
@@ -107,7 +107,7 @@ AVAILABLE_METRICS: Dict[str, Callable[[Targets, Targets, Targets], float]] = {
 
 
 def evaluate_uq_metrics(
-    prob_model: ProbGNN,
+    prob_model: ProbNN,
     test_structs: List[Structure],
     test_targets: Targets,
     metrics: List[str] = list(AVAILABLE_METRICS.keys()),
@@ -131,7 +131,7 @@ def evaluate_uq_metrics(
         Compute the metrics of the example ``MEGNetProbModel`` for
         predicting binary compounds' formation energies:
 
-        >>> from unlockgnn.download import load_data, load_pretrained
+        >>> from unlocknn.download import load_data, load_pretrained
         >>> binary_model = load_pretrained("binary_e_form")
         >>> binary_data = load_data("binary_e_form")
         >>> metrics = evaluate_uq_metrics(

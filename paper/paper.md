@@ -1,5 +1,5 @@
 ---
-title: 'UnlockGNN: Uncertainty quantification for graph neural network models of chemical systems'
+title: 'UnlockNN: Uncertainty quantification for graph neural network models of chemical systems'
 tags:
   - Python
   - graph neural networks
@@ -39,14 +39,14 @@ first-principles calculations based on physical laws, particularly for complex
 systems with many possible configurations
 [@butlerMachineLearningMolecular2018;@ramprasadMachineLearningMaterials2017;@xueAcceleratedSearchMaterials2016].
 
-Graph neural networks (GNNs) [@battagliaRelationalInductiveBiases2018] provide a
+Graph neural networks (NNs) [@battagliaRelationalInductiveBiases2018] provide a
 data-driven approach for learning materials' properties based on their
 _structure_. This is more general than previous approaches; in particular, it
 can be used for molecules as well as crystals and achieve highly accurate
 predictions for both
 [@xieCrystalGraphConvolutional2018;@chenGraphNetworksUniversal2019].
 
-However, current implementations of GNNs lack _uncertainty quantification_, a
+However, current implementations of NNs lack _uncertainty quantification_, a
 measure of the confidence of a prediction. This is especially detrimental to a
 machine learning model, as its reliability is contingent upon the existence of
 "similar" materials in the training data set. To the end user, there is no easy
@@ -54,9 +54,9 @@ way to tell whether this is the case.
 
 ## Statement of need
 
-UnlockGNN provides an API to add uncertainty quantification to Keras-based
+UnlockNN provides an API to add uncertainty quantification to Keras-based
 models and comes packaged with a specific implementation for compatibility with
-MEGNet models [@chenGraphNetworksUniversal2019], which are a GNN implementation
+MEGNet models [@chenGraphNetworksUniversal2019], which are a NN implementation
 for materials property prediction that have achieved state-of-the-art accuracy
 on many benchmark tasks [@dunnBenchmarkingMaterialsProperty2020]. Uncertainty
 quantification is achieved by supplanting the output layer of the model with a
@@ -74,15 +74,15 @@ between the GP based on _all_ training data and the VGP.
 Once created, the probabilistic model must be trained in order to optimize the
 locations of the VGP's inducing index points and its kernel parameters. However,
 the number of training iterations required is typically only a small fraction of
-the training iterations needed to train the base GNN it is modifying.
+the training iterations needed to train the base NN it is modifying.
 
-The primary interface for unlockGNN is the `model` module, which contains an
-extensible `ProbGNN` class for adding uncertainty quantification to arbitrary
+The primary interface for unlockNN is the `model` module, which contains an
+extensible `ProbNN` class for adding uncertainty quantification to arbitrary
 Keras models, and a `MEGNetProbModel` class for adding uncertainty
 quantification to `MEGNetModel`s. 
 
 Graph network-fed VGPs share a similar principle to the convolution-fed Gaussian
-processes formulated by @tranMethodsComparingUncertainty2020. UnlockGNN also
+processes formulated by @tranMethodsComparingUncertainty2020. UnlockNN also
 implements tools for calculating the performance metrics suggested by
 @tranMethodsComparingUncertainty2020, including sharpness and calibration error,
 via its `metrics` module.

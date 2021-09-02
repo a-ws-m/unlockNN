@@ -5,7 +5,7 @@ from pathlib import Path
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
-from unlockgnn.download import load_data, load_pretrained
+from unlocknn.download import load_data, load_pretrained
 
 
 def test_load_model(tmp_path: Path):

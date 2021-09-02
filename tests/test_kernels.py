@@ -9,7 +9,7 @@ from typing import Type
 
 import numpy as np
 import pytest
-from unlockgnn.kernel_layers import *
+from unlocknn.kernel_layers import *
 
 
 @pytest.mark.parametrize("kernel_type", [RBFKernelFn, MaternOneHalfFn])

@@ -1,26 +1,26 @@
-# unlockGNN
+# unlockNN
 
-[![Documentation Status](https://readthedocs.org/projects/unlockgnn/badge/?version=latest)](https://unlockgnn.readthedocs.io/en/latest/?badge=latest)
-![PyPi](https://img.shields.io/pypi/v/unlockGNN)
+[![Documentation Status](https://readthedocs.org/projects/unlocknn/badge/?version=latest)](https://unlocknn.readthedocs.io/en/latest/?badge=latest)
+![PyPi](https://img.shields.io/pypi/v/unlockNN)
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![codecov](https://codecov.io/gh/a-ws-m/unlockGNN/branch/master/graph/badge.svg?token=TBDX3P6OZ3)](https://codecov.io/gh/a-ws-m/unlockGNN)
+[![codecov](https://codecov.io/gh/a-ws-m/unlockNN/branch/master/graph/badge.svg?token=TBDX3P6OZ3)](https://codecov.io/gh/a-ws-m/unlockNN)
 
 A Python package for interpreting and extracting uncertainties in graph neural network models of chemical systems based upon Gaussian processes.
 
 ## Statement of need
 
-Graph neural networks (GNNs) are powerful tools for performing materials property prediciton based on structural information.
+Graph neural networks (NNs) are powerful tools for performing materials property prediciton based on structural information.
 They offer a cheaper alternative to DFT models and are therefore promising for high throughput screening of materials.
-However, current implementations of GNNs lack uncertainty quantifiers for regression problems.
+However, current implementations of NNs lack uncertainty quantifiers for regression problems.
 Knowledge of the certainty in an estimate is particularly important for data-driven predictive models,
 as the reliability of a prediction depends on the existence of functionally similar structures in the
 training dataset, which cannot be readily determined.
 
-UnlockGNN contains utilities for training a neural network-fed Gaussian process as an uncertainty quantifier.
-The framework enables the training of a precursor GNN, which functions as a representation learning algorithm.
-A layer of the GNN can then be selected to serve as the input (index points) for a Gaussian process.
+UnlockNN contains utilities for training a neural network-fed Gaussian process as an uncertainty quantifier.
+The framework enables the training of a precursor NN, which functions as a representation learning algorithm.
+A layer of the NN can then be selected to serve as the input (index points) for a Gaussian process.
 The model can be saved and reloaded in a bundled format and used to perform predictions and confidence intervals
 on unseen structures.
 
@@ -30,12 +30,12 @@ on unseen structures.
 The package can be installed by cloning this repository and building it using either anaconda or pip,
 or it can be downloaded directly from PyPi.
 
-To install from PyPi, run `pip install unlockGNN`.
+To install from PyPi, run `pip install unlockNN`.
 To install from source:
 
 ```bash
-git clone https://github.com/a-ws-m/unlockGNN.git
-cd unlockGNN
+git clone https://github.com/a-ws-m/unlockNN.git
+cd unlockNN
 conda env create -f environment.yml  # Optional: create a virtual environment with conda
 pip install .
 ```
@@ -45,7 +45,7 @@ It can be installed using `conda env create -f dev_environment.yml`.
 
 ## Documentation
 
-Full documentation is available for the project [here](https://unlockgnn.readthedocs.io/en/latest/).
+Full documentation is available for the project [here](https://unlocknn.readthedocs.io/en/latest/).
 
 ## License and attribution
 
@@ -57,9 +57,9 @@ Code licensed under the MIT License.
 
 Please use the Issue tracker to report bugs in the software, suggest feature improvements, or seek support.
 
-### Contributing to unlockGNN
+### Contributing to unlockNN
 
-Contributions are very welcome as we look to make unlockGNN more flexible and efficient.
+Contributions are very welcome as we look to make unlockNN more flexible and efficient.
 Please use the [Fork and Pull](https://guides.github.com/activities/forking/) workflow to make contributions and follow the contribution guidelines:
 
 - Use the environment defined in `dev_environment.yml`. This installs `black`, the formatter used for this project, as well as utilities for building documentation, enabling the testing suite and publishing to PyPi.
@@ -69,7 +69,7 @@ Please use the [Fork and Pull](https://guides.github.com/activities/forking/) wo
 
 ### List of developers
 
-Contributors to unlockGNN:
+Contributors to unlockNN:
 
 - [Alexander Moriarty](https://github.com/a-ws-m)
 

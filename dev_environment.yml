@@ -1,4 +1,4 @@
-name: unlockGNN
+name: unlockNN
 channels:
   - conda-forge
   - defaults

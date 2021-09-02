@@ -2,8 +2,8 @@
 from pathlib import Path
 
 from megnet.models import MEGNetModel
-from unlockgnn.download import load_data
-from unlockgnn.model import MEGNetProbModel
+from unlocknn.download import load_data
+from unlocknn.model import MEGNetProbModel
 
 TRAINING_RATIO: float = 0.8
 NUM_INDUCING_POINTS: int = 500  # Number of inducing index points for VGP
@@ -52,8 +52,8 @@ def train_model():
 
 # 3. First training run is to approximate correct inducing points locations
 train_model()
-# 4. Unfreeze GNN layers and train again for fine tuning
-prob_model.set_frozen("GNN", freeze=False)
+# 4. Unfreeze NN layers and train again for fine tuning
+prob_model.set_frozen("NN", freeze=False)
 train_model()
 # 5. ``train_model`` also handles saving.
 
