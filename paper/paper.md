@@ -50,22 +50,22 @@ set. To the end user, there is no easy way to tell whether this is the case.
 
 ## Statement of need
 
-UnlockNN provides an API to add uncertainty quantification to Keras-based
-models and comes packaged with a specific implementation for compatibility with
-MEGNet models [@chenGraphNetworksUniversal2019], which are a NN implementation
-for materials property prediction that have achieved state-of-the-art accuracy
-on many benchmark tasks [@dunnBenchmarkingMaterialsProperty2020]. Uncertainty
-quantification is achieved by supplanting the output layer of the model with a
-variational Gaussian process (VGP)
+UnlockNN provides an API to add uncertainty quantification to Keras-based models
+and comes packaged with a specific implementation for compatibility with MEGNet
+[@chenGraphNetworksUniversal2019], which is a graph NN implementation for
+materials property prediction that has achieved state-of-the-art accuracy on
+many benchmark tasks [@dunnBenchmarkingMaterialsProperty2020].
+
+This uncertainty quantification is achieved by supplanting the output layer of
+the model with a variational Gaussian process (VGP)
 [@dillonTensorFlowDistributions2017;@hensmanGaussianProcessesBig2013]: a
 modification of a Gaussian process (GP) that allows for scalability to large
-data sets.
-
-Whilst a typical GP requires the entire training data set to be stored in memory
-and used for inference (an example of _instance-based_ learning), the VGP infers
-a smaller set of inducing index points. The locations of these inducing index
-points are optimized during training to minimise the Kullback-Leibler divergence
-between the GP based on _all_ training data and the VGP.
+data sets. Whilst a typical GP requires the entire training data set to be
+stored in memory and used for inference (an example of _instance-based_
+learning), the VGP infers a smaller set of inducing index points. The locations
+of these inducing index points are optimized during training to minimise the
+Kullback-Leibler divergence between the GP based on _all_ training data and the
+VGP.
 
 Once created, the probabilistic model must be trained in order to optimize the
 locations of the VGP's inducing index points and its kernel parameters. However,
