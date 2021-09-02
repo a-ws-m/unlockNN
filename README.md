@@ -20,12 +20,16 @@ estimate is particularly important for machine learning models, as the
 reliability of a prediction depends on the existence of functionally similar
 structures in the training dataset, which cannot be readily determined.
 
-UnlockNN contains utilities for training a NN-fed Gaussian process as an
-uncertainty quantifier. The framework enables the training of a precursor NN,
-which functions as a representation learning algorithm. A layer of the NN can
-then be selected to serve as the input (index points) for a Gaussian process.
-The model can be saved and reloaded in a bundled format and used to perform
-predictions and confidence intervals on unseen structures.
+UnlockNN contains utilities for adding uncertainty quantification to Keras-based
+models. This is achieved by replacing the last layer of the model with a
+*variational Gaussian process* (VGP), a modification of a Gaussian process that
+improves scalability to larger data sets. The caveat is that the modified model
+must undergo further training in order to calibrate the uncertainty quantifier;
+however, this typically only requires a small number of training iterations.
+
+UnlockGNN also contains a specific configuration for adding uncertainty
+quantification to [MEGNet](https://github.com/materialsvirtuallab/megnet/): a
+powerful graph NN model for predicting properties of molecules and crystals.
 
 ## Installation
 
