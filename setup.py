@@ -51,7 +51,6 @@ setup(
     ],
     python_requires=">=3.6",
     extras_require={
-        "Compatibility with Python < 3.8": ["typish"],
         "Compatible matminer version": ["matminer==0.6.5"],
     },
 )
