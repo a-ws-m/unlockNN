@@ -38,8 +38,9 @@ their ability to predict materials' properties accurately and faster than
 first-principles calculations based on physical laws, particularly for complex
 systems with many possible configurations
 [@butlerMachineLearningMolecular2018;@ramprasadMachineLearningMaterials2017;@xueAcceleratedSearchMaterials2016].
-In particular, neural networks (NNs) have been shown to achieve predictive accuracies
-on the order of chemical accuracy.
+In particular, neural networks (NNs) have been shown to achieve predictive
+accuracies within the threshold of "chemical accuracy"
+[@chenGraphNetworksUniversal2019;@schuttSchNetDeepLearning2018;@faberPredictionErrorsMolecular2017].
 
 However, most current implementations of NNs for materials property prediction
 lack _uncertainty quantification_, a measure of the confidence of a prediction.
@@ -74,7 +75,7 @@ the training iterations needed to train the base NN it is modifying.
 The primary interface for unlockNN is the `model` module, which contains an
 extensible `ProbNN` class for adding uncertainty quantification to arbitrary
 Keras models. It also contains a `MEGNetProbModel` class for adding uncertainty
-quantification to MEGNet models [@chenGraphNetworksUniversal2019].
+quantification to MEGNet.
 
 Neural network-fed VGPs share a similar principle to the convolution-fed
 Gaussian processes formulated by @tranMethodsComparingUncertainty2020. UnlockNN

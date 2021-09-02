@@ -86,6 +86,25 @@
   file = {/home/awsm/Zotero/storage/HWEE87Q8/Dunn et al. - 2020 - Benchmarking materials property prediction methods.pdf}
 }
 
+@article{faberPredictionErrorsMolecular2017,
+  title = {Prediction {{Errors}} of {{Molecular Machine Learning Models Lower}} than {{Hybrid DFT Error}}},
+  author = {Faber, Felix A. and Hutchison, Luke and Huang, Bing and Gilmer, Justin and Schoenholz, Samuel S. and Dahl, George E. and Vinyals, Oriol and Kearnes, Steven and Riley, Patrick F. and von Lilienfeld, O. Anatole},
+  options = {useprefix=true},
+  date = {2017-11-14},
+  journaltitle = {Journal of Chemical Theory and Computation},
+  shortjournal = {J. Chem. Theory Comput.},
+  volume = {13},
+  number = {11},
+  pages = {5255--5264},
+  publisher = {{American Chemical Society}},
+  issn = {1549-9618},
+  doi = {10.1021/acs.jctc.7b00577},
+  url = {https://doi.org/10.1021/acs.jctc.7b00577},
+  urldate = {2020-12-09},
+  abstract = {We investigate the impact of choosing regressors and molecular representations for the construction of fast machine learning (ML) models of 13 electronic ground-state properties of organic molecules. The performance of each regressor/representation/property combination is assessed using learning curves which report out-of-sample errors as a function of training set size with up to ∼118k distinct molecules. Molecular structures and properties at the hybrid density functional theory (DFT) level of theory come from the QM9 database [Ramakrishnan et al. Sci. Data 2014, 1, 140022] and include enthalpies and free energies of atomization, HOMO/LUMO energies and gap, dipole moment, polarizability, zero point vibrational energy, heat capacity, and the highest fundamental vibrational frequency. Various molecular representations have been studied (Coulomb matrix, bag of bonds, BAML and ECFP4, molecular graphs (MG)), as well as newly developed distribution based variants including histograms of distances (HD), angles (HDA/MARAD), and dihedrals (HDAD). Regressors include linear models (Bayesian ridge regression (BR) and linear regression with elastic net regularization (EN)), random forest (RF), kernel ridge regression (KRR), and two types of neural networks, graph convolutions (GC) and gated graph networks (GG). Out-of sample errors are strongly dependent on the choice of representation and regressor and molecular property. Electronic properties are typically best accounted for by MG and GC, while energetic properties are better described by HDAD and KRR. The specific combinations with the lowest out-of-sample errors in the ∼118k training set size limit are (free) energies and enthalpies of atomization (HDAD/KRR), HOMO/LUMO eigenvalue and gap (MG/GC), dipole moment (MG/GC), static polarizability (MG/GG), zero point vibrational energy (HDAD/KRR), heat capacity at room temperature (HDAD/KRR), and highest fundamental vibrational frequency (BAML/RF). We present numerical evidence that ML model predictions deviate from DFT (B3LYP) less than DFT (B3LYP) deviates from experiment for all properties. Furthermore, out-of-sample prediction errors with respect to hybrid DFT reference are on par with, or close to, chemical accuracy. The results suggest that ML models could be more accurate than hybrid DFT if explicitly electron correlated quantum (or experimental) data were available.},
+  file = {/home/awsm/Zotero/storage/BZXYXM67/Faber et al. - 2017 - Prediction Errors of Molecular Machine Learning Mo.pdf}
+}
+
 @online{hensmanGaussianProcessesBig2013,
   title = {Gaussian {{Processes}} for {{Big Data}}},
   author = {Hensman, James and Fusi, Nicolo and Lawrence, Neil D.},
@@ -155,6 +174,24 @@
   issue = {1},
   langid = {english},
   file = {/home/awsm/Zotero/storage/PFW9WKG6/Schmidt et al. - 2019 - Recent advances and applications of machine learni.pdf}
+}
+
+@article{schuttSchNetDeepLearning2018,
+  title = {{{SchNet}} – {{A}} Deep Learning Architecture for Molecules and Materials},
+  author = {Schütt, K. T. and Sauceda, H. E. and Kindermans, P.-J. and Tkatchenko, A. and Müller, K.-R.},
+  date = {2018-03-29},
+  journaltitle = {The Journal of Chemical Physics},
+  shortjournal = {J. Chem. Phys.},
+  volume = {148},
+  number = {24},
+  pages = {241722},
+  publisher = {{American Institute of Physics}},
+  issn = {0021-9606},
+  doi = {10.1063/1.5019779},
+  url = {https://aip.scitation.org/doi/full/10.1063/1.5019779},
+  urldate = {2020-10-06},
+  abstract = {Deep learning has led to a paradigm shift in artificial intelligence, including web, text, and image search, speech recognition, as well as bioinformatics, with growing impact in chemical physics. Machine learning, in general, and deep learning, in particular, are ideally suitable for representing quantum-mechanical interactions, enabling us to model nonlinear potential-energy surfaces or enhancing the exploration of chemical compound space. Here we present the deep learning architecture SchNet that is specifically designed to model atomistic systems by making use of continuous-filter convolutional layers. We demonstrate the capabilities of SchNet by accurately predicting a range of properties across chemical space for molecules and materials, where our model learns chemically plausible embeddings of atom types across the periodic table. Finally, we employ SchNet to predict potential-energy surfaces and energy-conserving force fields for molecular dynamics simulations of small molecules and perform an exemplary study on the quantum-mechanical properties of C20-fullerene that would have been infeasible with regular ab initio molecular dynamics.},
+  file = {/home/awsm/Zotero/storage/DEJUW4IW/Schütt et al. - 2018 - SchNet – A deep learning architecture for molecule.pdf}
 }
 
 @online{tranMethodsComparingUncertainty2020,
