@@ -37,13 +37,14 @@ Machine learning models have gained interest from materials researchers for
 their ability to predict materials' properties accurately and faster than
 first-principles calculations based on physical laws, particularly for complex
 systems with many possible configurations
-[@butler_machine_2018;@ramprasad_machine_2017;@xue_accelerated_2016].
+[@butlerMachineLearningMolecular2018;@ramprasadMachineLearningMaterials2017;@xueAcceleratedSearchMaterials2016].
 
-Graph neural networks (GNNs) [@battaglia_relational_2018] provide a data-driven
-approach for learning materials' properties based on their _structure_. This is
-more general than previous approaches; in particular, it can be used for
-molecules as well as crystals and achieve highly accurate predictions for both
-[@xie_crystal_2018;@chen_graph_2019].
+Graph neural networks (GNNs) [@battagliaRelationalInductiveBiases2018] provide a
+data-driven approach for learning materials' properties based on their
+_structure_. This is more general than previous approaches; in particular, it
+can be used for molecules as well as crystals and achieve highly accurate
+predictions for both
+[@xieCrystalGraphConvolutional2018;@chenGraphNetworksUniversal2019].
 
 However, current implementations of GNNs lack _uncertainty quantification_, a
 measure of the confidence of a prediction. This is especially detrimental to a
@@ -55,8 +56,8 @@ way to tell whether this is the case.
 
 UnlockGNN provides an API to add uncertainty quantification to Keras-based
 models and comes packaged with a specific implementation for compatibility with
-MEGNet models [@chen_graph_2019]. This is achieved by supplanting the output
-layer of the model with a variational Gaussian process (VGP)
+MEGNet models [@chenGraphNetworksUniversal2019]. This is achieved by supplanting
+the output layer of the model with a variational Gaussian process (VGP)
 [@dillonTensorFlowDistributions2017;@hensmanGaussianProcessesBig2013]: a
 modification of a Gaussian process (GP) that allows for scalability to large
 data sets. Whilst a typical GP requires the entire training data set to be
@@ -66,21 +67,21 @@ of these inducing index points are optimized during training to minimise the
 Kullback-Leibler divergence between the GP based on _all_ training data and the
 VGP.
 
-Graph network-fed VGPs share a similar principle to the convolution-fed Gaussian
-processes formulated by @tran_methods_2020. UnlockGNN also implements tools for
-calculating the performance metrics suggested by @tran_methods_2020, including
-sharpness and calibration error, via its `metrics` module.
-
-The primary interface for unlockGNN is the `model` module, which contains an
-extensible `ProbGNN` class for adding uncertainty quantification to arbitrary
-Keras models, and a `MEGNetProbModel` class for adding uncertainty
-quantification to `MEGNetModel`s.
-
 Once created, the probabilistic model must be trained in order to optimize the
 locations of the VGP's inducing index points and its kernel parameters. However,
 the number of training iterations required is typically only a small fraction of
 the training iterations needed to train the base GNN it is modifying.
 
+The primary interface for unlockGNN is the `model` module, which contains an
+extensible `ProbGNN` class for adding uncertainty quantification to arbitrary
+Keras models, and a `MEGNetProbModel` class for adding uncertainty
+quantification to `MEGNetModel`s. 
+
+Graph network-fed VGPs share a similar principle to the convolution-fed Gaussian
+processes formulated by @tranMethodsComparingUncertainty2020. UnlockGNN also
+implements tools for calculating the performance metrics suggested by
+@tranMethodsComparingUncertainty2020, including sharpness and calibration error,
+via its `metrics` module.
 ## Acknowledgements
 
 This project was proposed by [Keith Butler](https://github.com/keeeto) and has
