@@ -5,8 +5,8 @@ tags:
   - graph neural networks
   - uncertainty quantification
   - machine learning
-  - materials
-  - MEGNet
+  - material science
+  - chemistry
 authors:
   - name: Alexander Moriarty
     orcid: 0000-0001-7525-1419
@@ -27,49 +27,68 @@ affiliations:
     index: 2
   - name: Department of Materials Science and Engineering, Yonsei University, Seoul, Korea
     index: 3
-date: 29 September 2020
+date: 2 September 2021
 bibliography: paper.bib
 ---
 
 ## Summary
 
-Machine learning models have gained interest from materials researchers for their ability to predict materials'
-properties accurately and faster than first-principles calculations based on physical laws, particularly
-for complex systems with many possible configurations [@butler_machine_2018;@ramprasad_machine_2017;@xue_accelerated_2016].
+Machine learning models have gained interest from materials researchers for
+their ability to predict materials' properties accurately and faster than
+first-principles calculations based on physical laws, particularly for complex
+systems with many possible configurations
+[@butler_machine_2018;@ramprasad_machine_2017;@xue_accelerated_2016].
 
-Graph neural networks (GNNs), a subset of the graph networks proposed by @battaglia_relational_2018, provide a data-driven
-approach for learning materials' properties based on crystal or molecular _structure_.
-This approach is both general and interpretable [@xie_crystal_2018;@chen_graph_2019], which addresses a major criticism
-of machine learning techniques as "black boxes" [@schmidt_recent_2019].
+Graph neural networks (GNNs) [@battaglia_relational_2018] provide a data-driven
+approach for learning materials' properties based on their _structure_. This is
+more general than previous approaches; in particular, it can be used for
+molecules as well as crystals and achieve highly accurate predictions for both
+[@xie_crystal_2018;@chen_graph_2019].
 
-However, current implementations of GNNs lack uncertainty quantification, a measure of the confidence of a prediction.
-This is especially detrimental to a data-driven model, as its reliability is contingent upon the existence of "similar"
-materials in the training data set. To the end user, there is no easy way to tell whether this is the case.
+However, current implementations of GNNs lack _uncertainty quantification_, a
+measure of the confidence of a prediction. This is especially detrimental to a
+machine learning model, as its reliability is contingent upon the existence of
+"similar" materials in the training data set. To the end user, there is no easy
+way to tell whether this is the case.
 
 ## Statement of need
 
-`UnlockGNN` contains utilities for training a neural network-fed Gaussian process as an uncertainty quantifier.
-The framework enables the training of a precursor GNN, which functions as a representation learning algorithm.
-A layer of the GNN can then be selected to serve as the input (index points) for a Gaussian process.
-The model can be saved and reloaded in a bundled format and used to perform predictions and confidence intervals
-on unseen structures.
+UnlockGNN provides an API to add uncertainty quantification to Keras-based
+models and comes packaged with a specific implementation for compatibility with
+MEGNet models [@chen_graph_2019]. This is achieved by supplanting the output
+layer of the model with a variational Gaussian process (VGP)
+[@dillonTensorFlowDistributions2017;@hensmanGaussianProcessesBig2013]: a
+modification of a Gaussian process (GP) that allows for scalability to large
+data sets. Whilst a typical GP requires the entire training data set to be
+stored in memory and used for inference (an example of _instance-based_
+learning), the VGP infers a smaller set of inducing index points. The locations
+of these inducing index points are optimized during training to minimise the
+Kullback-Leibler divergence between the GP based on _all_ training data and the
+VGP.
 
-Graph network-fed Gaussian processes share a similar principle to the convolution-fed Gaussian processes
-formulated by @tran_methods_2020 and `UnlockGNN` provides tools for calculating the performance metrics
-suggested by them, including sharpness and calibration error.
+Graph network-fed VGPs share a similar principle to the convolution-fed Gaussian
+processes formulated by @tran_methods_2020. UnlockGNN also implements tools for
+calculating the performance metrics suggested by @tran_methods_2020, including
+sharpness and calibration error, via its `metrics` module.
 
-`UnlockGNN` was designed for use with `Keras` [@chollet2015keras] implementations of graph neural networks.
-Its front end is implemented in the `ProbGNN` class, which provides an API that allows a GNN and an uncertainty
-quantifier to be bundled together in a single interface. This minimises the amount of data handling an
-end user needs to perform.
-An implementation of the `ProbGNN` is included for `MEGNet` [@chen_graph_2019], a high performing,
-modular architecture for graph network-based modelling of materials.
+The primary interface for unlockGNN is the `model` module, which contains an
+extensible `ProbGNN` class for adding uncertainty quantification to arbitrary
+Keras models, and a `MEGNetProbModel` class for adding uncertainty
+quantification to `MEGNetModel`s.
+
+Once created, the probabilistic model must be trained in order to optimize the
+locations of the VGP's inducing index points and its kernel parameters. However,
+the number of training iterations required is typically only a small fraction of
+the training iterations needed to train the base GNN it is modifying.
 
 ## Acknowledgements
 
-This project was proposed by [Keith Butler](https://github.com/keeeto) and has benefitted hugely from his support,
-as well as the support of [Aron Walsh](https://wmd-group.github.io/) and [Kazuki Morita](https://github.com/KazMorita).
-Thanks also to the Royal Society for funding the project and the Science and Technology Facilities Council
-for providing access to their computing cluster, which was used extensively for testing during development.
+This project was proposed by [Keith Butler](https://github.com/keeeto) and has
+benefited hugely from his support, as well as the support of [Aron
+Walsh](https://wmd-group.github.io/) and [Kazuki
+Morita](https://github.com/KazMorita). Thanks also to the Royal Society for
+funding this project and the Science and Technology Facilities Council for
+providing access to their computing cluster, which was used extensively for
+testing during development.
 
 ## References
