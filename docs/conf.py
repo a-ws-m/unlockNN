@@ -68,3 +68,7 @@ html_static_path = ["_static"]
 
 html_logo = "_static/unlockgnn_icon.svg"
 html_last_updated_fmt = "%d %b %Y"
+
+html_theme_options = {
+    "navigation_depth": 1
+}
