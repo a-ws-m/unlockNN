@@ -1,4 +1,4 @@
-"""ProbGNN model code and implementation for MEGNet."""
+"""ProbNN model code and implementation for MEGNet."""
 import json
 from shutil import copyfile
 from os import PathLike
@@ -27,10 +27,10 @@ from .megnet_utils import create_megnet_input, Targets
 
 tfd = tfp.distributions
 
-LayerName = Literal["GNN", "VGP", "Norm"]
+LayerName = Literal["NN", "VGP", "Norm"]
 Metrics = List[Union[str, tf.keras.metrics.Metric]]
 
-__all__ = ["ProbGNN", "MEGNetProbModel"]
+__all__ = ["ProbNN", "MEGNetProbModel"]
 
 
 def _get_save_paths(root_dir: PathLike) -> Dict[str, Path]:
@@ -49,7 +49,7 @@ def _get_save_paths(root_dir: PathLike) -> Dict[str, Path]:
         conf_path="config.json",
         ckpt_path="checkpoint.h5",
         kernel_path="kernel",
-        gnn_path="gnn",
+        nn_path="nn",
         meg_path="megnet",
     )
     return {component: root_dir / rel_path for component, rel_path in rel_paths.items()}
@@ -74,7 +74,7 @@ class VariationalLoss(keras.losses.Loss):
 
 
 def make_probabilistic(
-    gnn: keras.Model,
+    nn: keras.Model,
     num_inducing_points: int,
     kernel: KernelLayer = RBFKernelFn(),
     latent_layer: Union[str, int] = -2,
@@ -83,18 +83,18 @@ def make_probabilistic(
     index_initializer: Optional[keras.initializers.Initializer] = None,
     use_normalization: bool = False,
 ) -> keras.Model:
-    """Make a GNN probabilistic by replacing the final layer(s) with a VGP.
+    """Make a neural network probabilistic by replacing the final layer(s) with a VGP.
 
-    Caution: This function modifies the GNN in memory. Ensure that the GNN has
-    been saved to disk before using.
+    Caution: This function modifies the neural network (NN) in memory.
+    Ensure that the NN has been saved to disk before using.
 
     Args:
-        gnn: The base GNN model to modify. latent_layer: The name or index of
-            the layer of the GNN to be fed into the VGP.
+        nn: The base NN model to modify. latent_layer: The name or index of
+            the layer of the NN to be fed into the VGP.
         num_inducing_points: The number of inducing index points for the
             VGP.
         kernel: A :class:`KernelLayer` for the VGP to use.
-        latent_layer: The index or name of the GNN layer to use as the
+        latent_layer: The index or name of the NN layer to use as the
             input for the VGP.
         target_shape: The shape of the target values.
         use_normalization: Whether to use a ``BatchNormalization`` layer before
@@ -104,16 +104,16 @@ def make_probabilistic(
         index_initializer: A custom initializer to use for the VGP index points.
 
     Returns:
-        A :class:`keras.Model` with the ``gnn``'s first layers, but terminating in a
+        A :class:`keras.Model` with the ``nn``'s first layers, but terminating in a
             VGP.
 
     """
     if isinstance(latent_layer, int):
         latent_idx = latent_layer
     else:
-        latent_idx = [layer.name for layer in gnn.layers].index(latent_layer)
+        latent_idx = [layer.name for layer in nn.layers].index(latent_layer)
 
-    vgp_input = gnn.layers[latent_idx].output
+    vgp_input = nn.layers[latent_idx].output
 
     if use_normalization:
         vgp_input = keras.layers.BatchNormalization()(vgp_input)
@@ -138,18 +138,18 @@ def make_probabilistic(
         convert_to_tensor_fn=convert_fn,
     )(vgp_input)
 
-    return keras.Model(gnn.inputs, vgp_outputs)
+    return keras.Model(nn.inputs, vgp_outputs)
 
 
-class ProbGNN(ABC):
-    """Wrapper for creating a probabilistic GNN model.
+class ProbNN(ABC):
+    """Wrapper for creating a probabilistic NN model.
 
     Args:
-        gnn: The base GNN model to modify.
+        nn: The base NN model to modify.
         num_inducing_points: The number of inducing index points for the
             VGP.
         kernel: A :class:`KernelLayer` for the VGP to use.
-        latent_layer: The name or index of the layer of the GNN to be fed into
+        latent_layer: The name or index of the layer of the NN to be fed into
             the VGP.
         target_shape: The shape of the target values.
         metrics: A list of metrics to record during training.
@@ -173,7 +173,7 @@ class ProbGNN(ABC):
 
     def __init__(
         self,
-        gnn: keras.Model,
+        nn: keras.Model,
         num_inducing_points: int,
         kernel: KernelLayer = RBFKernelFn(),
         latent_layer: Union[str, int] = -2,
@@ -186,11 +186,11 @@ class ProbGNN(ABC):
     ) -> None:
         """Initialize the probabilistic model.
 
-        The model's GNN layers are initially frozen by default (but not the VGP
+        The model's NN layers are initially frozen by default (but not the VGP
         and ``BatchNormalization`` layer, if applicable).
 
         """
-        self.gnn = gnn
+        self.nn = nn
         self.num_inducing_points = num_inducing_points
         self.kernel = kernel
         self.latent_layer = latent_layer
@@ -203,7 +203,7 @@ class ProbGNN(ABC):
 
         # Instantiate probabilistic model
         self.model = make_probabilistic(
-            gnn,
+            nn,
             num_inducing_points,
             kernel,
             latent_layer,
@@ -212,8 +212,8 @@ class ProbGNN(ABC):
             use_normalization=use_normalization,
         )
 
-        # Freeze GNN layers and compile, ready to train the VGP
-        self.set_frozen("GNN", recompile=True)
+        # Freeze NN layers and compile, ready to train the VGP
+        self.set_frozen("NN", recompile=True)
 
     def set_frozen(
         self,
@@ -222,7 +222,7 @@ class ProbGNN(ABC):
         recompile: bool = True,
         **compilation_kwargs,
     ) -> None:
-        """Freeze or thaw probabilistic GNN layers.
+        """Freeze or thaw probabilistic NN layers.
 
         Args:
             layers: Name or list of names of layers to thaw.
@@ -252,9 +252,9 @@ class ProbGNN(ABC):
                 )
             else:
                 self.model.layers[-2].trainable = not freeze
-        if "GNN" in layers:
-            last_gnn_index = -2 if self.use_normalization else -1
-            for layer in self.model.layers[:last_gnn_index]:
+        if "NN" in layers:
+            last_nn_index = -2 if self.use_normalization else -1
+            for layer in self.model.layers[:last_nn_index]:
                 layer.trainable = not freeze
         if "VGP" in layers:
             self.model.layers[-1].trainable = not freeze
@@ -273,7 +273,7 @@ class ProbGNN(ABC):
         """Handle updating predictor model once checks have been done."""
         weights = self.model.get_weights()
         pred_model = make_probabilistic(
-            self.gnn,
+            self.nn,
             self.num_inducing_points,
             self.kernel,
             self.latent_layer,
@@ -332,12 +332,10 @@ class ProbGNN(ABC):
         return self.pred_model.predict(input)
 
     @property
-    def gnn_frozen(self) -> bool:
-        """Determine whether all GNN layers are frozen."""
-        last_gnn_index = -2 if self.use_normalization else -1
-        return all(
-            (not layer.trainable for layer in self.model.layers[:last_gnn_index])
-        )
+    def nn_frozen(self) -> bool:
+        """Determine whether all NN layers are frozen."""
+        last_nn_index = -2 if self.use_normalization else -1
+        return all((not layer.trainable for layer in self.model.layers[:last_nn_index]))
 
     @property
     def vgp_frozen(self) -> bool:
@@ -356,7 +354,7 @@ class ProbGNN(ABC):
         optimizer: keras.optimizers.Optimizer = tf.optimizers.Adam(),
         new_metrics: Optional[Metrics] = None,
     ):
-        """Compile the probabilistic GNN.
+        """Compile the probabilistic NN.
 
         Recompilation is required whenever layers are (un)frozen.
 
@@ -404,7 +402,7 @@ class ProbGNN(ABC):
 
         self.save_kernel(paths["kernel_path"])
 
-        self.gnn.save(paths["gnn_path"], include_optimizer=False)
+        self.nn.save(paths["nn_path"], include_optimizer=False)
 
         # Copy checkpoints
         if ckpt_path is not None:
@@ -417,9 +415,9 @@ class ProbGNN(ABC):
 
     @classmethod
     def load(
-        cls: "ProbGNN", save_path: Path, load_ckpt: bool = True, **kwargs
-    ) -> "ProbGNN":
-        """Load a ProbGNN from disk.
+        cls: "ProbNN", save_path: Path, load_ckpt: bool = True, **kwargs
+    ) -> "ProbNN":
+        """Load a ProbNN from disk.
 
         Args:
             save_path: The path to the model's save directory.
@@ -444,15 +442,15 @@ class ProbGNN(ABC):
         with paths["conf_path"].open("r") as f:
             config: Dict[str, Any] = json.load(f)
 
-        # Load GNN
+        # Load NN
         try:
-            gnn = keras.models.load_model(paths["gnn_path"], compile=False)
+            nn = keras.models.load_model(paths["nn_path"], compile=False)
         except OSError:
-            raise FileNotFoundError(f"Couldn't load GNN at `{paths['gnn_path']}`.")
+            raise FileNotFoundError(f"Couldn't load NN at `{paths['nn_path']}`.")
 
         # Initialize...
         config.update(kwargs)
-        prob_model: ProbGNN = cls(gnn=gnn, **config)
+        prob_model: ProbNN = cls(nn=nn, **config)
 
         # ...and load weights
         to_load = paths["ckpt_path"] if load_ckpt else paths["weights_path"]
@@ -464,15 +462,15 @@ class ProbGNN(ABC):
         return prob_model
 
 
-class MEGNetProbModel(ProbGNN):
-    """ProbGNN for MEGNetModels.
+class MEGNetProbModel(ProbNN):
+    """ProbNN for MEGNetModels.
 
     Args:
         meg_model: The base :class:`MEGNetModel` to modify.
         num_inducing_points: The number of inducing index points for the
             VGP.
-        kernel: A :class:`~unlockgnn.kernel_layers.KernelLayer` for the VGP to use.
-        latent_layer: The name or index of the layer of the GNN to be fed into
+        kernel: A :class:`~unlocknn.kernel_layers.KernelLayer` for the VGP to use.
+        latent_layer: The name or index of the layer of the NN to be fed into
             the VGP.
         target_shape: The shape of the target values.
         metrics: A list of metrics to record during training.
@@ -480,13 +478,13 @@ class MEGNetProbModel(ProbGNN):
             in the loss function.
         optimizer: The model optimizer, needed for recompilation.
         index_initializer: A custom initializer to use for the VGP index points.
-            See also :mod:`unlockgnn.initializers`.
+            See also :mod:`unlocknn.initializers`.
         use_normalization: Whether to use a ``BatchNormalization`` layer before
             the VGP. Recommended for better training efficiency.
 
     .. warning::
         :attr:`metrics` are malfunctional and may give vastly incorrect
-        values -- use :func:`unlockgnn.metrics.evaluate_uq_metrics` instead!
+        values -- use :func:`unlocknn.metrics.evaluate_uq_metrics` instead!
 
     """
 
@@ -603,7 +601,7 @@ class MEGNetProbModel(ProbGNN):
 
         .. warning::
             This method is malfunctional and may give vastly incorrect
-            values -- use :func:`unlockgnn.metrics.evaluate_uq_metrics` instead!
+            values -- use :func:`unlocknn.metrics.evaluate_uq_metrics` instead!
 
         Args:
             eval_structs: Structures on which to evaluate performance.
@@ -643,7 +641,7 @@ class MEGNetProbModel(ProbGNN):
             95% confidence interval (two standard deviations) uncertainty
             estimate:
 
-            >>> from unlockgnn.download import load_data, load_pretrained
+            >>> from unlocknn.download import load_data, load_pretrained
             >>> binary_model = load_pretrained("binary_e_form")
             >>> binary_data = load_data("binary_e_form")
             >>> example_struct = binary_data.loc[0, "structure"]

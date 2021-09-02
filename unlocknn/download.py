@@ -19,9 +19,9 @@ from .model import MEGNetProbModel
 DEFAULT_MODEL_PATH = Path(__file__).parent / "models"
 DEFAULT_DATA_PATH = Path(__file__).parent / "data"
 MODELS_URL: str = (
-    "https://github.com/a-ws-m/unlockGNN/raw/{branch}/models/{fname}.tar.gz"
+    "https://github.com/a-ws-m/unlockNN/raw/{branch}/models/{fname}.tar.gz"
 )
-DATA_URL: str = "https://github.com/a-ws-m/unlockGNN/raw/{branch}/data/{fname}.parquet"
+DATA_URL: str = "https://github.com/a-ws-m/unlockNN/raw/{branch}/data/{fname}.parquet"
 AVAILABLE_MODELS = Literal["binary_e_form"]
 AVAILABLE_DATA = Literal["binary_e_form"]
 
@@ -36,7 +36,7 @@ def _download_file(
 
     Args:
         fname: The file name.
-        branch: Which branch of the unlockGNN repository to download from.
+        branch: Which branch of the unlockNN repository to download from.
         save_dir: The directory to check for already-downloaded models and
             in which to save newly downloaded models.
         type: The type of file.
@@ -76,11 +76,11 @@ def load_pretrained(
     """Download a pre-trained model.
 
     A list of available models and their descriptions can be
-    found at https://github.com/a-ws-m/unlockGNN/tree/master/models.
+    found at https://github.com/a-ws-m/unlockNN/tree/master/models.
 
     Args:
         model_name: The name of the model to download.
-        branch: Which branch of the unlockGNN repository to download from.
+        branch: Which branch of the unlockNN repository to download from.
         save_dir: The directory to check for already-downloaded models and
             in which to save newly downloaded models.
 
@@ -105,11 +105,11 @@ def load_data(
     """Download sample data.
 
     A list of available data, their sources and descriptions can be
-    found at https://github.com/a-ws-m/unlockGNN/tree/master/data.
+    found at https://github.com/a-ws-m/unlockNN/tree/master/data.
 
     Args:
         data_name: The name of the data to download.
-        branch: Which branch of the unlockGNN repository to download from.
+        branch: Which branch of the unlockNN repository to download from.
         save_dir: The directory to check for already-downloaded data and
             in which to save newly downloaded data.
 

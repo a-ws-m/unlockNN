@@ -35,12 +35,12 @@ class SampleInitializer(keras.initializers.Initializer):
 
         self.meg_model = meg_model
 
-        self.gnn = self.meg_model.model
+        self.nn = self.meg_model.model
 
         if isinstance(latent_layer, int):
             self.latent_idx: int = latent_layer
         else:
-            self.latent_idx = [layer.name for layer in self.gnn.layers].index(
+            self.latent_idx = [layer.name for layer in self.nn.layers].index(
                 latent_layer
             )
 
@@ -48,8 +48,8 @@ class SampleInitializer(keras.initializers.Initializer):
 
     def compute_points(self, batch_size: int = 128, scrub_failed_structs: bool = False):
         """Update stored index points."""
-        latent_layer = self.gnn.layers[self.latent_idx].output
-        index_pt_model = keras.Model(self.gnn.inputs, latent_layer)
+        latent_layer = self.nn.layers[self.latent_idx].output
+        index_pt_model = keras.Model(self.nn.inputs, latent_layer)
 
         input_gen, _ = create_megnet_input(
             self.meg_model,

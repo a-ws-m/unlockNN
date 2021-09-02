@@ -1,4 +1,4 @@
-.. currentmodule:: unlockgnn.download
+.. currentmodule:: unlocknn.download
 
 Download example files
 ======================

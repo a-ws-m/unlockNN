@@ -15,8 +15,8 @@ import pandas as pd
 import pytest
 import tensorflow as tf
 from megnet.models import MEGNetModel
-from unlockgnn import MEGNetProbModel
-from unlockgnn.initializers import SampleInitializer
+from unlocknn import MEGNetProbModel
+from unlocknn.initializers import SampleInitializer
 
 np.random.seed(123)
 python_random.seed(123)
@@ -110,14 +110,14 @@ def test_meg_prob(tmp_path: Path, datadir: Path, use_norm: bool):
     prob_model = MEGNetProbModel(megnet_e_form_model, 10, use_normalization=use_norm)
 
     # Test weights equality
-    last_gnn_idx = -2 if use_norm else -1
-    meg_gnn_weights = [
+    last_nn_idx = -2 if use_norm else -1
+    meg_nn_weights = [
         layer.get_weights() for layer in megnet_e_form_model.model.layers[:-1]
     ]
-    prob_model_gnn_weights = [
-        layer.get_weights() for layer in prob_model.model.layers[:last_gnn_idx]
+    prob_model_nn_weights = [
+        layer.get_weights() for layer in prob_model.model.layers[:last_nn_idx]
     ]
-    for meg_layer, prob_layer in zip(meg_gnn_weights, prob_model_gnn_weights):
+    for meg_layer, prob_layer in zip(meg_nn_weights, prob_model_nn_weights):
         assert weights_equal(meg_layer, prob_layer)
 
     init_performance = prob_model.evaluate(test_structs, test_targets)

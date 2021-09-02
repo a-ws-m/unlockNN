@@ -10,12 +10,12 @@ README = (HERE / "README.md").read_text()
 
 # This call to setup() does all the work
 setup(
-    name="unlockGNN",
+    name="unlockNN",
     version="2.0.0",
-    description="Uncertainty quantification for graph neural network models of chemical systems.",
+    description="Uncertainty quantification for neural network models of chemical systems.",
     long_description=README,
     long_description_content_type="text/markdown",
-    url="https://github.com/a-ws-m/unlockGNN",
+    url="https://github.com/a-ws-m/unlockNN",
     author="Alexander Moriarty",
     author_email="amoriarty14@gmail.com",
     license="MIT",
@@ -36,7 +36,7 @@ setup(
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
         "Topic :: Scientific/Engineering :: Chemistry",
     ],
-    packages=find_namespace_packages(include=["unlockgnn.*"]),
+    packages=find_namespace_packages(include=["unlocknn.*"]),
     include_package_data=False,
     install_requires=[
         "numpy<=1.19.5",

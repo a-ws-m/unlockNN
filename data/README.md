@@ -1,8 +1,8 @@
 # Example data
 
-This data is included as a convenience for testing unlockGNN and demonstrating
+This data is included as a convenience for testing unlockNN and demonstrating
 its usage with more minimalist examples. It can be loaded using
-`unlockgnn.download.load_data(fname)`, where `fname` is the name of the data
+`unlocknn.download.load_data(fname)`, where `fname` is the name of the data
 file _without the file extension_.
 
 Currently, the only included data is `binary_e_form.parquet`, which includes

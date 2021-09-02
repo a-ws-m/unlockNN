@@ -14,10 +14,10 @@ import pandas as pd
 import requests
 from megnet.models import MEGNetModel
 from pymatgen.core.structure import Structure
-from unlockgnn import MEGNetProbModel
+from unlocknn import MEGNetProbModel
 from tensorflow.keras.callbacks import TensorBoard
-from unlockgnn.megnet_utils import default_megnet_config
-from unlockgnn.metrics import MAE, evaluate_uq_metrics
+from unlocknn.megnet_utils import default_megnet_config
+from unlocknn.metrics import MAE, evaluate_uq_metrics
 
 HERE = Path(__file__).parent
 PHONONS_URL = "https://ml.materialsproject.org/projects/matbench_phonons.json.gz"
@@ -27,9 +27,9 @@ VERBOSITY: int = 2
 PHONONS_SAVE_DIR = HERE / "phonons.pkl"
 
 MEGNET_LOGS = HERE / "megnet_logs"
-PROB_GNN_LOGS = HERE / "prob_logs"
-VGP_LOGS = PROB_GNN_LOGS / "vgp_only"
-FULL_MODEL_LOGS = PROB_GNN_LOGS / "probgnn"
+PROB_NN_LOGS = HERE / "prob_logs"
+VGP_LOGS = PROB_NN_LOGS / "vgp_only"
+FULL_MODEL_LOGS = PROB_NN_LOGS / "probnn"
 
 MEGNET_MODEL_DIR = HERE / "meg_model"
 PROB_MODEL_DIR = HERE / "prob_model"
@@ -38,7 +38,7 @@ METRICS_LOGS = HERE / "metrics.log"
 
 NOW: str = datetime.now().strftime("%Y%m%d-%H%M%S")
 
-for log_dir in [MEGNET_LOGS, PROB_GNN_LOGS, VGP_LOGS, FULL_MODEL_LOGS]:
+for log_dir in [MEGNET_LOGS, PROB_NN_LOGS, VGP_LOGS, FULL_MODEL_LOGS]:
     if not log_dir.exists():
         os.mkdir(log_dir)
 
@@ -88,7 +88,7 @@ def download_data(url: str, save_dir: Path) -> pd.DataFrame:
 def log_metrics(metrics: Dict[str, float], data_name: str):
     """Log all metrics from a dictionary."""
     for metric_name, value in metrics.items():
-        metric_logger.info("ProbGNN %s %s = %f", data_name, metric_name, value)
+        metric_logger.info("ProbNN %s %s = %f", data_name, metric_name, value)
 
 
 def main() -> None:
@@ -108,13 +108,13 @@ def main() -> None:
     )
     parser.add_argument(
         "--which",
-        choices=["MEGNet", "VGP", "ProbGNN"],
+        choices=["MEGNet", "VGP", "ProbNN"],
         required=("--train" in sys.argv),
         help=(
             "Which components to train: "
             "MEGNet -- Just the MEGNetModel; "
-            "VGP -- Just the VGP part of the ProbGNN; "
-            "ProbGNN -- The whole ProbGNN."
+            "VGP -- Just the VGP part of the ProbNN; "
+            "ProbNN -- The whole ProbNN."
         ),
         dest="which",
     )
@@ -186,7 +186,7 @@ def main() -> None:
             test_mae = MAE(test_predicted, None, test_targets)
             metric_logger.info("MEGNet test MAE = %f", test_mae)
     else:
-        # Load the ProbGNN into memory
+        # Load the ProbNN into memory
         try:
             prob_model: MEGNetProbModel = MEGNetProbModel.load(PROB_MODEL_DIR)
         except FileNotFoundError:
@@ -194,11 +194,11 @@ def main() -> None:
 
         if do_train:
             if which_model == "VGP":
-                prob_model.set_frozen("GNN", recompile=False)
+                prob_model.set_frozen("NN", recompile=False)
                 prob_model.set_frozen(["VGP", "Norm"], freeze=False)
                 tf_callback = TensorBoard(VGP_LOGS / NOW, write_graph=False)
             else:
-                prob_model.set_frozen(["VGP", "GNN", "Norm"], freeze=False)
+                prob_model.set_frozen(["VGP", "NN", "Norm"], freeze=False)
                 tf_callback = TensorBoard(FULL_MODEL_LOGS / NOW, write_graph=False)
             prob_model.train(
                 train_structs,

@@ -1,9 +1,9 @@
-.. currentmodule:: unlockgnn.kernel_layers
+.. currentmodule:: unlocknn.kernel_layers
 
 Kernel layers
 =============
 
-UnlockGNN provides Keras-compatible implementations of a few kernel
+UnlockNN provides Keras-compatible implementations of a few kernel
 functions for use with the Gaussian process, as well as an extensible
 API for implementing your own kernels.
 

@@ -1,4 +1,4 @@
-.. currentmodule:: unlockgnn.initializers
+.. currentmodule:: unlocknn.initializers
 
 Inducing index points initializers
 ==================================

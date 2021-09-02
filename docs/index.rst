@@ -1,13 +1,13 @@
-.. unlockGNN documentation master file, created by
+.. unlockNN documentation master file, created by
    sphinx-quickstart on Wed Aug 18 15:33:30 2021.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
-.. module:: unlockgnn
+.. module:: unlocknn
 
-What is unlockGNN?
+What is unlockNN?
 ==================
 
-UnlockGNN is a Python package for adding uncertainty quantification to
+UnlockNN is a Python package for adding uncertainty quantification to
 Keras models for materials property prediction.
 
 This documentation was built on |today|.
@@ -17,15 +17,15 @@ Installation
 
 Using ``pip``::
 
-   $ pip install unlockGNN
+   $ pip install unlockNN
 
 From source
 ^^^^^^^^^^^
 
 First, clone the repository::
 
-   $ git clone https://github.com/a-ws-m/unlockGNN.git
-   $ cd unlockGNN
+   $ git clone https://github.com/a-ws-m/unlockNN.git
+   $ cd unlockNN
 
 Then, either install dependencies using ``conda``::
 
@@ -41,15 +41,15 @@ Or simply install using ``pip`` exclusively::
 
    Home <self>
    quickstart
-   GitHub <https://github.com/a-ws-m/unlockGNN/>
+   GitHub <https://github.com/a-ws-m/unlockNN/>
 
 .. toctree::
    :hidden:
    :caption: Modules
 
-   modules/unlockgnn.model
-   modules/unlockgnn.kernel_layers
-   modules/unlockgnn.metrics
-   modules/unlockgnn.megnet_utils
-   modules/unlockgnn.download
-   modules/unlockgnn.initializers
+   modules/unlocknn.model
+   modules/unlocknn.kernel_layers
+   modules/unlocknn.metrics
+   modules/unlocknn.megnet_utils
+   modules/unlocknn.download
+   modules/unlocknn.initializers
