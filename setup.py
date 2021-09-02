@@ -43,7 +43,7 @@ setup(
         "pymatgen<=2021.2.8",
         "megnet>=1.1.4",
         "requests",
-        "pyarrow",
+        "pyarrow>=1.0.1",
         "tensorflow>=2.2",
         "tensorflow-probability>=0.10.1",
         "typish; python_version < '3.8'",
