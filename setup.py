@@ -33,6 +33,7 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
         "Topic :: Scientific/Engineering :: Chemistry",
     ],
@@ -48,7 +49,7 @@ setup(
         "tensorflow-probability>=0.10.1",
         "typish; python_version < '3.8'",
     ],
-    python_requires=">=3.6, <3.9",
+    python_requires=">=3.6",
     extras_require={
         "Compatibility with Python < 3.8": ["typish"],
         "Compatible matminer version": ["matminer==0.6.5"],
