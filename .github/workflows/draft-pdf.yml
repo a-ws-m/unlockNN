@@ -1,4 +1,6 @@
 # https://github.com/marketplace/actions/open-journals-pdf-generator
+name: JOSS paper compile
+
 on: [push]
 
 jobs:
