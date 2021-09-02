@@ -1,5 +1,5 @@
 ---
-title: 'UnlockNN: Uncertainty quantification for graph neural network models of chemical systems'
+title: 'UnlockNN: Uncertainty quantification for neural network models of chemical systems'
 tags:
   - Python
   - graph neural networks
@@ -39,7 +39,7 @@ first-principles calculations based on physical laws, particularly for complex
 systems with many possible configurations
 [@butlerMachineLearningMolecular2018;@ramprasadMachineLearningMaterials2017;@xueAcceleratedSearchMaterials2016].
 
-Graph neural networks (NNs) [@battagliaRelationalInductiveBiases2018] provide a
+Graph neural networks (GNNs) [@battagliaRelationalInductiveBiases2018] provide a
 data-driven approach for learning materials' properties based on their
 _structure_. This is more general than previous approaches; in particular, it
 can be used for molecules as well as crystals and achieve highly accurate
