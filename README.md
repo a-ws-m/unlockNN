@@ -1,6 +1,6 @@
 # unlockNN
 
-[![Documentation Status](https://readthedocs.org/projects/unlocknn/badge/?version=latest)](https://unlocknn.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/unlocknn/badge/?version=latest)](https://unlockgnn.readthedocs.io/en/latest/?badge=latest)
 ![PyPi](https://img.shields.io/pypi/v/unlockNN)
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -48,7 +48,7 @@ It can be installed using `conda env create -f dev_environment.yml`.
 
 ## Documentation
 
-Full documentation is available for the project [here](https://unlocknn.readthedocs.io/en/latest/).
+Full documentation is available for the project [here](https://unlockgnn.readthedocs.io/en/latest/).
 
 ## License and attribution
 
