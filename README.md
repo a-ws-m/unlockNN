@@ -27,7 +27,7 @@ improves scalability to larger data sets. The caveat is that the modified model
 must undergo further training in order to calibrate the uncertainty quantifier;
 however, this typically only requires a small number of training iterations.
 
-UnlockGNN also contains a specific configuration for adding uncertainty
+UnlockNN also contains a specific configuration for adding uncertainty
 quantification to [MEGNet](https://github.com/materialsvirtuallab/megnet/): a
 powerful graph NN model for predicting properties of molecules and crystals.
 
