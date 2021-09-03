@@ -11,7 +11,7 @@ README = (HERE / "README.md").read_text()
 # This call to setup() does all the work
 setup(
     name="unlockNN",
-    version="2.0.1",
+    version="2.0.2",
     description="Uncertainty quantification for neural network models of chemical systems.",
     long_description=README,
     long_description_content_type="text/markdown",
@@ -37,7 +37,7 @@ setup(
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
         "Topic :: Scientific/Engineering :: Chemistry",
     ],
-    packages=find_namespace_packages(include=["unlocknn.*"]),
+    packages=find_namespace_packages(include=["unlocknn*"]),
     include_package_data=False,
     install_requires=[
         "numpy<=1.19.5",
