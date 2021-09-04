@@ -14,7 +14,7 @@ authors:
   - name: Kazuki Morita
     orcid: 0000-0002-2558-6963
     affiliation: 1
-  - name: Keith Butler
+  - name: Keith T. Butler
     orcid: 0000-0001-5432-5597
     affiliation: 2
   - name: Aron Walsh
