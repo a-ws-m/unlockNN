@@ -2,7 +2,8 @@
 import os
 from pathlib import Path
 
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+# See https://github.com/tensorflow/tensorflow/issues/152#issuecomment-273663277
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 from unlocknn.download import load_data, load_pretrained
