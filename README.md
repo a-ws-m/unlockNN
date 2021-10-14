@@ -70,9 +70,12 @@ Please use the Issue tracker to report bugs in the software, suggest feature imp
 Contributions are very welcome as we look to make unlockNN more flexible and efficient.
 Please use the [Fork and Pull](https://guides.github.com/activities/forking/) workflow to make contributions and follow the contribution guidelines:
 
-- Use the environment defined in `dev_environment.yml`. This installs `black`, the formatter used for this project, as well as utilities for building documentation, enabling the testing suite and publishing to PyPi.
-- Write tests for new features in the appropriate directory.
-- Use [Google-style Docstrings](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html). Check docstrings with `pydocstyle`.
+- Use the environment defined in `dev_environment.yml`. This installs `black`, the formatter used for this project, as well as utilities for building documentation (`sphinx` and the `insegel` theme), enabling the testing suite (`pytest` and `pytest-cov`) and publishing to PyPi (`build`, but this will be handled by the package maintainer).
+- Use `black` to format all Python files that you edit: `black {edited_file.py}` or `python -m black {edited_file.py}`.
+- Write tests for new features in the appropriate directory. Run tests using `pytest tests/`, or optionally with `pytest --cov=unlocknn tests/` to generate coverage on the fly.
+- After testing that `pytest` works for your current environment, run `tox` in the root directory of the project to check that all versions of Python are compatible.
+- Use [Google-style Docstrings](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html). Check docstrings with `pydocstyle`: `pydocstyle {edited_file.py}`.
+- Check docstrings are valid Sphinx RST and that the documentation compiles without errors: in the `docs` directory, run `make html`.
 - Feel free to clean up others' code as you go along.
 
 ### List of developers
