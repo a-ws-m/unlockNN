@@ -16,7 +16,26 @@ def neg_log_likelihood(
     stddevs: Targets,
     true_vals: Targets,
 ) -> float:
-    """Calculate the negative log likelihood of true values given predictions."""
+    r"""Calculate the negative log likelihood (NLL) of true values given predictions.
+
+    NLL is given by
+
+    .. math::
+
+        \mathrm{NLL} = -\sum_i \log p_i(y_i),
+
+    where :math:`y_i` is the :math:`i^\mathrm{th}` observed (true) value and
+    :math:`p_i` is the probability density function for the
+    :math:`i^\mathrm{th}` predicted Gaussian distribution:
+
+    .. math::
+
+        p_i \sim \mathcal{N} \left( \hat{y}_i, \sigma_i^2 \right),
+
+    where :math:`\hat{y}_i` is the :math:`i^\mathrm{th}` predicted mean and
+    :math:`\sigma_i` is the :math:`i^\mathrm{th}` predicted standard deviation.
+
+    """
     dist = tfp.distributions.Normal(loc=predictions, scale=stddevs)
     nll = -tf.math.reduce_sum(dist.log_prob(true_vals))
     return nll.numpy()
