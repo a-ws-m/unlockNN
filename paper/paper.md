@@ -78,9 +78,9 @@ Keras models. It also contains a `MEGNetProbModel` class for adding uncertainty
 quantification to MEGNet.
 
 Neural network-fed VGPs share a similar principle to the convolution-fed
-Gaussian processes formulated by @tranMethodsComparingUncertainty2020a. UnlockNN
+Gaussian processes formulated by @tranMethodsComparingUncertainty2020. UnlockNN
 also implements tools for calculating the performance metrics suggested by
-@tranMethodsComparingUncertainty2020a, including sharpness and calibration error,
+@tranMethodsComparingUncertainty2020, including sharpness and calibration error,
 via its `metrics` module.
 
 ## Acknowledgements
