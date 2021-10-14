@@ -28,5 +28,5 @@ def test_load_data(tmp_path: Path):
     orig_data = load_data("binary_e_form", save_dir=tmp_path)
     reload_data = load_data("binary_e_form", save_dir=tmp_path)
 
-    assert pytest.approx(-0.7374389025, orig_data.loc[0, "formation_energy_per_atom"], abs=1e-10)
-    assert pytest.approx(-0.7374389025, reload_data.loc[0, "formation_energy_per_atom"], abs=1e-10)
+    assert orig_data.loc[0, "formation_energy_per_atom"] == pytest.approx(-0.7374389025, abs=1e-10)
+    assert reload_data.loc[0, "formation_energy_per_atom"] == pytest.approx(-0.7374389025, abs=1e-10)
