@@ -23,10 +23,14 @@ def test_load_model(tmp_path: Path, mocker: MockerFixture):
     get_spy.assert_called_once()
 
 
-def test_load_data(tmp_path: Path):
+def test_load_data(tmp_path: Path, mocker: MockerFixture):
     """Test downloading formation energies data."""
+    get_spy = mocker.spy(requests, "get")
     orig_data = load_data("binary_e_form", save_dir=tmp_path)
+    get_spy.assert_called_once()
     reload_data = load_data("binary_e_form", save_dir=tmp_path)
+    # Second call should load from disk
+    get_spy.assert_called_once()
 
     assert orig_data.loc[0, "formation_energy_per_atom"] == pytest.approx(-0.7374389025, abs=1e-10)
     assert reload_data.loc[0, "formation_energy_per_atom"] == pytest.approx(-0.7374389025, abs=1e-10)
