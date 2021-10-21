@@ -45,9 +45,9 @@ TEST_DATA: List[ToyData] = [
 
 # TODO: WIP Metrics values!
 TEST_EXPECTED: List[ExpectedMetrics] = [
-    ExpectedMetrics(-0.731394, 0.0, 0.0, 0.0, 2.1602),
-    ExpectedMetrics(-0.574423),
-    ExpectedMetrics(-0.773894),
+    ExpectedMetrics(4.5486, 0.0, 0.0, 0.0, 2.1602, 0.5),
+    ExpectedMetrics(5.0486, 1/3, 1/3, 0.57735, 2.1602, 0.5),
+    ExpectedMetrics(4.3554, 1/3, 1/3, 0.57735, 1.9149, 0.69282),
 ]
 
 
@@ -55,4 +55,4 @@ TEST_EXPECTED: List[ExpectedMetrics] = [
 def test_metrics(toy_data: ToyData, expected: ExpectedMetrics):
     """Test that the metrics for the toy data match expected values."""
     for metric, expected_value in zip(METRICS_TEST_ORDER, expected):
-        assert metric(*toy_data) == pytest.approx(expected_value)
+        assert metric(*toy_data) == pytest.approx(expected_value, abs=1e-4)
