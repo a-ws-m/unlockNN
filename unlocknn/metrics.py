@@ -67,7 +67,7 @@ def variation(
     the mean of the standard deviations and :math:`N` be the number of
     predictions. The coefficient of variation is given by:
 
-    .. math:: C_v = \sqrt{\frac{\sum_i^N{(\sigma_i - \bar{\sigma})^2}}{N - 1}}
+    .. math:: C_v = \frac{1}{\bar{\sigma}}\sqrt{\frac{\sum_i^N{(\sigma_i - \bar{\sigma})^2}}{N - 1}}
 
     """
     stddev_mean = np.mean(stddevs)
@@ -102,7 +102,7 @@ class MeanErrorMetric:
         true_vals: Targets,
     ) -> float:
         """Calculate the mean metric."""
-        mean_error = np.mean(self.mean_what_func(true_vals - predictions))
+        mean_error = np.mean(self.mean_what_func(np.array(true_vals) - np.array(predictions)))
         if self.take_root:
             return np.sqrt(mean_error)
         else:
