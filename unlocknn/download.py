@@ -7,7 +7,7 @@ from typing import Union
 
 try:
     from typing import Literal
-except ImportError:
+except ImportError:  # pragma: no cover
     from typish import Literal
 
 import pandas as pd

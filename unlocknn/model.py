@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 try:
     from typing import Literal, get_args
-except ImportError:
+except ImportError:  # pragma: no cover
     from typish import Literal, get_args
 
 
