@@ -58,7 +58,7 @@ def test_reload(tmp_path: Path, kernel_type: Type[AmpAndLengthScaleFn]):
     loaded_weights = loaded_kernel.get_weights()
     assert loaded_weights == example_weights
 
-    loaded_amp = loaded_kernel.amplitude
-    loaded_ls = loaded_kernel.length_scale
+    loaded_amp = loaded_kernel.amplitude.numpy()
+    loaded_ls = loaded_kernel.length_scale.numpy()
     assert loaded_amp == pytest.approx(orig_amplitude)
     assert loaded_ls == pytest.approx(orig_length_scale)

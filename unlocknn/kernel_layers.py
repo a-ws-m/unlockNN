@@ -110,14 +110,14 @@ class AmpAndLengthScaleFn(KernelLayer, ABC):
         )
     
     @property
-    def amplitude(self) -> float:
+    def amplitude(self) -> tf.Tensor:
         """Get the current kernel amplitude."""
-        return tf.nn.softplus(0.1 * self._amplitude_basis).numpy().item()
+        return tf.nn.softplus(0.1 * self._amplitude_basis)
     
     @property
-    def length_scale(self) -> float:
+    def length_scale(self) -> tf.Tensor:
         """Get the current kernel length scale."""
-        return tf.nn.softplus(5.0 * self._length_scale_basis).numpy().item()
+        return tf.nn.softplus(5.0 * self._length_scale_basis)
 
 
 class RBFKernelFn(AmpAndLengthScaleFn):
