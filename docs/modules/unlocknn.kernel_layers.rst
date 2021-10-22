@@ -40,4 +40,5 @@ these weights during instantiation and other kernels that are parameterized as
 such may inherit from this class also:
 
 .. autoclass:: AmpAndLengthScaleFn
+   :members:
    :special-members: __init__
