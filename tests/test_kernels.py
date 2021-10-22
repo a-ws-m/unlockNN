@@ -9,25 +9,27 @@ from typing import Type
 
 import numpy as np
 import pytest
+import tensorflow as tf
 import tensorflow_probability as tfp
 from unlocknn.kernel_layers import *
 
 class TestKernel(KernelLayer):
     """An example kernel for testing."""
 
-    def __init__(self, trainable=True, name=None, dtype=None, dynamic=False, bias_variance=1.0, **kwargs):
+    def __init__(self, bias_variance: float=1.0, **kwargs):
         """Initialize the bias_variance parameter."""
-        self.bias_variance = bias_variance
-        super().__init__(trainable=trainable, name=name, dtype=dtype, dynamic=dynamic, **kwargs)
+        super().__init__(**kwargs)
+        dtype = kwargs.get("dtype", tf.float64)
+        self.bias_variance = self.add_weight(initializer=tf.constant_initializer(bias_variance), dtype=dtype, name="bias_variance")
 
     def kernel(self) -> tfp.math.psd_kernels.PositiveSemidefiniteKernel:
         """Get a linear kernel that's parameterised by a given bias variance."""
-        return tfp.math.psd_kernels.Linear(self.bias_variance)
+        return tfp.math.psd_kernels.Linear(bias_variance=self.bias_variance)
     
     @property
     def config(self) -> dict:
-        """Return the bias_variance."""
-        return {"bias_variance": self.bias_variance}
+        """Return an empty dict: no kwargs are required."""
+        return dict()
 
 def test_custom_kernel_reloading(tmp_path: Path):
     """Test saving and loading with a custom kernel."""
@@ -35,7 +37,7 @@ def test_custom_kernel_reloading(tmp_path: Path):
     kernel = TestKernel(bias_variance=2.0)
     kernel.save(save_path)
     reload_kernel = load_kernel(save_path, TestKernel)
-    assert reload_kernel.kernel().bias_variance.numpy().item() == pytest.approx(2.0)
+    assert reload_kernel.get_weights()[0] == pytest.approx(2.0)
 
 
 @pytest.mark.parametrize("kernel_type", [RBFKernelFn, MaternOneHalfFn])
