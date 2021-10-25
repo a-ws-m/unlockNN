@@ -78,7 +78,9 @@ the training iterations needed to train the base NN it is modifying.
 The primary interface for unlockNN is the `model` module, which contains an
 extensible `ProbNN` class for adding uncertainty quantification to arbitrary
 Keras models. It also contains a `MEGNetProbModel` class for adding uncertainty
-quantification to MEGNet.
+quantification to MEGNet, and a download suite for accessing example models
+and data. The models can be configured with different kernels for the VGP,
+which are implemented in a `kernel_layers` module.
 
 Neural network-fed VGPs share a similar principle to the convolution-fed
 Gaussian processes formulated by @tranMethodsComparingUncertainty2020. UnlockNN
