@@ -54,7 +54,10 @@ UnlockNN provides an API to add uncertainty quantification to Keras-based models
 and comes packaged with a specific implementation for compatibility with MEGNet
 [@chenGraphNetworksUniversal2019], which is a graph NN implementation for
 materials property prediction that has achieved state-of-the-art accuracy on
-many benchmark tasks [@dunnBenchmarkingMaterialsProperty2020].
+many benchmark tasks [@dunnBenchmarkingMaterialsProperty2020]. The package is
+designed for materials and chemistry researchers to improve their models'
+reliability and identify the domain(s) of materials on which the models can
+perform well.
 
 This uncertainty quantification is achieved by supplanting the output layer of
 the model with a variational Gaussian process (VGP)
