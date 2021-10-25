@@ -130,9 +130,11 @@ def test_model_reload(tmp_path: Path, datadir: Path, use_norm: bool):
         prob_model.model.get_weights(), loaded_model.model.get_weights()
     )
 
-def test_model_prediction(datadir: Path, split_data: SplitData):
+@pytest.mark.parametrize("use_norm", [True, False])
+def test_model_prediction(datadir: Path, split_data: SplitData, use_norm: bool):
     """Test that model prediction has expected dimensions."""
-    prob_model = MEGNetProbModel.load(datadir / "prob_e_form_norm", load_ckpt=False)
+    model_name = "prob_e_form_" + ("" if use_norm else "un") + "norm"
+    prob_model = MEGNetProbModel.load(datadir / model_name, load_ckpt=False)
     (train_structs, _), (_, _) = split_data
 
     prob_model.update_pred_model()
@@ -209,3 +211,38 @@ def test_meg_weights_preserved(datadir: Path, use_norm: bool):
     ]
     for meg_layer, prob_layer in zip(meg_nn_weights, prob_model_nn_weights):
         assert weights_equal(meg_layer, prob_layer)
+
+@pytest.mark.parametrize("use_norm", [True, False])
+def test_freezing(datadir: Path, use_norm: bool):
+    """Test that model layers can be frozen and thawed."""
+    model_name = "prob_e_form_" + ("" if use_norm else "un") + "norm"
+    prob_model = MEGNetProbModel.load(datadir / model_name, load_ckpt=False)
+    
+    # Loaded model should have NN frozen and VGP and Norm unfrozen
+    assert prob_model.nn_frozen
+    assert not prob_model.vgp_frozen
+    if use_norm:
+        assert prob_model.norm_frozen is False
+    else:
+        assert prob_model.norm_frozen is None
+    
+    # Try freezing/thawing
+    prob_model.set_frozen("VGP")
+    assert prob_model.vgp_frozen
+
+    # Test thawing with a single item list
+    prob_model.set_frozen(["VGP"], False)
+    assert not prob_model.vgp_frozen
+
+    # Test error handling
+    if use_norm:
+        prob_model.set_frozen("Norm")
+        assert prob_model.norm_frozen
+    else:
+        with pytest.raises(ValueError):
+            prob_model.set_frozen("Norm")
+
+    # Test thawing with a list
+    prob_model.set_frozen(["NN", "VGP"], False)
+    assert not prob_model.nn_frozen
+    assert not prob_model.vgp_frozen
