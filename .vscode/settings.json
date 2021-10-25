@@ -11,5 +11,6 @@
         "**/.pytest_cache/**": true,
         "**/docs/_build/**": true,
         "**/__pycache__/**": true
-    }
+    },
+    "python.formatting.provider": "black"
 }
