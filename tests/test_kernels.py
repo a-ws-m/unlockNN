@@ -13,7 +13,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from unlocknn.kernel_layers import *
 
-class TestKernel(KernelLayer):
+class ExampleKernel(KernelLayer):
     """An example kernel for testing."""
 
     def __init__(self, bias_variance: float=1.0, **kwargs):
@@ -34,9 +34,9 @@ class TestKernel(KernelLayer):
 def test_custom_kernel_reloading(tmp_path: Path):
     """Test saving and loading with a custom kernel."""
     save_path = tmp_path / "kernel"
-    kernel = TestKernel(bias_variance=2.0)
+    kernel = ExampleKernel(bias_variance=2.0)
     kernel.save(save_path)
-    reload_kernel = load_kernel(save_path, TestKernel)
+    reload_kernel = load_kernel(save_path, ExampleKernel)
     assert reload_kernel.get_weights()[0] == pytest.approx(2.0)
 
 

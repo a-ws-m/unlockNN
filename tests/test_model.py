@@ -159,7 +159,7 @@ def test_model_training(tmp_path: Path, datadir: Path, split_data: SplitData, us
     (train_structs, train_targets), (test_structs, test_targets) = split_data
     last_nn_idx = -2 if use_norm else -1
 
-    prob_model = MEGNetProbModel.load(datadir / model_name)
+    prob_model = MEGNetProbModel.load(datadir / model_name, load_ckpt=False)
 
     for layer in prob_model.model.layers:
         print(layer.name)
