@@ -17,6 +17,7 @@ from megnet.utils.models import load_model
 from pymatgen.core.structure import Structure
 from tensorflow.python.keras.callbacks import TensorBoard
 from unlocknn import MEGNetProbModel
+from unlocknn.megnet_utils import MEGNetGraph
 from unlocknn.metrics import evaluate_uq_metrics, MSE
 
 HERE = Path(__file__).parent
@@ -60,9 +61,9 @@ def load_meg_model() -> MEGNetModel:
     """Load the MEGNetModel."""
     return load_model("Eform_MP_2019")
 
-def eval_meg_model(meg_model: MEGNetModel, structures: Iterable[Structure], targets: Iterable[float]):
+def eval_meg_model(meg_model: MEGNetModel, graphs: Iterable[MEGNetGraph], targets: Iterable[float]):
     """Evaluate the MSE of a given MEGNetModel."""
-    predictions = meg_model.predict_structures(structures)
+    predictions = meg_model.predict_graphs(graphs)
     return MSE(predictions, None, targets)
 
 def load_data() -> pd.DataFrame:
@@ -71,7 +72,7 @@ def load_data() -> pd.DataFrame:
         data = json.load(f)
     
     df = pd.DataFrame({
-        "structure": [Structure.from_str(entry["structure"]) for entry in data],
+        "graph": [entry["graph"] for entry in data],
         "e_form_per_atom": [entry["formation_energy_per_atom"] for entry in data],
         "band_gap": [entry["band_gap"] for entry in data]
     })
@@ -135,7 +136,7 @@ def main():
         # * Evaluate MEGNet
         print("Evaluating MEGNet...")
         meg_model = load_meg_model()
-        test_mse = eval_meg_model(meg_model, train_df["structure"], train_df["e_form_per_atom"])
+        test_mse = eval_meg_model(meg_model, train_df["graph"], train_df["e_form_per_atom"])
         MEGNET_METRICS_LOG.write_text(f"{test_mse=}")
         print(f"Wrote evaluation results to {MEGNET_METRICS_LOG}")
 
@@ -154,13 +155,13 @@ def main():
         # * Train the probabilistic model
         val_df = df.query("validation_set")
         # Training time
-        prob_model.train(train_df["structure"], train_df["e_form_per_atom"], cli_args["train"], val_df["structure"], val_df["e_form_per_atom"], callbacks=[get_tb_callback(NUM_INDUCING_POINTS)])
+        prob_model.train(train_df["graph"], train_df["e_form_per_atom"], cli_args["train"], val_df["graph"], val_df["e_form_per_atom"], callbacks=[get_tb_callback(NUM_INDUCING_POINTS)])
         prob_model.save(MODEL_DIR)
     
     if cli_args["eval"]:
         # * Evaluate prob_model
         train_df = df.query("training_set")
-        test_metrics = evaluate_uq_metrics(prob_model, train_df["structure"], train_df["e_form_per_atom"])
+        test_metrics = evaluate_uq_metrics(prob_model, train_df["graph"], train_df["e_form_per_atom"])
         with PROB_MODEL_METRICS_LOG.open("w") as f:
             json.dump(test_metrics, f)
 
