@@ -74,7 +74,6 @@ def load_data() -> pd.DataFrame:
     df = pd.DataFrame({
         "graph": [entry["graph"] for entry in data],
         "e_form_per_atom": [entry["formation_energy_per_atom"] for entry in data],
-        "band_gap": [entry["band_gap"] for entry in data]
     })
     # Decorate DataFrame with set type
     num_entries = len(df.index)
