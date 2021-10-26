@@ -128,8 +128,9 @@ def main():
     train_df = df.query("training_set")
     print("Loaded data.")
 
-    NUM_INDUCING_POINTS: int = cli_args["points"]
-    MODEL_DIR = model_dir(NUM_INDUCING_POINTS)
+    if cli_args["points"]:
+        NUM_INDUCING_POINTS: int = cli_args["points"]
+        MODEL_DIR = model_dir(NUM_INDUCING_POINTS)
 
     if cli_args["meg"]:
         # * Evaluate MEGNet
