@@ -6,13 +6,16 @@ os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 import random as python_random
 from pathlib import Path
+from typing import List
 
 import numpy as np
 import pytest
 import tensorflow as tf
 from megnet.models import MEGNetModel
+from pymatgen.core.structure import Structure
 from unlocknn import MEGNetProbModel
 from unlocknn.initializers import SampleInitializer
+from unlocknn.megnet_utils import MEGNetGraph
 
 from .utils import (SplitData, datadir, load_df_head, train_test_split,
                    weights_equal)
@@ -21,6 +24,11 @@ np.random.seed(123)
 python_random.seed(123)
 tf.random.set_seed(123)
 
+
+def structs_to_graphs(meg_model: MEGNetModel, structures: List[Structure]) -> List[MEGNetGraph]:
+    """Convert Structures to graphs."""
+    dummy_targets = [0.0] * len(structures)
+    return meg_model.get_all_graphs_targets(structures, dummy_targets)[0]
 
 
 @pytest.fixture
@@ -74,16 +82,18 @@ def test_model_reload(tmp_path: Path, datadir: Path, use_norm: bool):
         prob_model.model.get_weights(), loaded_model.model.get_weights()
     )
 
+@pytest.mark.parametrize("use_graphs", [True, False])
 @pytest.mark.parametrize("use_norm", [True, False])
-def test_model_prediction(datadir: Path, split_data: SplitData, use_norm: bool):
+def test_model_prediction(datadir: Path, split_data: SplitData, use_norm: bool, use_graphs: bool):
     """Test that model prediction has expected dimensions."""
     model_name = "prob_e_form_" + ("" if use_norm else "un") + "norm"
     prob_model = MEGNetProbModel.load(datadir / model_name, load_ckpt=False)
     (train_structs, _), (_, _) = split_data
+    train_input = structs_to_graphs(prob_model.meg_model, train_structs) if use_graphs else train_structs
 
     prob_model.update_pred_model()
 
-    prediction, stddev = prob_model.predict(train_structs, batch_size=16)
+    prediction, stddev = prob_model.predict(train_input, batch_size=16)
 
     # Arrays should have the same shape: flat, with one entry per structure
     expected_shape = (len(train_structs),)
@@ -91,8 +101,9 @@ def test_model_prediction(datadir: Path, split_data: SplitData, use_norm: bool):
     assert stddev.shape == expected_shape
 
 
+@pytest.mark.parametrize("use_graphs", [True, False])
 @pytest.mark.parametrize("use_norm", [True, False])
-def test_model_training(tmp_path: Path, datadir: Path, split_data: SplitData, use_norm: bool):
+def test_model_training(tmp_path: Path, datadir: Path, split_data: SplitData, use_norm: bool, use_graphs: bool):
     """Test training then saving a model.
     
     Check if expected weights update/are frozen. Saves model after training to
@@ -106,6 +117,8 @@ def test_model_training(tmp_path: Path, datadir: Path, split_data: SplitData, us
     last_nn_idx = -2 if use_norm else -1
 
     prob_model = MEGNetProbModel.load(datadir / model_name, load_ckpt=False)
+    train_input = structs_to_graphs(prob_model.meg_model, train_structs) if use_graphs else train_structs
+    test_input = structs_to_graphs(prob_model.meg_model, test_structs) if use_graphs else test_structs
 
     for layer in prob_model.model.layers:
         print(layer.name)
@@ -118,7 +131,7 @@ def test_model_training(tmp_path: Path, datadir: Path, split_data: SplitData, us
     # `Norm`/`VGP` layers to be frozen initially, so these shouldn't change.
     # The rest should, as the model isn't optimised.
     prob_model.train(
-        train_structs, train_targets, 1, test_structs, test_targets, batch_size=32, ckpt_path=ckpt_path
+        train_input, train_targets, 1, test_input, test_targets, batch_size=32, ckpt_path=ckpt_path
     )
 
     final_weights = [layer.get_weights() for layer in prob_model.model.layers]

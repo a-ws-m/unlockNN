@@ -10,6 +10,7 @@ from pymatgen.core.structure import Structure
 
 MEGNetGraph = Dict[str, Union[np.ndarray, List[Union[int, float]]]]
 Targets = List[Union[float, np.ndarray]]
+ModelInput = Union[Structure, MEGNetGraph]
 
 
 def default_megnet_config(
@@ -58,7 +59,7 @@ def scale_targets(
 
 def create_megnet_input(
     meg_model: MEGNetModel,
-    structs: List[Structure],
+    inputs: List[ModelInput],
     targets: Optional[Targets] = None,
     batch_size: int = 128,
     scrub_failed_structs: bool = False,
@@ -68,7 +69,7 @@ def create_megnet_input(
 
     Args:
         meg_model: The :class:`MEGNetModel` whose graph converter to use.
-        structs: The input structures.
+        inputs: The input, either as graphs or structures.
         targets: The input targets, if any.
         batch_size: The batch size for the generator.
         scrub_failed_structures: Whether to discard structures
@@ -84,11 +85,17 @@ def create_megnet_input(
     """
     # Make some targets up for compatibility
     has_targets = targets is not None
-    target_buffer = targets if has_targets else [0.0] * len(structs)
+    target_buffer = targets if has_targets else [0.0] * len(inputs)
 
-    graphs, trunc_targets = meg_model.get_all_graphs_targets(
-        structs, target_buffer, scrub_failed_structs
-    )
+    is_struct = isinstance(inputs[0], Structure)
+    if is_struct:
+        graphs, trunc_targets = meg_model.get_all_graphs_targets(
+            inputs, target_buffer, scrub_failed_structs
+        )
+    else:
+        graphs = inputs
+        trunc_targets = target_buffer
+
     # Check dimensions of model against converted graphs
     meg_model.check_dimension(graphs[0])
 
