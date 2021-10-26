@@ -1,5 +1,4 @@
 """Uncertainty quantification metrics and evaluation utilities."""
-from pprint import pprint
 from typing import Callable, Dict, List, Optional
 
 import numpy as np
@@ -8,7 +7,7 @@ import tensorflow_probability as tfp
 from pymatgen.core.structure import Structure
 
 from .megnet_utils import Targets
-from .model import ProbNN
+from .model import ProbNN, ModelInput
 
 
 def neg_log_likelihood(
@@ -127,7 +126,7 @@ AVAILABLE_METRICS: Dict[str, Callable[[Targets, Targets, Targets], float]] = {
 
 def evaluate_uq_metrics(
     prob_model: ProbNN,
-    test_structs: List[Structure],
+    test_inputs: List[ModelInput],
     test_targets: Targets,
     metrics: List[str] = list(AVAILABLE_METRICS.keys()),
 ) -> Dict[str, float]:
@@ -135,7 +134,7 @@ def evaluate_uq_metrics(
 
     Args:
         prob_model: The probabilistic model to evaluate.
-        test_structs: The input structures.
+        test_inputs: The input structures or graphs.
         test_targets: The target values for the structures.
         metrics: A list of metrics to compute. Defaults
             to computing all of the currently implemented
@@ -168,7 +167,7 @@ def evaluate_uq_metrics(
 
     """
     metrics_dict = {metric: AVAILABLE_METRICS[metric] for metric in metrics}
-    predictions, stddevs = prob_model.predict(test_structs)
+    predictions, stddevs = prob_model.predict(test_inputs)
     return {
         metric: func(predictions, stddevs, test_targets)
         for metric, func in metrics_dict.items()
