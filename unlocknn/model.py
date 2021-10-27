@@ -552,7 +552,7 @@ class MEGNetProbModel(ProbNN):
             inputs: A list of training crystal structures or graphs.
             targets: A list of training target values.
             epochs: The number of training epochs.
-            val_structs: A list of validation crystal structures.
+            val_inputs: A list of validation crystal structures or graphs.
             val_targets: A list of validation target values.
             callbacks: A list of additional callbacks.
             use_default_ckpt_handler: Whether to use the default
