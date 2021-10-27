@@ -126,7 +126,9 @@ def main():
     print("Loading data...")
     df = load_data()
     train_df = df.query("training_set")
-    print("Loaded data.")
+    print("Loaded data:")
+    print(df.describe())
+    print(df.head())
 
     if cli_args["points"]:
         NUM_INDUCING_POINTS: int = cli_args["points"]
