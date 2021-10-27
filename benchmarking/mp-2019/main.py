@@ -156,6 +156,8 @@ def main():
     if cli_args["train"]:
         # * Train the probabilistic model
         val_df = df.query("validation_set")
+        print(val_df.describe())
+        print(val_df.head())
         # Training time
         prob_model.train(train_df["graph"], train_df["e_form_per_atom"], cli_args["train"], val_df["graph"], val_df["e_form_per_atom"], callbacks=[get_tb_callback(NUM_INDUCING_POINTS)])
         prob_model.save(MODEL_DIR)
