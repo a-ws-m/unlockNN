@@ -162,15 +162,13 @@ def main():
 
     if cli_args["train"]:
         # * Train the probabilistic model
-        print(val_df["graph"].head())
-        # Training time
-        prob_model.train(train_df["graph"], train_df["e_form_per_atom"], cli_args["train"], val_df["graph"], val_df["e_form_per_atom"], callbacks=[get_tb_callback(NUM_INDUCING_POINTS)])
+        prob_model.train(train_df["graph"].values, train_df["e_form_per_atom"], cli_args["train"], val_df["graph"].values, val_df["e_form_per_atom"], callbacks=[get_tb_callback(NUM_INDUCING_POINTS)])
         prob_model.save(MODEL_DIR)
     
     if cli_args["eval"]:
         # * Evaluate prob_model
         train_df = df.query("training_set")
-        test_metrics = evaluate_uq_metrics(prob_model, test_df["graph"], test_df["e_form_per_atom"])
+        test_metrics = evaluate_uq_metrics(prob_model, test_df["graph"].values, test_df["e_form_per_atom"])
         with PROB_MODEL_METRICS_LOG.open("w") as f:
             json.dump(test_metrics, f)
 
