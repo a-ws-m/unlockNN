@@ -126,9 +126,16 @@ def main():
     print("Loading data...")
     df = load_data()
     train_df = df.query("training_set")
+    val_df = df.query("validation_set")
+    test_df = df.query("testing_set")
+
     print("Loaded data:")
     print(train_df.describe())
     print(train_df.head())
+    print(val_df.describe())
+    print(val_df.head())
+    print(test_df.describe())
+    print(test_df.head())
 
     if cli_args["points"]:
         NUM_INDUCING_POINTS: int = cli_args["points"]
@@ -138,7 +145,7 @@ def main():
         # * Evaluate MEGNet
         print("Evaluating MEGNet...")
         meg_model = load_meg_model()
-        test_mse = eval_meg_model(meg_model, train_df["graph"], train_df["e_form_per_atom"])
+        test_mse = eval_meg_model(meg_model, test_df["graph"], test_df["e_form_per_atom"])
         MEGNET_METRICS_LOG.write_text(f"{test_mse=}")
         print(f"Wrote evaluation results to {MEGNET_METRICS_LOG}")
 
@@ -155,9 +162,6 @@ def main():
 
     if cli_args["train"]:
         # * Train the probabilistic model
-        val_df = df.query("validation_set")
-        print(val_df.describe())
-        print(val_df.head())
         # Training time
         prob_model.train(train_df["graph"], train_df["e_form_per_atom"], cli_args["train"], val_df["graph"], val_df["e_form_per_atom"], callbacks=[get_tb_callback(NUM_INDUCING_POINTS)])
         prob_model.save(MODEL_DIR)
@@ -165,7 +169,7 @@ def main():
     if cli_args["eval"]:
         # * Evaluate prob_model
         train_df = df.query("training_set")
-        test_metrics = evaluate_uq_metrics(prob_model, train_df["graph"], train_df["e_form_per_atom"])
+        test_metrics = evaluate_uq_metrics(prob_model, test_df["graph"], test_df["e_form_per_atom"])
         with PROB_MODEL_METRICS_LOG.open("w") as f:
             json.dump(test_metrics, f)
 
