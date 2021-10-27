@@ -3,7 +3,7 @@
 <https://figshare.com/articles/dataset/Graphs_of_Materials_Project_20190401/8097992>
 
 """
-import datetime
+from datetime import datetime
 import json
 from argparse import ArgumentError, ArgumentParser
 from os import mkdir
