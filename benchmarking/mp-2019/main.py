@@ -169,7 +169,7 @@ def main():
         prob_model.set_frozen(to_freeze, recompile=False)
         prob_model.set_frozen(cli_args["comp"], freeze=False)
 
-        names = [weight.name for layer in prob_model.layers for weight in layer.weights]
+        names = [weight.name for layer in prob_model.model.layers for weight in layer.weights]
         dupe = set()
         seen = set()
         for name in names:
