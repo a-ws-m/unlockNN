@@ -169,6 +169,16 @@ def main():
         prob_model.set_frozen(to_freeze, recompile=False)
         prob_model.set_frozen(cli_args["comp"], freeze=False)
 
+        names = [weight.name for layer in prob_model.layers for weight in layer.weights]
+        dupe = set()
+        seen = set()
+        for name in names:
+            if name in seen:
+                dupe.add(name)
+            seen.add(name)
+        
+        print(f"Duplicate weight names: {dupe}")
+
         # * Train the probabilistic model
         prob_model.train(train_df["graph"].values, train_df["e_form_per_atom"], cli_args["train"], val_df["graph"].values, val_df["e_form_per_atom"], callbacks=[get_tb_callback(NUM_INDUCING_POINTS)])
         prob_model.save(MODEL_DIR)
