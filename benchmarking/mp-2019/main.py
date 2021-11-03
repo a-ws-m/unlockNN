@@ -8,7 +8,7 @@ import json
 from argparse import ArgumentError, ArgumentParser
 from os import mkdir
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -105,19 +105,21 @@ def parse_args() -> Dict[str, Any]:
     parser.add_argument("--train", "-t", type=int, dest="train", help="Number of training iterations.")
     parser.add_argument("--eval", "-e", action="store_true", dest="eval", help="Set this flag to evaluate the model.")
     points_arg = parser.add_argument("--points", "-p", type=int, dest="points", help="The number of model inducing index points.")
+    parser.add_argument("--comp", "-c", choices=["NN", "VGP"], nargs="*", default="VGP", dest="component", help="The component of the model to train.")
 
     args = parser.parse_args()
     meg: bool = args.meg
     train: Optional[int] = args.train
     evaluate: bool = args.eval
     points: Optional[int] = args.points
+    comp: List[str] = args.component
 
     if train or evaluate:
         # Points must be specified
         if not points:
             raise ArgumentError(points_arg, "Must specify number of inducing points for model for training or evaluation.")
 
-    return {"train": train, "eval": evaluate, "meg": meg, "points": points}
+    return {"train": train, "eval": evaluate, "meg": meg, "points": points, "comp": comp}
 
 def main():
     """Evaluate CLI arguments and execute main program flow."""
@@ -161,6 +163,12 @@ def main():
                 prob_model.save(MODEL_DIR, ckpt_path=None)
 
     if cli_args["train"]:
+        # * Freeze layers
+        freezable = ["VGP", "NN"]
+        to_freeze = [layer for layer in freezable if layer not in cli_args["comp"]]
+        prob_model.set_frozen(to_freeze, recompile=False)
+        prob_model.set_frozen(cli_args["comp"], freeze=False)
+
         # * Train the probabilistic model
         prob_model.train(train_df["graph"].values, train_df["e_form_per_atom"], cli_args["train"], val_df["graph"].values, val_df["e_form_per_atom"], callbacks=[get_tb_callback(NUM_INDUCING_POINTS)])
         prob_model.save(MODEL_DIR)
