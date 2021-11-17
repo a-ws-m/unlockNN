@@ -8,7 +8,7 @@ import json
 from argparse import ArgumentError, ArgumentParser
 from os import mkdir
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Set
 
 import numpy as np
 import pandas as pd
@@ -121,6 +121,19 @@ def parse_args() -> Dict[str, Any]:
 
     return {"train": train, "eval": evaluate, "meg": meg, "points": points, "comp": comp}
 
+def find_duplicate_weights(prob_model: MEGNetProbModel) -> Set[str]:
+    """Find any duplicate weight names in a model."""
+    names = [weight.name for layer in prob_model.model.layers for weight in layer.weights]
+    dupe = set()
+    seen = set()
+
+    for name in names:
+        if name in seen:
+            dupe.add(name)
+        seen.add(name)
+
+    return dupe    
+
 def main():
     """Evaluate CLI arguments and execute main program flow."""
     cli_args = parse_args()
@@ -154,6 +167,9 @@ def main():
     if cli_args["train"] or cli_args["eval"]:
         try:
             prob_model = MEGNetProbModel.load(MODEL_DIR)
+            dupes = find_duplicate_weights(prob_model)
+            print(f"Duplicate names after loading: {dupes}")
+
         except:
             if cli_args["eval"]:
                 raise ValueError("Couldn't load model; nothing to evaluate")
@@ -168,16 +184,8 @@ def main():
         to_freeze = [layer for layer in freezable if layer not in cli_args["comp"]]
         prob_model.set_frozen(to_freeze, recompile=False)
         prob_model.set_frozen(cli_args["comp"], freeze=False)
-
-        names = [weight.name for layer in prob_model.model.layers for weight in layer.weights]
-        dupe = set()
-        seen = set()
-        for name in names:
-            if name in seen:
-                dupe.add(name)
-            seen.add(name)
-        
-        print(f"Duplicate weight names: {dupe}")
+        dupes = find_duplicate_weights(prob_model)
+        print(f"Duplicate names after freezing: {dupes}")
 
         # * Train the probabilistic model
         prob_model.train(train_df["graph"].values, train_df["e_form_per_atom"], cli_args["train"], val_df["graph"].values, val_df["e_form_per_atom"], callbacks=[get_tb_callback(NUM_INDUCING_POINTS)])
