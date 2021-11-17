@@ -130,7 +130,8 @@ def find_duplicate_weights(prob_model: MEGNetProbModel) -> Set[str]:
     for name in names:
         if name in seen:
             dupe.add(name)
-        seen.add(name)
+        else:
+            seen.add(name)
 
     return dupe
 
@@ -167,11 +168,13 @@ def main():
     if cli_args["train"] or cli_args["eval"]:
         try:
             prob_model = MEGNetProbModel.load(MODEL_DIR)
+            print(f"{MODEL_DIR=}")
 
             dupes = find_duplicate_weights(prob_model)
             print(f"Duplicate names after loading: {dupes}")
 
         except:
+            print("Exception raised during loading")
             if cli_args["eval"]:
                 raise ValueError("Couldn't load model; nothing to evaluate")
             else:
