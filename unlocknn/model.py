@@ -292,7 +292,6 @@ class ProbNN(ABC):
             use_normalization=self.use_normalization,
             prediction_mode=True,
         )
-        pred_model.compile()
         pred_model.set_weights(weights)
         self.pred_model = pred_model
 
