@@ -132,7 +132,7 @@ def find_duplicate_weights(prob_model: MEGNetProbModel) -> Set[str]:
             dupe.add(name)
         seen.add(name)
 
-    return dupe    
+    return dupe
 
 def main():
     """Evaluate CLI arguments and execute main program flow."""
@@ -167,6 +167,7 @@ def main():
     if cli_args["train"] or cli_args["eval"]:
         try:
             prob_model = MEGNetProbModel.load(MODEL_DIR)
+
             dupes = find_duplicate_weights(prob_model)
             print(f"Duplicate names after loading: {dupes}")
 
@@ -185,6 +186,10 @@ def main():
 
         print(f"{to_freeze=}")
         print(f"{cli_args['comp']=}")
+        print(f"{type(cli_args['comp'])=}")
+
+        dupes = find_duplicate_weights(prob_model)
+        print(f"Duplicate names after computing which to freeze: {dupes}")
 
         prob_model.set_frozen(to_freeze, recompile=False)
 
