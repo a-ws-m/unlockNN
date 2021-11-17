@@ -182,10 +182,19 @@ def main():
         # * Freeze layers
         freezable = ["VGP", "NN"]
         to_freeze = [layer for layer in freezable if layer not in cli_args["comp"]]
-        # prob_model.set_frozen(to_freeze, recompile=False)
-        # prob_model.set_frozen(cli_args["comp"], freeze=False)
+
+        print(f"{to_freeze=}")
+        print(f"{cli_args['comp']=}")
+
+        prob_model.set_frozen(to_freeze, recompile=False)
+
         dupes = find_duplicate_weights(prob_model)
-        print(f"Duplicate names after freezing: {dupes}")
+        print(f"Duplicate names after freezing to_freeze: {dupes}")
+
+        prob_model.set_frozen(cli_args["comp"], freeze=False)
+
+        dupes = find_duplicate_weights(prob_model)
+        print(f"Duplicate names after thawing : {dupes}")
         raise ValueError("Duplicate weight names found.")
 
         # * Train the probabilistic model
