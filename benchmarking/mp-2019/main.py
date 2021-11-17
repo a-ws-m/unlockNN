@@ -194,12 +194,12 @@ def main():
         dupes = find_duplicate_weights(prob_model)
         print(f"Duplicate names after computing which to freeze: {dupes}")
 
-        prob_model.set_frozen(to_freeze, recompile=False)
+        prob_model.set_frozen(["VGP"], recompile=False)
 
         dupes = find_duplicate_weights(prob_model)
         print(f"Duplicate names after freezing to_freeze: {dupes}")
 
-        prob_model.set_frozen(cli_args["comp"], freeze=False)
+        prob_model.set_frozen(["NN"], freeze=False)
 
         dupes = find_duplicate_weights(prob_model)
         print(f"Duplicate names after thawing : {dupes}")
