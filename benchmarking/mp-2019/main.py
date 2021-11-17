@@ -105,7 +105,7 @@ def parse_args() -> Dict[str, Any]:
     parser.add_argument("--train", "-t", type=int, dest="train", help="Number of training iterations.")
     parser.add_argument("--eval", "-e", action="store_true", dest="eval", help="Set this flag to evaluate the model.")
     points_arg = parser.add_argument("--points", "-p", type=int, dest="points", help="The number of model inducing index points.")
-    parser.add_argument("--comp", "-c", choices=["NN", "VGP"], nargs="*", default="VGP", dest="component", help="The component of the model to train.")
+    parser.add_argument("--comp", "-c", choices=["NN", "VGP"], nargs="*", default=["VGP"], dest="component", help="The component of the model to train.")
 
     args = parser.parse_args()
     meg: bool = args.meg
@@ -182,10 +182,11 @@ def main():
         # * Freeze layers
         freezable = ["VGP", "NN"]
         to_freeze = [layer for layer in freezable if layer not in cli_args["comp"]]
-        prob_model.set_frozen(to_freeze, recompile=False)
-        prob_model.set_frozen(cli_args["comp"], freeze=False)
+        # prob_model.set_frozen(to_freeze, recompile=False)
+        # prob_model.set_frozen(cli_args["comp"], freeze=False)
         dupes = find_duplicate_weights(prob_model)
         print(f"Duplicate names after freezing: {dupes}")
+        raise ValueError("Duplicate weight names found.")
 
         # * Train the probabilistic model
         prob_model.train(train_df["graph"].values, train_df["e_form_per_atom"], cli_args["train"], val_df["graph"].values, val_df["e_form_per_atom"], callbacks=[get_tb_callback(NUM_INDUCING_POINTS)])
