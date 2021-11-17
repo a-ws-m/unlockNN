@@ -425,7 +425,7 @@ class ProbNN(ABC):
 
     @classmethod
     def load(
-        cls: "ProbNN", save_path: Path, load_ckpt: bool = True, **kwargs
+        cls: "ProbNN", save_path: PathLike, load_ckpt: bool = True, **kwargs
     ) -> "ProbNN":
         """Load a ProbNN from disk.
 
@@ -443,7 +443,7 @@ class ProbNN(ABC):
 
         """
         # Check the save path exists
-        if not save_path.exists():
+        if not Path(save_path).exists():
             raise FileNotFoundError(f"`{save_path}` does not exist.")
 
         paths = _get_save_paths(save_path)
