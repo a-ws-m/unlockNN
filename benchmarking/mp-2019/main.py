@@ -106,6 +106,7 @@ def parse_args() -> Dict[str, Any]:
     parser.add_argument("--eval", "-e", action="store_true", dest="eval", help="Set this flag to evaluate the model.")
     points_arg = parser.add_argument("--points", "-p", type=int, dest="points", help="The number of model inducing index points.")
     parser.add_argument("--comp", "-c", choices=["NN", "VGP"], nargs="*", default=["VGP"], dest="component", help="The component of the model to train.")
+    parser.add_argument("--debug", "-d", action="store_true", dest="debug", help="Set flag to just check for duplicate weights bug.")
 
     args = parser.parse_args()
     meg: bool = args.meg
@@ -113,13 +114,14 @@ def parse_args() -> Dict[str, Any]:
     evaluate: bool = args.eval
     points: Optional[int] = args.points
     comp: List[str] = args.component
+    debug: bool = args.debug
 
     if train or evaluate:
         # Points must be specified
         if not points:
             raise ArgumentError(points_arg, "Must specify number of inducing points for model for training or evaluation.")
 
-    return {"train": train, "eval": evaluate, "meg": meg, "points": points, "comp": comp}
+    return {"train": train, "eval": evaluate, "meg": meg, "points": points, "comp": comp, "debug": debug,}
 
 def find_duplicate_weights(prob_model: MEGNetProbModel) -> Set[str]:
     """Find any duplicate weight names in a model."""
@@ -139,19 +141,20 @@ def main():
     """Evaluate CLI arguments and execute main program flow."""
     cli_args = parse_args()
 
-    print("Loading data...")
-    df = load_data()
-    train_df = df.query("training_set")
-    val_df = df.query("validation_set")
-    test_df = df.query("testing_set")
+    if not cli_args["debug"]:
+        print("Loading data...")
+        df = load_data()
+        train_df = df.query("training_set")
+        val_df = df.query("validation_set")
+        test_df = df.query("testing_set")
 
-    print("Loaded data:")
-    print(train_df.describe())
-    print(train_df.head())
-    print(val_df.describe())
-    print(val_df.head())
-    print(test_df.describe())
-    print(test_df.head())
+        print("Loaded data:")
+        print(train_df.describe())
+        print(train_df.head())
+        print(val_df.describe())
+        print(val_df.head())
+        print(test_df.describe())
+        print(test_df.head())
 
     if cli_args["points"]:
         NUM_INDUCING_POINTS: int = cli_args["points"]
@@ -165,7 +168,7 @@ def main():
         MEGNET_METRICS_LOG.write_text(f"{test_mse=}")
         print(f"Wrote evaluation results to {MEGNET_METRICS_LOG}")
 
-    if cli_args["train"] or cli_args["eval"]:
+    if any([cli_args["train"], cli_args["eval"], cli_args["debug"]]):
         try:
             prob_model = MEGNetProbModel.load(MODEL_DIR)
             print(f"{MODEL_DIR=}")
@@ -194,16 +197,18 @@ def main():
         dupes = find_duplicate_weights(prob_model)
         print(f"Duplicate names after computing which to freeze: {dupes}")
 
-        prob_model.set_frozen(["VGP"], recompile=False)
+        prob_model.set_frozen(["NN"], freeze=False)
 
         dupes = find_duplicate_weights(prob_model)
         print(f"Duplicate names after freezing to_freeze: {dupes}")
 
-        prob_model.set_frozen(["NN"], freeze=False)
+        prob_model.set_frozen(["VGP"])
 
         dupes = find_duplicate_weights(prob_model)
         print(f"Duplicate names after thawing : {dupes}")
-        raise ValueError("Duplicate weight names found.")
+
+        if cli_args["debug"]:
+            return
 
         # * Train the probabilistic model
         prob_model.train(train_df["graph"].values, train_df["e_form_per_atom"], cli_args["train"], val_df["graph"].values, val_df["e_form_per_atom"], callbacks=[get_tb_callback(NUM_INDUCING_POINTS)])
