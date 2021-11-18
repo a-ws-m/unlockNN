@@ -159,6 +159,8 @@ class ProbNN(ABC):
         index_initializer: A custom initializer to use for the VGP index points.
         use_normalization: Whether to use a ``BatchNormalization`` layer before
             the VGP. Recommended for better training efficiency.
+        compile: Whether to compile the model for training. Not needed when loading
+            the model for inference only.
     
     Attributes:
         CONFIG_VARS: A list of attribute names, as strings, to include in metadata
@@ -359,7 +361,7 @@ class ProbNN(ABC):
 
     def compile(
         self,
-        kl_weight: float = 1.0,
+        new_kl_weight: Optional[float] = None,
         optimizer: keras.optimizers.Optimizer = tf.optimizers.Adam(),
         new_metrics: Optional[Metrics] = None,
     ):
@@ -368,13 +370,13 @@ class ProbNN(ABC):
         Recompilation is required whenever layers are (un)frozen.
 
         Args:
-            kl_weight: The relative weighting of the Kullback-Leibler divergence
-                in the loss function.
+            new_kl_weight: The relative weighting of the Kullback-Leibler divergence
+                in the loss function. Default (``None``) is to leave unchanged.
             optimizer: The model optimizer, needed for recompilation.
             new_metrics: New metrics with which to compile.
 
         """
-        loss = VariationalLoss(kl_weight)
+        loss = VariationalLoss(new_kl_weight if new_kl_weight is not None else self.kl_weight)
         if new_metrics is not None:
             self.metrics = new_metrics
         self.model.compile(optimizer, loss=loss, metrics=self.metrics)
@@ -428,6 +430,8 @@ class ProbNN(ABC):
     ) -> "ProbNN":
         """Load a ProbNN from disk.
 
+        Loaded models must be recompiled before 
+
         Args:
             save_path: The path to the model's save directory.
             load_ckpt: Whether to load the best checkpoint's weights, instead
@@ -459,7 +463,7 @@ class ProbNN(ABC):
 
         # Initialize...
         config.update(kwargs)
-        prob_model: ProbNN = cls(nn=nn, **config)
+        prob_model: ProbNN = cls(nn=nn, compile=False, **config)
 
         # ...and load weights
         to_load = paths["ckpt_path"] if load_ckpt else paths["weights_path"]
