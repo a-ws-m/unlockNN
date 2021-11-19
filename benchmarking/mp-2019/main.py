@@ -137,11 +137,23 @@ def find_duplicate_weights(prob_model: MEGNetProbModel) -> Set[str]:
 
     return dupe
 
+def check_frozen(prob_model: MEGNetProbModel, to_freeze: List[str], to_train: List[str]):
+    """Check that the appropriate layers are frozen in the probabilistic model."""
+    frozen = {"NN": prob_model.nn_frozen, "VGP": prob_model.vgp_frozen}
+    for layer in to_freeze:
+        if not frozen[layer]:
+            return False
+    for layer in to_train:
+        if frozen[layer]:
+            return False
+    return True
+
 def main():
     """Evaluate CLI arguments and execute main program flow."""
     cli_args = parse_args()
+    debug: bool = cli_args["debug"]
 
-    if not cli_args["debug"]:
+    if not debug:
         print("Loading data...")
         df = load_data()
         train_df = df.query("training_set")
@@ -194,21 +206,28 @@ def main():
         print(f"{cli_args['comp']=}")
         print(f"{type(cli_args['comp'])=}")
 
+        if debug:
+            dupes = find_duplicate_weights(prob_model)
+            print(f"Duplicate names after computing which to freeze: {dupes}")
+
+        prob_model.set_frozen(to_freeze, recompile=False)
+
+        if debug:
+            dupes = find_duplicate_weights(prob_model)
+            print(f"Duplicate names after freezing to_freeze: {dupes}")
+
+        prob_model.set_frozen(cli_args["comp"], freeze=False, recompile=True)
+
         dupes = find_duplicate_weights(prob_model)
-        print(f"Duplicate names after computing which to freeze: {dupes}")
-
-        prob_model.set_frozen(["NN"], freeze=False)
-
-        dupes = find_duplicate_weights(prob_model)
-        print(f"Duplicate names after freezing to_freeze: {dupes}")
-
-        prob_model.set_frozen(["VGP"])
-
-        dupes = find_duplicate_weights(prob_model)
-        print(f"Duplicate names after thawing : {dupes}")
-
-        if cli_args["debug"]:
+        if debug:
+            print(f"Duplicate names after thawing : {dupes}")
             return
+        if dupes:
+            raise ValueError(f"Duplicate weights found: {dupes}")
+        
+        # * Check frozen
+        if not check_frozen(prob_model, to_freeze, cli_args["comp"]):
+            raise ValueError("Layers not properly frozen.")
 
         # * Train the probabilistic model
         prob_model.train(train_df["graph"].values, train_df["e_form_per_atom"], cli_args["train"], val_df["graph"].values, val_df["e_form_per_atom"], callbacks=[get_tb_callback(NUM_INDUCING_POINTS)])
