@@ -269,7 +269,7 @@ class ProbNN(ABC):
 
         if recompile:
             self.compile(
-                kl_weight=self.kl_weight, optimizer=self.optimizer, **compilation_kwargs
+                optimizer=self.optimizer, **compilation_kwargs
             )
 
     @abstractmethod
