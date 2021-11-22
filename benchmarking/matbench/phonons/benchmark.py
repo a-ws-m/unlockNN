@@ -10,5 +10,6 @@ if __name__ == "__main__":
         "last phdos peak",
         root_dir=Path(__file__).parent,
         prefer_ckpt=False,
+        batch_size=8,
     )
     trainer.execute()

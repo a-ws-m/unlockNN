@@ -36,6 +36,7 @@ def train_megnet(
     checkpoint_path: Path,
     verbose: int = 2,
     callbacks=[],
+    batch_size: int = 32,
 ):
     """Train a MEGNetModel."""
     ckpt_callback = ModelCheckpoint(
@@ -52,6 +53,7 @@ def train_megnet(
         automatic_correction=False,
         callbacks=callbacks,
         verbose=verbose,
+        batch_size=batch_size,
     )
 
 
@@ -70,13 +72,17 @@ class UnlockTrainer(ABC):
     """Handler for training and benchmarking unlockNN models."""
 
     def __init__(
-        self, root_dir: Path = Path(__file__).parent, prefer_ckpt: bool = True
+        self,
+        root_dir: Path = Path(__file__).parent,
+        prefer_ckpt: bool = True,
+        batch_size: int = 32,
     ) -> None:
         """Initialize parameters."""
         super().__init__()
 
         self.root_dir = root_dir
         self.prefer_ckpt = prefer_ckpt
+        self.batch_size = batch_size
 
         # * Read command line arguments
         self.init_cli_args()
@@ -146,6 +152,7 @@ class UnlockTrainer(ABC):
                     self.checkpoint_dir,
                     self.verbosity,
                     [self.tb_callback],
+                    self.batch_size,
                 )
                 self.meg_model.save_model(str(self.model_dir))
 
@@ -194,7 +201,7 @@ class UnlockTrainer(ABC):
                     self.data.val_targets,
                     callbacks=[self.tb_callback],
                     ckpt_path=self.checkpoint_dir,
-                    batch_size=32,
+                    batch_size=self.batch_size,
                     verbose=self.verbosity,
                 )
                 self.prob_model.save(self.model_dir, self.checkpoint_dir)
