@@ -69,11 +69,14 @@ class Dataset(NamedTuple):
 class UnlockTrainer(ABC):
     """Handler for training and benchmarking unlockNN models."""
 
-    def __init__(self, root_dir: Path = Path(__file__).parent) -> None:
+    def __init__(
+        self, root_dir: Path = Path(__file__).parent, prefer_ckpt: bool = True
+    ) -> None:
         """Initialize parameters."""
         super().__init__()
 
         self.root_dir = root_dir
+        self.prefer_ckpt = prefer_ckpt
 
         # * Read command line arguments
         self.init_cli_args()
@@ -146,6 +149,14 @@ class UnlockTrainer(ABC):
                 )
                 self.meg_model.save_model(str(self.model_dir))
 
+            if self.val:
+                # * Validation
+                val_mse, val_mae = eval_meg_model(
+                    self.meg_model, self.data.val_input, self.data.val_targets
+                )
+                meg_val_metrics = pd.Series({"mse": val_mse, "mae": val_mae})
+                print(meg_val_metrics)
+
             if self.evaluate:
                 # * Evaluation routine
                 mse, mae = eval_meg_model(
@@ -153,11 +164,14 @@ class UnlockTrainer(ABC):
                 )
                 meg_metrics = pd.Series({"mse": mse, "mae": mae})
                 meg_metrics.to_csv(self.test_result_path)
+                print(meg_metrics)
 
         else:
             # * Handle MEGNetProbModel creation, training and evaluation
             if self.model_dir.exists():
-                self.prob_model = MEGNetProbModel.load(self.model_dir)
+                self.prob_model = MEGNetProbModel.load(
+                    self.model_dir, load_ckpt=self.prefer_ckpt
+                )
             else:
                 if self.evaluate:
                     raise ArgumentError(
@@ -184,12 +198,15 @@ class UnlockTrainer(ABC):
                     verbose=self.verbosity,
                 )
                 self.prob_model.save(self.model_dir, self.checkpoint_dir)
+
+            if self.val:
                 prob_val_metrics = pd.Series(
                     evaluate_uq_metrics(
                         self.prob_model, self.data.val_input, self.data.val_targets
                     )
                 )
                 prob_val_metrics.to_csv(self.val_prob_metrics_dir)
+                print(prob_val_metrics)
 
             if self.evaluate:
                 prob_metrics = pd.Series(
@@ -198,6 +215,7 @@ class UnlockTrainer(ABC):
                     )
                 )
                 prob_metrics.to_csv(self.test_result_path)
+                print(prob_metrics)
 
     def handle_freezing(self):
         """Freeze the appropriate probabilistic layers."""
@@ -212,7 +230,7 @@ class UnlockTrainer(ABC):
         if self.meg_model_dir.exists():
             # Load it
             self.meg_model = MEGNetModel.from_file(str(self.meg_model_dir))
-        if self.checkpoint_dir.exists():
+        if self.checkpoint_dir.exists() and self.prefer_ckpt:
             self.meg_model.model.load_weights(self.checkpoint_dir)
             print(f"Loaded weights from {self.checkpoint_dir}")
         return self.meg_model
@@ -240,6 +258,7 @@ class UnlockTrainer(ABC):
         self.meg: bool = args.meg
         self.train: Optional[int] = args.train
         self.evaluate: bool = args.eval
+        self.val: bool = args.val
         self.points: Optional[int] = args.points
         self.comp: List[str] = args.component
         self.verbosity: int = args.verbosity
@@ -275,6 +294,12 @@ class UnlockTrainer(ABC):
             action="store_true",
             dest="eval",
             help="Set this flag to evaluate the model.",
+        )
+        parser.add_argument(
+            "--val",
+            action="store_true",
+            dest="val",
+            help="Set this flag to evaluate the model on the validation data.",
         )
         parser.add_argument(
             "--points",

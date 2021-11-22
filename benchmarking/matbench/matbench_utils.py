@@ -67,12 +67,13 @@ class MatbenchTrainer(utils.UnlockTrainer):
         data_url: str,
         target_col: str,
         root_dir: Path = Path(__file__).parent,
+        prefer_ckpt: bool = True,
     ) -> None:
         """Initialize training suite."""
         self.data_name = data_name
         self.data_url = data_url
         self.target_col = target_col
-        super().__init__(root_dir=root_dir)
+        super().__init__(root_dir=root_dir, prefer_ckpt=prefer_ckpt)
 
     def load_data(self) -> utils.Dataset:
         """Load matbench data."""
