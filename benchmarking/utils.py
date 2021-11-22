@@ -69,9 +69,11 @@ class Dataset(NamedTuple):
 class UnlockTrainer(ABC):
     """Handler for training and benchmarking unlockNN models."""
 
-    def __init__(self) -> None:
+    def __init__(self, root_dir: Path = Path(__file__).parent) -> None:
         """Initialize parameters."""
         super().__init__()
+
+        self.root_dir = root_dir
 
         # * Read command line arguments
         self.init_cli_args()
@@ -142,6 +144,7 @@ class UnlockTrainer(ABC):
                     self.verbosity,
                     [self.tb_callback],
                 )
+                self.meg_model.save_model(str(self.model_dir))
 
             if self.evaluate:
                 # * Evaluation routine
@@ -161,7 +164,7 @@ class UnlockTrainer(ABC):
                         None, f"No MEGNetProbModel found at {self.model_dir}"
                     )
                 # Create model
-                if not load_meg_model():
+                if not self.load_meg_model():
                     raise ArgumentError(
                         f"Cannot make new MEGNetProbModel: no MEGNetModel at {self.meg_model_dir}"
                     )
@@ -180,6 +183,7 @@ class UnlockTrainer(ABC):
                     batch_size=32,
                     verbose=self.verbosity,
                 )
+                self.prob_model.save(self.model_dir, self.checkpoint_dir)
                 prob_val_metrics = pd.Series(
                     evaluate_uq_metrics(
                         self.prob_model, self.data.val_input, self.data.val_targets
@@ -208,15 +212,13 @@ class UnlockTrainer(ABC):
         if self.meg_model_dir.exists():
             # Load it
             self.meg_model = MEGNetModel.from_file(str(self.meg_model_dir))
+        if self.checkpoint_dir.exists():
+            self.meg_model.model.load_weights(self.checkpoint_dir)
+            print(f"Loaded weights from {self.checkpoint_dir}")
         return self.meg_model
 
     @property
-    def root_dir(self) -> Path:
-        """Get the root directory of the project."""
-        return Path(".")
-
     @abstractmethod
-    @property
     def task_name(self) -> str:
         """Human readable name segment to describe the name of this task."""
         ...
@@ -250,7 +252,9 @@ class UnlockTrainer(ABC):
 
     def setup_argparse(self) -> ArgumentParser:
         """Set up expected command line arguments in order to decide what procedures to run."""
-        parser = ArgumentParser(f"Script for model training and evaluation on {self.task_name}.")
+        parser = ArgumentParser(
+            f"Script for model training and evaluation on {self.task_name}."
+        )
         parser.add_argument(
             "--meg",
             "-m",
@@ -289,7 +293,9 @@ class UnlockTrainer(ABC):
             help="The component of the model to train.",
         )
         parser.add_argument(
-            "--verbosity" "-v",
+            "--verbosity",
+            "-v",
+            type=int,
             choices=range(3),
             default=1,
             dest="verbosity",
@@ -317,7 +323,9 @@ class UnlockTrainer(ABC):
     @property
     def model_dirname(self) -> str:
         """Get the name of the model's directory."""
-        dirname = f"{self.task_name}-{self.points}"
+        dirname = self.task_name
+        if not self.meg:
+            dirname += f"-{self.points}"
         if self.fold is not None:
             dirname += f"-{self.fold}"
         return dirname
@@ -346,7 +354,7 @@ class UnlockTrainer(ABC):
         """Get the checkpoint file path."""
         return (
             self.megnet_models_dir if self.meg else self.prob_models_dir
-        ) / f"{self.task_name}-ckpt.h5"
+        ) / f"{self.model_dirname}-ckpt.h5"
 
     @property
     def test_result_path(self) -> Path:

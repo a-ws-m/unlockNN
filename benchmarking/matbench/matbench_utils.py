@@ -61,12 +61,18 @@ def convert_to_graphs(df: pd.DataFrame) -> pd.DataFrame:
 class MatbenchTrainer(utils.UnlockTrainer):
     """Training suite for matbench regression benchmarks."""
 
-    def __init__(self, data_name: str, data_url: str, target_col: str) -> None:
+    def __init__(
+        self,
+        data_name: str,
+        data_url: str,
+        target_col: str,
+        root_dir: Path = Path(__file__).parent,
+    ) -> None:
         """Initialize training suite."""
         self.data_name = data_name
         self.data_url = data_url
         self.target_col = target_col
-        super().__init__()
+        super().__init__(root_dir=root_dir)
 
     def load_data(self) -> utils.Dataset:
         """Load matbench data."""
@@ -106,6 +112,7 @@ class MatbenchTrainer(utils.UnlockTrainer):
             test_targets=df[self.target_col].iloc[testing_indexes],
         )
 
+    @property
     def task_name(self) -> str:
         return self.data_name
 
@@ -117,3 +124,7 @@ class MatbenchTrainer(utils.UnlockTrainer):
 
         self.raw_data_file = self.data_dir / f"{self.data_name}.pkl"
         self.graph_data_file = self.data_dir / f"{self.data_name}_graphs.pkl"
+
+    @property
+    def num_folds(self) -> int:
+        return 5
