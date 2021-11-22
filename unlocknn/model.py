@@ -161,7 +161,7 @@ class ProbNN(ABC):
             the VGP. Recommended for better training efficiency.
         compile: Whether to compile the model for training. Not needed when loading
             the model for inference only.
-    
+
     Attributes:
         CONFIG_VARS: A list of attribute names, as strings, to include in metadata
             when saving. These variables will be saved in a ``config.json`` file
@@ -268,9 +268,7 @@ class ProbNN(ABC):
             self.model.layers[-1].trainable = not freeze
 
         if recompile:
-            self.compile(
-                optimizer=self.optimizer, **compilation_kwargs
-            )
+            self.compile(optimizer=self.optimizer, **compilation_kwargs)
 
     @abstractmethod
     def train(self, *args, **kwargs) -> None:
@@ -376,7 +374,9 @@ class ProbNN(ABC):
             new_metrics: New metrics with which to compile.
 
         """
-        loss = VariationalLoss(new_kl_weight if new_kl_weight is not None else self.kl_weight)
+        loss = VariationalLoss(
+            new_kl_weight if new_kl_weight is not None else self.kl_weight
+        )
         if new_metrics is not None:
             self.metrics = new_metrics
         self.model.compile(optimizer, loss=loss, metrics=self.metrics)
@@ -430,7 +430,7 @@ class ProbNN(ABC):
     ) -> "ProbNN":
         """Load a ProbNN from disk.
 
-        Loaded models must be recompiled before 
+        Loaded models must be recompiled before training.
 
         Args:
             save_path: The path to the model's save directory.
@@ -545,7 +545,7 @@ class MEGNetProbModel(ProbNN):
         callbacks: List[tf.keras.callbacks.Callback] = [],
         use_default_ckpt_handler: bool = True,
         ckpt_path: PathLike = "checkpoint.h5",
-        batch_size: int = 128,
+        batch_size: int = 32,
         scrub_failed_structs: bool = False,
         verbose: Literal[0, 1, 2] = 2,
     ):
