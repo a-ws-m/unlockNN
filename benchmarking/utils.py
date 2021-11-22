@@ -250,7 +250,7 @@ class UnlockTrainer(ABC):
 
     def setup_argparse(self) -> ArgumentParser:
         """Set up expected command line arguments in order to decide what procedures to run."""
-        parser = ArgumentParser()
+        parser = ArgumentParser(f"Script for model training and evaluation on {self.task_name}.")
         parser.add_argument(
             "--meg",
             "-m",
