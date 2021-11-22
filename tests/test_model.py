@@ -5,8 +5,9 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 import random as python_random
+from collections import Counter
 from pathlib import Path
-from typing import List
+from typing import List, Set
 
 import numpy as np
 import pytest
@@ -30,6 +31,10 @@ def structs_to_graphs(meg_model: MEGNetModel, structures: List[Structure]) -> Li
     dummy_targets = [0.0] * len(structures)
     return meg_model.get_all_graphs_targets(structures, dummy_targets)[0]
 
+def find_duplicate_weights(prob_model: MEGNetProbModel) -> Set[str]:
+    """Find duplicate weight names."""
+    count = Counter(weight.name for weight in prob_model.model.weights)
+    return set(pair[0] for pair in count.items() if pair[1] > 1)
 
 @pytest.fixture
 def split_data(datadir: Path) -> SplitData:
@@ -171,7 +176,11 @@ def test_meg_weights_preserved(datadir: Path, use_norm: bool):
 
 @pytest.mark.parametrize("use_norm", [True, False])
 def test_freezing(datadir: Path, use_norm: bool):
-    """Test that model layers can be frozen and thawed."""
+    """Test that model layers can be frozen and thawed.
+    
+    Also ensure that no weight names are duplicated during this process.
+    
+    """
     model_name = "prob_e_form_" + ("" if use_norm else "un") + "norm"
     prob_model = MEGNetProbModel.load(datadir / model_name, load_ckpt=False)
     
@@ -203,3 +212,12 @@ def test_freezing(datadir: Path, use_norm: bool):
     prob_model.set_frozen(["NN", "VGP"], False)
     assert not prob_model.nn_frozen
     assert not prob_model.vgp_frozen
+
+    # Now in two steps
+    prob_model.set_frozen(["VGP"], recompile=False)
+    prob_model.set_frozen(["NN"], freeze=False)
+    assert not prob_model.nn_frozen
+    assert prob_model.vgp_frozen
+
+    duplicate_names = find_duplicate_weights(prob_model)
+    assert len(duplicate_names) == 0
