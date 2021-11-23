@@ -138,7 +138,7 @@ class UnlockTrainer(ABC):
                         None, f"No MEGNetModel found at {self.model_dir}"
                     )
                 # Create model
-                self.meg_model = MEGNetModel(**default_megnet_config())
+                self.meg_model = MEGNetModel(**default_megnet_config(), loss="mae")
 
             if self.train:
                 # * Training routine
