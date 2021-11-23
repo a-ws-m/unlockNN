@@ -54,7 +54,9 @@ def download_data(url: str, save_dir: Path) -> pd.DataFrame:
 def convert_to_graphs(df: pd.DataFrame) -> pd.DataFrame:
     """Convert Structures in a DataFrame to graphs."""
     dummy_model = MEGNetModel(**default_megnet_config())
-    _, df["graph"] = create_megnet_input(dummy_model, df["structure"], shuffle=False)
+    _, df["graph"] = create_megnet_input(
+        dummy_model, df["structure"].values, shuffle=False
+    )
     return df
 
 
@@ -108,12 +110,12 @@ class MatbenchTrainer(utils.UnlockTrainer):
         )
 
         return utils.Dataset(
-            train_input=df["graph"].iloc[training_indexes],
-            train_targets=df[self.target_col].iloc[training_indexes],
-            val_input=df["graph"].iloc[val_indexes],
-            val_targets=df[self.target_col].iloc[val_indexes],
-            test_input=df["graph"].iloc[testing_indexes],
-            test_targets=df[self.target_col].iloc[testing_indexes],
+            train_input=df["graph"].iloc[training_indexes].values,
+            train_targets=df[self.target_col].iloc[training_indexes].values,
+            val_input=df["graph"].iloc[val_indexes].values,
+            val_targets=df[self.target_col].iloc[val_indexes].values,
+            test_input=df["graph"].iloc[testing_indexes].values,
+            test_targets=df[self.target_col].iloc[testing_indexes].values,
         )
 
     @property
