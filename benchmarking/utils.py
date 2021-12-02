@@ -72,16 +72,12 @@ class UnlockTrainer(ABC):
     """Handler for training and benchmarking unlockNN models."""
 
     def __init__(
-        self,
-        root_dir: Path = Path(__file__).parent,
-        prefer_ckpt: bool = True,
-        batch_size: int = 32,
+        self, root_dir: Path = Path(__file__).parent, batch_size: int = 32,
     ) -> None:
         """Initialize parameters."""
         super().__init__()
 
         self.root_dir = root_dir
-        self.prefer_ckpt = prefer_ckpt
         self.batch_size = batch_size
 
         # * Read command line arguments
@@ -177,7 +173,7 @@ class UnlockTrainer(ABC):
             # * Handle MEGNetProbModel creation, training and evaluation
             if self.model_dir.exists():
                 self.prob_model = MEGNetProbModel.load(
-                    self.model_dir, load_ckpt=self.prefer_ckpt
+                    self.model_dir, load_ckpt=(not self.ignore_ckpt)
                 )
             else:
                 if self.evaluate:
@@ -237,7 +233,7 @@ class UnlockTrainer(ABC):
         if self.meg_model_dir.exists():
             # Load it
             self.meg_model = MEGNetModel.from_file(str(self.meg_model_dir))
-        if self.checkpoint_dir.exists() and self.prefer_ckpt:
+        if self.checkpoint_dir.exists() and not self.ignore_ckpt:
             self.meg_model.model.load_weights(self.checkpoint_dir)
             print(f"Loaded weights from {self.checkpoint_dir}")
         return self.meg_model
@@ -269,6 +265,7 @@ class UnlockTrainer(ABC):
         self.points: Optional[int] = args.points
         self.comp: List[str] = args.component
         self.verbosity: int = args.verbosity
+        self.ignore_ckpt: bool = args.load_ckpt
         try:
             self.fold: int = args.fold
         except AttributeError:
@@ -332,6 +329,15 @@ class UnlockTrainer(ABC):
             default=1,
             dest="verbosity",
             help="The level of verbosity for Keras operations.",
+        )
+        parser.add_argument(
+            "--ignore-ckpt",
+            action="store_false",
+            dest="ignore_ckpt",
+            help=(
+                "Whether to ignore saved checkpoints (corresponding to the best validation performance),"
+                " preferring to load the latest saved weights."
+            ),
         )
 
         if self.num_folds:
