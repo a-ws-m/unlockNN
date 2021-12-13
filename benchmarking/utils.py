@@ -71,9 +71,7 @@ class Dataset(NamedTuple):
 class UnlockTrainer(ABC):
     """Handler for training and benchmarking unlockNN models."""
 
-    def __init__(
-        self, batch_size: int = 32,
-    ) -> None:
+    def __init__(self, batch_size: int = 32) -> None:
         """Initialize parameters."""
         super().__init__()
 
@@ -124,6 +122,8 @@ class UnlockTrainer(ABC):
 
         # * Start by loading data
         self.data = self.load_data()
+        if self.data_only:
+            return
 
         if self.meg:
             # * Handle MEGNetModel creation, training and evaluation
@@ -266,6 +266,7 @@ class UnlockTrainer(ABC):
         self.verbosity: int = args.verbosity
         self.ignore_ckpt: bool = args.load_ckpt
         self.root_dir: Path = Path(args.root_dir)
+        self.data_only: bool = args.data_only
         try:
             self.fold: int = args.fold
         except AttributeError:
@@ -344,7 +345,12 @@ class UnlockTrainer(ABC):
             "-d",
             default=".",
             dest="root_dir",
-            help="The directory to save models, logs and data."
+            help="The directory to save models, logs and data.",
+        )
+        parser.add_argument(
+            "--data-only",
+            action="store_true",
+            help="If this flag is set, program will exit immediately after (down)loading data.",
         )
 
         if self.num_folds:
