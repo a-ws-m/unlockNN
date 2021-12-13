@@ -8,6 +8,5 @@ if __name__ == "__main__":
         "matbench_perovskites",
         "https://ml.materialsproject.org/projects/matbench_perovskites.json.gz",
         "e_form",
-        root_dir=Path(__file__).parent,
     )
     trainer.execute()

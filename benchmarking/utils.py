@@ -72,12 +72,11 @@ class UnlockTrainer(ABC):
     """Handler for training and benchmarking unlockNN models."""
 
     def __init__(
-        self, root_dir: Path = Path(__file__).parent, batch_size: int = 32,
+        self, batch_size: int = 32,
     ) -> None:
         """Initialize parameters."""
         super().__init__()
 
-        self.root_dir = root_dir
         self.batch_size = batch_size
 
         # * Read command line arguments
@@ -266,6 +265,7 @@ class UnlockTrainer(ABC):
         self.comp: List[str] = args.component
         self.verbosity: int = args.verbosity
         self.ignore_ckpt: bool = args.load_ckpt
+        self.root_dir: Path = Path(args.root_dir)
         try:
             self.fold: int = args.fold
         except AttributeError:
@@ -338,6 +338,13 @@ class UnlockTrainer(ABC):
                 "Whether to ignore saved checkpoints (corresponding to the best validation performance),"
                 " preferring to load the latest saved weights."
             ),
+        )
+        parser.add_argument(
+            "--root-dir",
+            "-d",
+            default=".",
+            dest="root_dir",
+            help="The directory to save models, logs and data."
         )
 
         if self.num_folds:

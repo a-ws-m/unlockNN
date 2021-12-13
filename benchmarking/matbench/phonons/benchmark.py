@@ -8,7 +8,6 @@ if __name__ == "__main__":
         "matbench_phonons",
         "https://ml.materialsproject.org/projects/matbench_phonons.json.gz",
         "last phdos peak",
-        root_dir=Path(__file__).parent,
         batch_size=8,
     )
     trainer.execute()
