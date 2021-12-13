@@ -350,6 +350,7 @@ class UnlockTrainer(ABC):
         parser.add_argument(
             "--data-only",
             action="store_true",
+            dest="data_only",
             help="If this flag is set, program will exit immediately after (down)loading data.",
         )
 
