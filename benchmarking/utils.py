@@ -264,7 +264,7 @@ class UnlockTrainer(ABC):
         self.points: Optional[int] = args.points
         self.comp: List[str] = args.component
         self.verbosity: int = args.verbosity
-        self.ignore_ckpt: bool = args.load_ckpt
+        self.ignore_ckpt: bool = args.ignore_ckpt
         self.root_dir: Path = Path(args.root_dir)
         self.data_only: bool = args.data_only
         self.fold: int = args.fold
