@@ -121,7 +121,7 @@ class UnlockTrainer(ABC):
             )
 
         # * Start by loading data
-        self.data = self.load_data()
+        self.data = self.load_data(download_only=self.data_only)
         if self.data_only:
             return
 
@@ -364,7 +364,7 @@ class UnlockTrainer(ABC):
         return parser
 
     @abstractmethod
-    def load_data(self) -> Dataset:
+    def load_data(self, download_only: bool = False) -> Optional[Dataset]:
         """Load data from disk for training/evaluation."""
         ...
 
