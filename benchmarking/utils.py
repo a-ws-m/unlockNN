@@ -267,12 +267,9 @@ class UnlockTrainer(ABC):
         self.ignore_ckpt: bool = args.load_ckpt
         self.root_dir: Path = Path(args.root_dir)
         self.data_only: bool = args.data_only
-        try:
-            self.fold: int = args.fold
-        except AttributeError:
-            # `required=True` means this won't happen if we need the cli_arg;
-            # only if we don't, so this can pass silently.
-            ...
+        self.fold: int = args.fold
+        if self.fold is None and not self.data_only:
+            raise ValueError("Must supply `--fold` for training or evaluation.")
 
     def setup_argparse(self) -> ArgumentParser:
         """Set up expected command line arguments in order to decide what procedures to run."""
@@ -360,7 +357,6 @@ class UnlockTrainer(ABC):
                 "-f",
                 type=int,
                 choices=range(self.num_folds),
-                required=True,
                 dest="fold",
                 help="Which fold of data to use for training or evaluation.",
             )
