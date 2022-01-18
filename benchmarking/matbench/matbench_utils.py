@@ -4,7 +4,7 @@ import json
 from math import floor
 from os import mkdir
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import pandas as pd
 import requests
@@ -68,16 +68,15 @@ class MatbenchTrainer(utils.UnlockTrainer):
         data_name: str,
         data_url: str,
         target_col: str,
-        root_dir: Path = Path(__file__).parent,
         batch_size: int = 32,
     ) -> None:
         """Initialize training suite."""
         self.data_name = data_name
         self.data_url = data_url
         self.target_col = target_col
-        super().__init__(root_dir=root_dir, batch_size=batch_size)
+        super().__init__(batch_size=batch_size)
 
-    def load_data(self) -> utils.Dataset:
+    def load_data(self, download_only: bool = False) -> Optional[utils.Dataset]:
         """Load matbench data."""
         if self.graph_data_file.exists():
             df = pd.read_pickle(self.graph_data_file)
@@ -88,6 +87,9 @@ class MatbenchTrainer(utils.UnlockTrainer):
                 raw_df = download_data(self.data_url, self.raw_data_file)
             df = convert_to_graphs(raw_df)
             df.to_pickle(self.graph_data_file)
+        
+        if download_only:
+            return
 
         # 5-fold splitting per matbench rules
         kf = KFold(n_splits=5, shuffle=True, random_state=18012019)

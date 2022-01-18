@@ -71,13 +71,10 @@ class Dataset(NamedTuple):
 class UnlockTrainer(ABC):
     """Handler for training and benchmarking unlockNN models."""
 
-    def __init__(
-        self, root_dir: Path = Path(__file__).parent, batch_size: int = 32,
-    ) -> None:
+    def __init__(self, batch_size: int = 32) -> None:
         """Initialize parameters."""
         super().__init__()
 
-        self.root_dir = root_dir
         self.batch_size = batch_size
 
         # * Read command line arguments
@@ -125,7 +122,9 @@ class UnlockTrainer(ABC):
             )
 
         # * Start by loading data
-        self.data = self.load_data()
+        self.data = self.load_data(download_only=self.data_only)
+        if self.data_only:
+            return
 
         if self.meg:
             # * Handle MEGNetModel creation, training and evaluation
@@ -267,13 +266,12 @@ class UnlockTrainer(ABC):
         self.points: Optional[int] = args.points
         self.comp: List[str] = args.component
         self.verbosity: int = args.verbosity
-        self.ignore_ckpt: bool = args.load_ckpt
-        try:
-            self.fold: int = args.fold
-        except AttributeError:
-            # `required=True` means this won't happen if we need the cli_arg;
-            # only if we don't, so this can pass silently.
-            ...
+        self.ignore_ckpt: bool = args.ignore_ckpt
+        self.root_dir: Path = Path(args.root_dir)
+        self.data_only: bool = args.data_only
+        self.fold: int = args.fold
+        if self.fold is None and not self.data_only:
+            raise ValueError("Must supply `--fold` for training or evaluation.")
 
     def setup_argparse(self) -> ArgumentParser:
         """Set up expected command line arguments in order to decide what procedures to run."""
@@ -341,6 +339,19 @@ class UnlockTrainer(ABC):
                 " preferring to load the latest saved weights."
             ),
         )
+        parser.add_argument(
+            "--root-dir",
+            "-d",
+            default=".",
+            dest="root_dir",
+            help="The directory to save models, logs and data.",
+        )
+        parser.add_argument(
+            "--data-only",
+            action="store_true",
+            dest="data_only",
+            help="If this flag is set, program will exit immediately after (down)loading data.",
+        )
 
         if self.num_folds:
             parser.add_argument(
@@ -348,7 +359,6 @@ class UnlockTrainer(ABC):
                 "-f",
                 type=int,
                 choices=range(self.num_folds),
-                required=True,
                 dest="fold",
                 help="Which fold of data to use for training or evaluation.",
             )
@@ -356,7 +366,7 @@ class UnlockTrainer(ABC):
         return parser
 
     @abstractmethod
-    def load_data(self) -> Dataset:
+    def load_data(self, download_only: bool = False) -> Optional[Dataset]:
         """Load data from disk for training/evaluation."""
         ...
 
