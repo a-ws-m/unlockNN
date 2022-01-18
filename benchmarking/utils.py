@@ -119,8 +119,9 @@ class UnlockTrainer(ABC):
         # * Ensure we're not training after we've evaluated test metrics
         if self.test_result_path.exists() and self.train:
             raise ArgumentError(
+                None,
                 f"The model has already been evaluated on the test set ({self.test_result_path})"
-                "and cannot be trained any more."
+                "and cannot be trained any more.",
             )
 
         # * Start by loading data
@@ -183,7 +184,8 @@ class UnlockTrainer(ABC):
                 # Create model
                 if not self.load_meg_model():
                     raise ArgumentError(
-                        f"Cannot make new MEGNetProbModel: no MEGNetModel at {self.meg_model_dir}"
+                        None,
+                        f"Cannot make new MEGNetProbModel: no MEGNetModel at {self.meg_model_dir}",
                     )
                 self.prob_model = MEGNetProbModel(self.meg_model, self.points)
 
