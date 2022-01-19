@@ -370,11 +370,10 @@ class UnlockTrainer(ABC):
         """Load data from disk for training/evaluation."""
         ...
 
-    @property
-    def model_dirname(self) -> str:
+    def model_dirname(self, include_points: bool = True) -> str:
         """Get the name of the model's directory."""
         dirname = self.task_name
-        if not self.meg:
+        if include_points:
             dirname += f"-{self.points}"
         if self.fold is not None:
             dirname += f"-{self.fold}"
@@ -383,28 +382,28 @@ class UnlockTrainer(ABC):
     @property
     def meg_model_dir(self) -> Path:
         """Get the directory of the MEGNetModel specified by command line args."""
-        return self.megnet_models_dir / self.model_dirname
+        return self.megnet_models_dir / self.model_dirname(False)
 
     @property
     def model_dir(self) -> Path:
         """Get the models directory for the model specified by command line args."""
         return (
             self.megnet_models_dir if self.meg else self.prob_models_dir
-        ) / self.model_dirname
+        ) / self.model_dirname(not self.meg)
 
     @property
     def log_dir(self) -> Path:
         """Get the logs directory for the model model specified by command line args."""
         return (
             self.megnet_logs_dir if self.meg else self.prob_logs_dir
-        ) / self.model_dirname
+        ) / self.model_dirname(not self.meg)
 
     @property
     def checkpoint_dir(self) -> Path:
         """Get the checkpoint file path."""
         return (
             self.megnet_models_dir if self.meg else self.prob_models_dir
-        ) / f"{self.model_dirname}-ckpt.h5"
+        ) / f"{self.model_dirname(not self.meg)}-ckpt.h5"
 
     @property
     def test_result_path(self) -> Path:
