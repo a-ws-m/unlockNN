@@ -422,8 +422,7 @@ class UnlockTrainer(ABC):
     @property
     def val_prob_metrics_dir(self) -> Path:
         """Get the path to this run's validation metrics."""
-        return (
-            self.log_dir / "val-metrics-"
-            + str(datetime.now().strftime("%Y.%m.%d.%H.%M.%S"))
-            + ".csv"
+        return self.log_dir / (
+            "val-metrics-" + str(datetime.now().strftime("%Y.%m.%d.%H.%M.%S")) + ".csv"
         )
+
