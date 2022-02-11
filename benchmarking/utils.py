@@ -332,7 +332,7 @@ class UnlockTrainer(ABC):
         )
         parser.add_argument(
             "--ignore-ckpt",
-            action="store_false",
+            action="store_true",
             dest="ignore_ckpt",
             help=(
                 "Whether to ignore saved checkpoints (corresponding to the best validation performance),"
