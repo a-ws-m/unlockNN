@@ -668,8 +668,10 @@ class MEGNetProbModel(ProbNN):
         """
         self.update_pred_model()
 
-        if not isinstance(input, list):
-            # Just one to predict
+        try:
+            len(input)
+        except TypeError:
+            # Make it a sequence
             input = [input]
 
         inputs, graphs = create_megnet_input(
