@@ -1,9 +1,10 @@
 ---
 created: 2021-12-13T21:07:50.278Z
-updated: 2021-12-13T21:07:50.277Z
+updated: 2022-03-02T12:49:40.635Z
 assigned: ""
 progress: 0
 tags: []
+completed: 2022-03-02T12:49:40.635Z
 ---
 
 # Train matbench: fine-tuning

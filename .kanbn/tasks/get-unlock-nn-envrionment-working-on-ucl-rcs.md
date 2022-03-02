@@ -1,10 +1,11 @@
 ---
 created: 2021-12-13T21:05:23.752Z
-updated: 2021-12-13T21:05:52.130Z
+updated: 2022-03-02T12:49:36.614Z
 assigned: ""
 progress: 0
 tags: []
 started: 2021-12-13T00:00:00.000Z
+completed: 2022-03-02T12:49:36.615Z
 ---
 
 # Get unlockNN envrionment working on UCL RCS

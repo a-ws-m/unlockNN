@@ -11,12 +11,13 @@ completedColumns:
 
 ## Todo
 
-- [train-matbench-megnet-models](tasks/train-matbench-megnet-models.md)
-- [train-matbench-fine-tuning](tasks/train-matbench-fine-tuning.md)
-- [train-matbench-variation-point-locations](tasks/train-matbench-variation-point-locations.md)
-
 ## In Progress
 
-- [get-unlock-nn-envrionment-working-on-ucl-rcs](tasks/get-unlock-nn-envrionment-working-on-ucl-rcs.md)
+- [correct-megnet-evaluation-metrics](tasks/correct-megnet-evaluation-metrics.md)
 
 ## Done
+
+- [get-unlock-nn-envrionment-working-on-ucl-rcs](tasks/get-unlock-nn-envrionment-working-on-ucl-rcs.md)
+- [train-matbench-variation-point-locations](tasks/train-matbench-variation-point-locations.md)
+- [train-matbench-fine-tuning](tasks/train-matbench-fine-tuning.md)
+- [train-matbench-megnet-models](tasks/train-matbench-megnet-models.md)
