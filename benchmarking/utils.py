@@ -22,7 +22,7 @@ def eval_meg_model(
     meg_model: MEGNetModel, graphs: Iterable[MEGNetGraph], targets: Iterable[float]
 ) -> Tuple[float, float]:
     """Evaluate the MSE and MAE of a given MEGNetModel."""
-    predictions = meg_model.predict_graphs(graphs)
+    predictions = meg_model.predict_graphs(graphs).flatten()
     return MSE(predictions, None, targets), MAE(predictions, None, targets)
 
 
