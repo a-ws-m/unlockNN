@@ -3,9 +3,10 @@ from collections import defaultdict
 from operator import itemgetter
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 
@@ -13,6 +14,124 @@ Pathy = Union[str, Path]
 
 
 sns.set_style()
+
+
+def calc_pis(
+    residuals: np.ndarray, stddevs: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Calculate probability intervals for given set of residuals and standard deviations."""
+    norm_resids = residuals / stddevs
+    predicted_pi = np.linspace(0, 1, 100)
+    bounds = norm.ppf(predicted_pi)
+    observed_pi = np.array([np.count_nonzero(norm_resids <= bound) for bound in bounds])
+    observed_pi = observed_pi / norm_resids.size
+    return predicted_pi, observed_pi
+
+
+def parity_plot(
+    prob_df: pd.DataFrame,
+    fname: str,
+    target_name: str,
+    top_padding: float = 1.0,
+    bottom_padding: float = 0.5,
+):
+    """Plot the parity with 95% CI error bars for a dataset."""
+    PREDICTED_NAME = f"Predicted {target_name}"
+    OBSERVED_NAME = f"Observed {target_name}"
+
+    # MARKER_COLOUR = tuple(np.array([168, 190, 240]) / 255)
+
+    plot_df = pd.DataFrame(
+        {
+            PREDICTED_NAME: prob_df["Predicted value"],
+            OBSERVED_NAME: prob_df["True value"],
+            "CI": prob_df["Predicted standard deviation"] * 2,
+            "# Inducing index points": prob_df["# Inducing points"],
+        }
+    )
+    Y_LIMS = (
+        min(plot_df[PREDICTED_NAME].min(), plot_df[OBSERVED_NAME].min())
+        - bottom_padding,
+        max(plot_df[PREDICTED_NAME].max(), plot_df[OBSERVED_NAME].max()) + top_padding,
+    )
+    g = sns.FacetGrid(data=plot_df, height=7, col="# Inducing index points", margin_titles=True)
+    g.map_dataframe(
+        plt.errorbar,
+        OBSERVED_NAME,
+        PREDICTED_NAME,
+        "CI",
+        marker="o",
+        # color=MARKER_COLOUR,
+        linestyle="",
+        alpha=0.7,
+        markeredgewidth=1,
+        markeredgecolor="black",
+    )
+
+    g.map(
+        sns.lineplot,
+        x=Y_LIMS,
+        y=Y_LIMS,
+        label="Ideal",
+        color="black",
+        linestyle="--",
+        marker="",
+    )
+    g.set(xlim=Y_LIMS, ylim=Y_LIMS, aspect="equal")
+    g.set_titles(col_template="{col_name} points")
+    plt.savefig(fname, transparent=True, bbox_inches="tight")
+
+
+def plot_calibration(prob_df: pd.DataFrame, fname):
+    """Plot a calibration curve for a given dataset."""
+    PREDICTED_NAME = "Predicted cumulative distribution"
+    OBSERVED_NAME = "Observed cumulative distribution"
+
+    # LINE_COLOUR = tuple(np.array([0, 40, 85]) / 255)
+    # FILL_COLOUR = tuple(np.array([203, 216, 246]) / 255)
+
+    data = None
+    for num_inducing_points, subdf in prob_df.groupby("# Inducing points"):
+        predicted_pi, observed_pi = calc_pis(
+            subdf["True value"] - subdf["Predicted value"],
+            subdf["Predicted standard deviation"],
+        )
+        sub_plot_df = pd.DataFrame({PREDICTED_NAME: predicted_pi, OBSERVED_NAME: observed_pi})
+        sub_plot_df["# Inducing index points"] = num_inducing_points
+        if data is None:
+            data = sub_plot_df
+        else:
+            data = pd.concat([data, sub_plot_df], ignore_index=True)
+    
+    g = sns.relplot(
+        data=data,
+        x=PREDICTED_NAME,
+        y=OBSERVED_NAME,
+        kind="line",
+        # color=LINE_COLOUR,
+        col="# Inducing index points",
+        label="Actual",
+        facet_kws={"margin_titles": True},
+    )
+    g.map(
+        sns.lineplot,
+        x=(0, 1),
+        y=(0, 1),
+        color="black",
+        linestyle="--",
+        marker="",
+        label="Ideal",
+    )
+    g.set(xlim=(0, 1), ylim=(0, 1), aspect="equal")
+    for (_, num_inducing_points), ax in g.axes_dict.items():
+        data_slice = data[data["# Inducing index points"] == num_inducing_points]
+        ax.fill_between(
+            data_slice[OBSERVED_NAME],
+            data_slice[OBSERVED_NAME],
+            data_slice[PREDICTED_NAME],
+            # color=FILL_COLOUR,
+        )
+    plt.savefig(fname, transparent=True, bbox_inches="tight")
 
 
 def read_prob_results(
@@ -115,6 +234,29 @@ class ResultsLoader:
                 model_dirs.append((int(match.group("fold")), direct))
         return [item[1] for item in sorted(model_dirs, key=itemgetter(0))]
 
+    def get_all_prob_predictions(self) -> pd.DataFrame:
+        """Get a dataframe with the combined test set predictions across all folds."""
+        template_df = None
+        for num_inducing_points, paths_ in self.prob_results_directories().items():
+            for path_ in paths_:
+                loaded_df = pd.read_csv(path_ / "predictions.csv", index_col=0)
+                loaded_df["# Inducing points"] = num_inducing_points
+                if template_df is None:
+                    template_df = loaded_df
+                else:
+                    template_df = pd.concat([template_df, loaded_df], ignore_index=True)
+        return template_df
+
+    def calibration_plot(self, fname: str):
+        """Make a calibration plot for the test set predictions."""
+        predictions_df = self.get_all_prob_predictions()
+        plot_calibration(predictions_df, fname)
+    
+    def parity_plot(self, fname: str, target_name: str):
+        """Make a parity plot for the test set predictions."""
+        # TODO: Parity plot with a sensible number of points
+        ...
+
     def plot_metric(
         self,
         fname: Pathy,
@@ -135,10 +277,12 @@ class ResultsLoader:
         """
         prob_result_dirs = self.prob_results_directories()
         plot_order = [f"Unlock-{points}" for points in sorted(prob_result_dirs.keys())]
-        prob_df = read_prob_results(prob_result_dirs)
+        prob_df = read_prob_results(prob_result_dirs, self.metric_fname)
         if include_base:
             base_df = read_base_results(
-                self.base_results_directories(), base_model_name=self.base_model_name
+                self.base_results_directories(),
+                base_model_name=self.base_model_name,
+                metric_fname=self.metric_fname,
             )
             plot_df = pd.concat([base_df, prob_df], ignore_index=True)
             plot_order.insert(0, self.base_model_name)
