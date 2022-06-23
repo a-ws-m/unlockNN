@@ -10,6 +10,7 @@ from os import mkdir
 from pathlib import Path
 from typing import Iterable, List, NamedTuple, Optional, Tuple
 
+import numpy as np
 import pandas as pd
 from megnet.models import MEGNetModel
 from tensorflow.python.keras.callbacks import ModelCheckpoint, TensorBoard
@@ -220,6 +221,9 @@ class UnlockTrainer(ABC):
                 )
                 prob_metrics.to_csv(self.test_result_path)
                 print(prob_metrics)
+                predictions, stddevs = self.prob_model.predict(self.data.test_input)
+                self.write_predictions(predictions, stddevs)
+
 
     def handle_freezing(self):
         """Freeze the appropriate probabilistic layers."""
@@ -426,3 +430,13 @@ class UnlockTrainer(ABC):
             "val-metrics-" + str(datetime.now().strftime("%Y.%m.%d.%H.%M.%S")) + ".csv"
         )
 
+    @property
+    def predictions_path(self) -> Path:
+        """Get the path to this fold's predictions."""
+        return self.log_dir / "predictions.csv"
+
+    def write_predictions(self, predictions: np.ndarray, stddevs: np.ndarray):
+        """Write probabilistic model's predictions to disk."""
+        data = {"Predicted value": predictions, "Predicted standard deviation": stddevs, "True value": self.data.train_targets}
+        df = pd.DataFrame(data)
+        df.to_csv(self.predictions_path)
