@@ -437,6 +437,6 @@ class UnlockTrainer(ABC):
 
     def write_predictions(self, predictions: np.ndarray, stddevs: np.ndarray):
         """Write probabilistic model's predictions to disk."""
-        data = {"Predicted value": predictions, "Predicted standard deviation": stddevs, "True value": self.data.train_targets}
+        data = {"Predicted value": predictions, "Predicted standard deviation": stddevs, "True value": self.data.test_targets}
         df = pd.DataFrame(data)
         df.to_csv(self.predictions_path)
