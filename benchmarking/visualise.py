@@ -54,7 +54,9 @@ def parity_plot(
         - bottom_padding,
         max(plot_df[PREDICTED_NAME].max(), plot_df[OBSERVED_NAME].max()) + top_padding,
     )
-    g = sns.FacetGrid(data=plot_df, height=7, col="# Inducing index points", margin_titles=True)
+    g = sns.FacetGrid(
+        data=plot_df, height=7, col="# Inducing index points", margin_titles=True
+    )
     g.map_dataframe(
         plt.errorbar,
         OBSERVED_NAME,
@@ -96,13 +98,15 @@ def plot_calibration(prob_df: pd.DataFrame, fname):
             subdf["True value"] - subdf["Predicted value"],
             subdf["Predicted standard deviation"],
         )
-        sub_plot_df = pd.DataFrame({PREDICTED_NAME: predicted_pi, OBSERVED_NAME: observed_pi})
+        sub_plot_df = pd.DataFrame(
+            {PREDICTED_NAME: predicted_pi, OBSERVED_NAME: observed_pi}
+        )
         sub_plot_df["# Inducing index points"] = num_inducing_points
         if data is None:
             data = sub_plot_df
         else:
             data = pd.concat([data, sub_plot_df], ignore_index=True)
-    
+
     g = sns.relplot(
         data=data,
         x=PREDICTED_NAME,
@@ -244,18 +248,29 @@ class ResultsLoader:
                 if template_df is None:
                     template_df = loaded_df
                 else:
-                    template_df = pd.concat([template_df, loaded_df], ignore_index=True)
+                    template_df = pd.concat([template_df, loaded_df])
         return template_df
 
     def calibration_plot(self, fname: str):
         """Make a calibration plot for the test set predictions."""
         predictions_df = self.get_all_prob_predictions()
         plot_calibration(predictions_df, fname)
-    
-    def parity_plot(self, fname: str, target_name: str):
+
+    def parity_plot(
+        self,
+        fname: str,
+        target_name: str,
+        num_scatter: int,
+        top_padding: float = 1.0,
+        bottom_padding: float = 0.5,
+    ):
         """Make a parity plot for the test set predictions."""
-        # TODO: Parity plot with a sensible number of points
-        ...
+        predictions_df = self.get_all_prob_predictions()
+        predictions_df["data_idx"] = predictions_df.index
+        num_test_points = int(predictions_df["data_idx"].max())
+        idxs_to_plot = np.random.randint(0, num_test_points + 1, num_scatter)
+        plot_df = predictions_df[predictions_df["num_test_points"] in idxs_to_plot]
+        parity_plot(plot_df, fname, target_name, top_padding, bottom_padding)
 
     def plot_metric(
         self,
