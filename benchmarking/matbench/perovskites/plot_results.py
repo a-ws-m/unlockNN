@@ -26,3 +26,11 @@ if __name__ == "__main__":
         title="Matbench Perovskites: Uncertainty Goodness",
         zero_lim=False,
     )
+    rl.parity_plot(
+        "perovskites-parity.png",
+        target_name="Formation energy / eV per atom",
+        num_scatter=150,
+    )
+    rl.calibration_plot(
+        "perovskites-calibration.png"
+    )

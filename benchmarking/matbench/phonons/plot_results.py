@@ -26,3 +26,11 @@ if __name__ == "__main__":
         title="Matbench Phonons: Uncertainty Goodness",
         zero_lim=False,
     )
+    rl.parity_plot(
+        "phonons-parity.png",
+        target_name="$\omega^{max} phonons$",
+        num_scatter=150,
+    )
+    rl.calibration_plot(
+        "phonons-calibration.png"
+    )

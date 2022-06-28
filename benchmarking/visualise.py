@@ -1,7 +1,7 @@
 """Tools for visualising benchmarking results."""
+import re
 from collections import defaultdict
 from operator import itemgetter
-import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from scipy.stats import norm
 
 Pathy = Union[str, Path]
 
@@ -47,6 +48,7 @@ def parity_plot(
             OBSERVED_NAME: prob_df["True value"],
             "CI": prob_df["Predicted standard deviation"] * 2,
             "# Inducing index points": prob_df["# Inducing points"],
+            "Fold": prob_df["Fold"],
         }
     )
     Y_LIMS = (
@@ -55,7 +57,7 @@ def parity_plot(
         max(plot_df[PREDICTED_NAME].max(), plot_df[OBSERVED_NAME].max()) + top_padding,
     )
     g = sns.FacetGrid(
-        data=plot_df, height=7, col="# Inducing index points", margin_titles=True
+        data=plot_df, height=7, col="# Inducing index points", margin_titles=True, hue="Fold"
     )
     g.map_dataframe(
         plt.errorbar,
@@ -81,7 +83,11 @@ def parity_plot(
     )
     g.set(xlim=Y_LIMS, ylim=Y_LIMS, aspect="equal")
     g.set_titles(col_template="{col_name} points")
-    plt.savefig(fname, transparent=True, bbox_inches="tight")
+    plt.savefig(
+        fname,
+        # transparent=True,
+        bbox_inches="tight"
+    )
 
 
 def plot_calibration(prob_df: pd.DataFrame, fname):
@@ -112,7 +118,7 @@ def plot_calibration(prob_df: pd.DataFrame, fname):
         x=PREDICTED_NAME,
         y=OBSERVED_NAME,
         kind="line",
-        # color=LINE_COLOUR,
+        color="black",
         col="# Inducing index points",
         label="Actual",
         facet_kws={"margin_titles": True},
@@ -127,15 +133,20 @@ def plot_calibration(prob_df: pd.DataFrame, fname):
         label="Ideal",
     )
     g.set(xlim=(0, 1), ylim=(0, 1), aspect="equal")
-    for (_, num_inducing_points), ax in g.axes_dict.items():
+    for num_inducing_points, ax in g.axes_dict.items():
         data_slice = data[data["# Inducing index points"] == num_inducing_points]
         ax.fill_between(
-            data_slice[OBSERVED_NAME],
-            data_slice[OBSERVED_NAME],
             data_slice[PREDICTED_NAME],
+            data_slice[PREDICTED_NAME],
+            data_slice[OBSERVED_NAME],
+            alpha=0.7,
             # color=FILL_COLOUR,
         )
-    plt.savefig(fname, transparent=True, bbox_inches="tight")
+    plt.savefig(
+        fname,
+        # transparent=True,
+        bbox_inches="tight"
+    )
 
 
 def read_prob_results(
@@ -200,7 +211,7 @@ class ResultsLoader:
         self.base_model_name = base_model_name
         self.metric_fname = metric_fname
 
-    def prob_results_directories(self) -> Dict[int, List[Path]]:
+    def prob_results_directories(self, with_fold: bool=False) -> Dict[int, List[Path]]:
         """Get the results directories for the model.
 
         Returns:
@@ -223,7 +234,9 @@ class ResultsLoader:
 
         for key, val in model_dirs.items():
             # Sort based on fold
-            model_dirs[key] = [tup[1] for tup in sorted(val, key=itemgetter(0))]
+            model_dirs[key] = list(sorted(val, key=itemgetter(0)))
+            if not with_fold:
+                model_dirs[key] = [tup[1] for tup in model_dirs[key]]
 
         return dict(model_dirs)
 
@@ -241,10 +254,11 @@ class ResultsLoader:
     def get_all_prob_predictions(self) -> pd.DataFrame:
         """Get a dataframe with the combined test set predictions across all folds."""
         template_df = None
-        for num_inducing_points, paths_ in self.prob_results_directories().items():
-            for path_ in paths_:
+        for num_inducing_points, entries in self.prob_results_directories(with_fold=True).items():
+            for fold, path_ in entries:
                 loaded_df = pd.read_csv(path_ / "predictions.csv", index_col=0)
                 loaded_df["# Inducing points"] = num_inducing_points
+                loaded_df["Fold"] = fold
                 if template_df is None:
                     template_df = loaded_df
                 else:
@@ -269,7 +283,7 @@ class ResultsLoader:
         predictions_df["data_idx"] = predictions_df.index
         num_test_points = int(predictions_df["data_idx"].max())
         idxs_to_plot = np.random.randint(0, num_test_points + 1, num_scatter)
-        plot_df = predictions_df[predictions_df["num_test_points"] in idxs_to_plot]
+        plot_df = predictions_df[[data_idx in idxs_to_plot for data_idx in predictions_df["data_idx"]]]
         parity_plot(plot_df, fname, target_name, top_padding, bottom_padding)
 
     def plot_metric(
