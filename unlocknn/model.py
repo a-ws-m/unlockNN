@@ -463,7 +463,7 @@ class ProbNN(ABC):
 
         # Initialize...
         config.update(kwargs)
-        prob_model: ProbNN = cls(nn=nn, compile=False, **config)
+        prob_model: ProbNN = cls(nn=nn, **config)
 
         # ...and load weights
         to_load = paths["ckpt_path"] if load_ckpt else paths["weights_path"]
