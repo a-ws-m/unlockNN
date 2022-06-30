@@ -51,9 +51,19 @@ residuals align with the predicted distributions. For a well calibrated model,
 5% of residuals should lie below the 95% confidence interval and 5% above it. By
 plotting the normalized cumulative distribution of the probability percentile in
 which each residual lies, we can visually inspect how over-/underconfident a
-model is.
+model is. See also this [paper](https://doi.org/10.1088/2632-2153/ab7e1a).
 
 To produce the calibration curves and parity plots here, the predictions for
 every model on their respective test subset were concatenated. In this way,
 there was exactly one prediction for every point in the dataset. The residual of
 each prediction contributed to the cumulative distribution.
+
+### Perovskites calibration
+
+![Perovskites probabilistic parity plots](perovskites-parity.png)
+![Perovskites calibration curves](perovskites-calibration.png)
+
+### Phonons calibration
+
+![Phonons probabilistic parity plots](phonons-parity.png)
+![Phonons calibration curves](phonons-calibration.png)

@@ -85,7 +85,8 @@ def parity_plot(
     g.set(xlim=Y_LIMS, ylim=Y_LIMS, aspect="equal")
     g.set_titles(col_template="{col_name} points")
     if title:
-        plt.title(title)
+        g.fig.subplots_adjust(top=0.9)
+        g.fig.suptitle(title)
     plt.savefig(
         fname,
         # transparent=True,
@@ -146,7 +147,8 @@ def plot_calibration(prob_df: pd.DataFrame, fname: str, title: str):
             # color=FILL_COLOUR,
         )
     if title:
-        plt.title(title)
+        g.fig.subplots_adjust(top=0.9)
+        g.fig.suptitle(title)
     plt.savefig(
         fname,
         # transparent=True,
