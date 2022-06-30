@@ -55,6 +55,10 @@ It can be installed using `conda env create -f dev_environment.yml`.
 
 Full documentation is available for the project [here](https://unlocknn.readthedocs.io/en/latest/).
 
+## Benchmarks
+
+Benchmark details and results can be found in the [benchmarking](benchmarking/) subdirectory.
+
 ## License and attribution
 
 Code licensed under the MIT License.

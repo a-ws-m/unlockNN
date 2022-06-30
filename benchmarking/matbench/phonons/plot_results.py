@@ -8,6 +8,7 @@ if __name__ == "__main__":
     meg_res_dir = result_dir / "megnet"
     prob_res_dir = result_dir / "prob"
     rl = visualise.ResultsLoader(meg_res_dir, prob_res_dir, 5, base_model_name="MEGNet")
+    rl.get_average_metrics()
     rl.plot_metric(
         "phonons-mae-change.png",
         title="Matbench Phonons: Adding UnlockNN",
@@ -30,7 +31,9 @@ if __name__ == "__main__":
         "phonons-parity.png",
         target_name="$\omega^{max} phonons$",
         num_scatter=150,
+        title="Matbench Phonons: Probabilistic parity plots"
     )
     rl.calibration_plot(
-        "phonons-calibration.png"
+        "phonons-calibration.png",
+        "Matbench Phonons: Calibration curves"
     )
