@@ -58,6 +58,12 @@ every model on their respective test subset were concatenated. In this way,
 there was exactly one prediction for every point in the dataset. The residual of
 each prediction contributed to the cumulative distribution.
 
+Parity plots are also provided to give a more intuitive way of visualising the
+confidence intervals predicted by the models. In each case, two standard
+deviations (the 95% confidence interval) are plotted for 125 randomly sampled
+points. The same materials (i.e. same inputs) and the respective predictions
+are plotted for each choice of number of inducing index points.
+
 ### Perovskites calibration
 
 ![Perovskites probabilistic parity plots](perovskites-parity.png)
