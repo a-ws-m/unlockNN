@@ -33,6 +33,7 @@ def parity_plot(
     prob_df: pd.DataFrame,
     fname: str,
     target_name: str,
+    title: str = "",
     top_padding: float = 1.0,
     bottom_padding: float = 0.5,
 ):
@@ -70,7 +71,7 @@ def parity_plot(
         alpha=0.7,
         markeredgewidth=1,
         markeredgecolor="black",
-    )
+    ).add_legend()
 
     g.map(
         sns.lineplot,
@@ -83,6 +84,8 @@ def parity_plot(
     )
     g.set(xlim=Y_LIMS, ylim=Y_LIMS, aspect="equal")
     g.set_titles(col_template="{col_name} points")
+    if title:
+        plt.title(title)
     plt.savefig(
         fname,
         # transparent=True,
@@ -90,7 +93,7 @@ def parity_plot(
     )
 
 
-def plot_calibration(prob_df: pd.DataFrame, fname):
+def plot_calibration(prob_df: pd.DataFrame, fname: str, title: str):
     """Plot a calibration curve for a given dataset."""
     PREDICTED_NAME = "Predicted cumulative distribution"
     OBSERVED_NAME = "Observed cumulative distribution"
@@ -142,6 +145,8 @@ def plot_calibration(prob_df: pd.DataFrame, fname):
             alpha=0.7,
             # color=FILL_COLOUR,
         )
+    if title:
+        plt.title(title)
     plt.savefig(
         fname,
         # transparent=True,
@@ -265,16 +270,17 @@ class ResultsLoader:
                     template_df = pd.concat([template_df, loaded_df])
         return template_df
 
-    def calibration_plot(self, fname: str):
+    def calibration_plot(self, fname: str, title: str = ""):
         """Make a calibration plot for the test set predictions."""
         predictions_df = self.get_all_prob_predictions()
-        plot_calibration(predictions_df, fname)
+        plot_calibration(predictions_df, fname, title)
 
     def parity_plot(
         self,
         fname: str,
         target_name: str,
         num_scatter: int,
+        title: str = "",
         top_padding: float = 1.0,
         bottom_padding: float = 0.5,
     ):
@@ -284,7 +290,7 @@ class ResultsLoader:
         num_test_points = int(predictions_df["data_idx"].max())
         idxs_to_plot = np.random.randint(0, num_test_points + 1, num_scatter)
         plot_df = predictions_df[[data_idx in idxs_to_plot for data_idx in predictions_df["data_idx"]]]
-        parity_plot(plot_df, fname, target_name, top_padding, bottom_padding)
+        parity_plot(plot_df, fname, target_name, title, top_padding, bottom_padding)
 
     def plot_metric(
         self,
@@ -352,3 +358,15 @@ class ResultsLoader:
             plt.title(title)
         plt.tight_layout()
         plt.savefig(fname, transparent=transparent)
+
+    def get_average_metrics(self):
+        """Print the average metrics for all the results grouped by model name."""
+        prob_result_dirs = self.prob_results_directories()
+        prob_df = read_prob_results(prob_result_dirs, self.metric_fname)
+        base_df = read_base_results(
+            self.base_results_directories(),
+            base_model_name=self.base_model_name,
+            metric_fname=self.metric_fname,
+        )
+        plot_df = pd.concat([base_df, prob_df], ignore_index=True)
+        print(plot_df.groupby("Model name").mean())
