@@ -5,11 +5,11 @@ from os import PathLike
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 try:
     from typing import Literal, get_args
-except ImportError:
+except ImportError:  # pragma: no cover
     from typish import Literal, get_args
 
 
@@ -23,7 +23,7 @@ from pymatgen.core import Structure
 from tensorflow.python.keras.utils import losses_utils
 
 from .kernel_layers import KernelLayer, RBFKernelFn, load_kernel
-from .megnet_utils import create_megnet_input, Targets
+from .megnet_utils import create_megnet_input, Targets, ModelInput
 
 tfd = tfp.distributions
 
@@ -159,7 +159,9 @@ class ProbNN(ABC):
         index_initializer: A custom initializer to use for the VGP index points.
         use_normalization: Whether to use a ``BatchNormalization`` layer before
             the VGP. Recommended for better training efficiency.
-    
+        compile: Whether to compile the model for training. Not needed when loading
+            the model for inference only.
+
     Attributes:
         CONFIG_VARS: A list of attribute names, as strings, to include in metadata
             when saving. These variables will be saved in a ``config.json`` file
@@ -266,9 +268,7 @@ class ProbNN(ABC):
             self.model.layers[-1].trainable = not freeze
 
         if recompile:
-            self.compile(
-                kl_weight=self.kl_weight, optimizer=self.optimizer, **compilation_kwargs
-            )
+            self.compile(optimizer=self.optimizer, **compilation_kwargs)
 
     @abstractmethod
     def train(self, *args, **kwargs) -> None:
@@ -292,7 +292,6 @@ class ProbNN(ABC):
             use_normalization=self.use_normalization,
             prediction_mode=True,
         )
-        pred_model.compile()
         pred_model.set_weights(weights)
         self.pred_model = pred_model
 
@@ -360,7 +359,7 @@ class ProbNN(ABC):
 
     def compile(
         self,
-        kl_weight: float = 1.0,
+        new_kl_weight: Optional[float] = None,
         optimizer: keras.optimizers.Optimizer = tf.optimizers.Adam(),
         new_metrics: Optional[Metrics] = None,
     ):
@@ -369,13 +368,15 @@ class ProbNN(ABC):
         Recompilation is required whenever layers are (un)frozen.
 
         Args:
-            kl_weight: The relative weighting of the Kullback-Leibler divergence
-                in the loss function.
+            new_kl_weight: The relative weighting of the Kullback-Leibler divergence
+                in the loss function. Default (``None``) is to leave unchanged.
             optimizer: The model optimizer, needed for recompilation.
             new_metrics: New metrics with which to compile.
 
         """
-        loss = VariationalLoss(kl_weight)
+        loss = VariationalLoss(
+            new_kl_weight if new_kl_weight is not None else self.kl_weight
+        )
         if new_metrics is not None:
             self.metrics = new_metrics
         self.model.compile(optimizer, loss=loss, metrics=self.metrics)
@@ -425,9 +426,11 @@ class ProbNN(ABC):
 
     @classmethod
     def load(
-        cls: "ProbNN", save_path: Path, load_ckpt: bool = True, **kwargs
+        cls: "ProbNN", save_path: PathLike, load_ckpt: bool = True, **kwargs
     ) -> "ProbNN":
         """Load a ProbNN from disk.
+
+        Loaded models must be recompiled before training.
 
         Args:
             save_path: The path to the model's save directory.
@@ -443,7 +446,7 @@ class ProbNN(ABC):
 
         """
         # Check the save path exists
-        if not save_path.exists():
+        if not Path(save_path).exists():
             raise FileNotFoundError(f"`{save_path}` does not exist.")
 
         paths = _get_save_paths(save_path)
@@ -534,25 +537,25 @@ class MEGNetProbModel(ProbNN):
 
     def train(
         self,
-        structs: List[Structure],
+        inputs: List[Structure],
         targets: Targets,
         epochs: int,
-        val_structs: Optional[List[Structure]] = None,
+        val_inputs: Optional[List[ModelInput]] = None,
         val_targets: Optional[Targets] = None,
         callbacks: List[tf.keras.callbacks.Callback] = [],
         use_default_ckpt_handler: bool = True,
         ckpt_path: PathLike = "checkpoint.h5",
-        batch_size: int = 128,
+        batch_size: int = 32,
         scrub_failed_structs: bool = False,
         verbose: Literal[0, 1, 2] = 2,
     ):
         """Train the model.
 
         Args:
-            structs: A list of training crystal structures.
+            inputs: A list of training crystal structures or graphs.
             targets: A list of training target values.
             epochs: The number of training epochs.
-            val_structs: A list of validation crystal structures.
+            val_inputs: A list of validation crystal structures or graphs.
             val_targets: A list of validation target values.
             callbacks: A list of additional callbacks.
             use_default_ckpt_handler: Whether to use the default
@@ -568,17 +571,17 @@ class MEGNetProbModel(ProbNN):
         """
         # Convert structures to graphs for model input
         train_gen, train_graphs = create_megnet_input(
-            self.meg_model, structs, targets, batch_size, scrub_failed_structs
+            self.meg_model, inputs, targets, batch_size, scrub_failed_structs
         )
         steps_per_train = int(np.ceil(len(train_graphs) / batch_size))
 
         val_gen = None
         val_graphs = None
         steps_per_val = None
-        if val_structs is not None and val_targets is not None:
+        if val_inputs is not None and val_targets is not None:
             val_gen, val_graphs = create_megnet_input(
                 self.meg_model,
-                val_structs,
+                val_inputs,
                 val_targets,
                 batch_size,
                 scrub_failed_structs,
@@ -633,7 +636,7 @@ class MEGNetProbModel(ProbNN):
         )
 
     def predict(
-        self, input: Union[Structure, Iterable[Structure]], batch_size: int = 128
+        self, input: Union[ModelInput, List[ModelInput]], batch_size: int = 128
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Predict target values and standard deviations for a given input.
 
@@ -665,12 +668,14 @@ class MEGNetProbModel(ProbNN):
         """
         self.update_pred_model()
 
-        if isinstance(input, Structure):
-            # Just one to predict
+        try:
+            len(input)
+        except TypeError:
+            # Make it a sequence
             input = [input]
 
         inputs, graphs = create_megnet_input(
-            self.meg_model, structs=input, batch_size=batch_size, shuffle=False
+            self.meg_model, inputs=input, batch_size=batch_size, shuffle=False
         )
         num_atoms = [len(graph["atom"]) for graph in graphs]
 

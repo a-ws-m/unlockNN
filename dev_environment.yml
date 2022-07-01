@@ -12,6 +12,7 @@ dependencies:
   - pydocstyle
   - pytest
   - pytest-cov
+  - pytest-mock
   - python=3.8
   - virtualenv
   - pip:

@@ -44,7 +44,7 @@ def train_model():
         train_structs,
         train_targets,
         epochs=50,
-        val_structs=val_structs,
+        val_inputs=val_structs,
         val_targets=val_targets,
     )
     prob_model.save(MODEL_SAVE_DIR)

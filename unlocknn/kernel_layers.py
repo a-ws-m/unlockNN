@@ -89,8 +89,10 @@ class AmpAndLengthScaleFn(KernelLayer, ABC):
     """An ABC for kernels with amplitude and length scale parameters.
 
     Attributes:
-        _amplitude (tf.Tensor): The amplitude of the kernel.
-        _length_scale (tf.Tensor): The length scale of the kernel.
+        _amplitude_basis (tf.Tensor): The basis for the kernel amplitude,
+            which is passed through a softplus to calculate the actual amplitude.
+        _length_scale_basis (tf.Tensor): The basis for the length scale of the kernel.
+            which is passed through a softplus to calculate the actual amplitude.
 
     """
 
@@ -99,21 +101,33 @@ class AmpAndLengthScaleFn(KernelLayer, ABC):
         super().__init__(**kwargs)
         dtype = kwargs.get("dtype", tf.float64)
 
-        self._amplitude = self.add_weight(
+        self._amplitude_basis = self.add_weight(
             initializer=tf.constant_initializer(0), dtype=dtype, name="amplitude"
         )
 
-        self._length_scale = self.add_weight(
+        self._length_scale_basis = self.add_weight(
             initializer=tf.constant_initializer(0), dtype=dtype, name="length_scale"
         )
+    
+    @property
+    def amplitude(self) -> tf.Tensor:
+        """Get the current kernel amplitude."""
+        return tf.nn.softplus(0.1 * self._amplitude_basis)
+    
+    @property
+    def length_scale(self) -> tf.Tensor:
+        """Get the current kernel length scale."""
+        return tf.nn.softplus(5.0 * self._length_scale_basis)
 
 
 class RBFKernelFn(AmpAndLengthScaleFn):
     """A radial basis function implementation that works with keras.
 
     Attributes:
-        _amplitude (tf.Tensor): The amplitude of the kernel.
-        _length_scale (tf.Tensor): The length scale of the kernel.
+        _amplitude_basis (tf.Tensor): The basis for the kernel amplitude,
+            which is passed through a softplus to calculate the actual amplitude.
+        _length_scale_basis (tf.Tensor): The basis for the length scale of the kernel.
+            which is passed through a softplus to calculate the actual amplitude.
 
     """
 
@@ -121,8 +135,8 @@ class RBFKernelFn(AmpAndLengthScaleFn):
     def kernel(self) -> tfp.math.psd_kernels.PositiveSemidefiniteKernel:
         """Get a callable kernel."""
         return tfp.math.psd_kernels.ExponentiatedQuadratic(
-            amplitude=tf.nn.softplus(0.1 * self._amplitude),
-            length_scale=tf.nn.softplus(5.0 * self._length_scale),
+            amplitude=self.amplitude,
+            length_scale=self.length_scale,
         )
 
     @property
@@ -134,8 +148,10 @@ class MaternOneHalfFn(AmpAndLengthScaleFn):
     """A Matern kernel with parameter 1/2 implementation that works with keras.
 
     Attributes:
-        _amplitude (tf.Tensor): The amplitude of the kernel.
-        _length_scale (tf.Tensor): The length scale of the kernel.
+        _amplitude_basis (tf.Tensor): The basis for the kernel amplitude,
+            which is passed through a softplus to calculate the actual amplitude.
+        _length_scale_basis (tf.Tensor): The basis for the length scale of the kernel.
+            which is passed through a softplus to calculate the actual amplitude.
 
     """
 
@@ -143,8 +159,8 @@ class MaternOneHalfFn(AmpAndLengthScaleFn):
     def kernel(self) -> tfp.math.psd_kernels.PositiveSemidefiniteKernel:
         """Get a callable kernel."""
         return tfp.math.psd_kernels.MaternOneHalf(
-            amplitude=tf.nn.softplus(0.1 * self._amplitude),
-            length_scale=tf.nn.softplus(5.0 * self._length_scale),
+            amplitude=self.amplitude,
+            length_scale=self.length_scale,
         )
 
     @property

@@ -54,7 +54,10 @@ UnlockNN provides an API to add uncertainty quantification to Keras-based models
 and comes packaged with a specific implementation for compatibility with MEGNet
 [@chenGraphNetworksUniversal2019], which is a graph NN implementation for
 materials property prediction that has achieved state-of-the-art accuracy on
-many benchmark tasks [@dunnBenchmarkingMaterialsProperty2020].
+many benchmark tasks [@dunnBenchmarkingMaterialsProperty2020]. The package is
+designed for materials and chemistry researchers to improve their models'
+reliability and identify the domain(s) of materials on which the models can
+perform well.
 
 This uncertainty quantification is achieved by supplanting the output layer of
 the model with a variational Gaussian process (VGP)
@@ -75,12 +78,14 @@ the training iterations needed to train the base NN it is modifying.
 The primary interface for unlockNN is the `model` module, which contains an
 extensible `ProbNN` class for adding uncertainty quantification to arbitrary
 Keras models. It also contains a `MEGNetProbModel` class for adding uncertainty
-quantification to MEGNet.
+quantification to MEGNet, and a download suite for accessing example models
+and data. The models can be configured with different kernels for the VGP,
+which are implemented in a `kernel_layers` module.
 
 Neural network-fed VGPs share a similar principle to the convolution-fed
-Gaussian processes formulated by @tranMethodsComparingUncertainty2020a. UnlockNN
+Gaussian processes formulated by @tranMethodsComparingUncertainty2020. UnlockNN
 also implements tools for calculating the performance metrics suggested by
-@tranMethodsComparingUncertainty2020a, including sharpness and calibration error,
+@tranMethodsComparingUncertainty2020, including sharpness and calibration error,
 via its `metrics` module.
 
 ## Acknowledgements

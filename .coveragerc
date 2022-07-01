@@ -1,0 +1,7 @@
+[report]
+
+exclude_lines =
+    @abstractmethod
+    pragma: no cover
+    if __name__ == .__main__.:
+

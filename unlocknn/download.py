@@ -7,7 +7,7 @@ from typing import Union
 
 try:
     from typing import Literal
-except ImportError:
+except ImportError:  # pragma: no cover
     from typish import Literal
 
 import pandas as pd
@@ -151,11 +151,11 @@ def _load_struct_data(fname: PathLike) -> pd.DataFrame:
     return serial_df
 
 
-def _save_struct_data(df: pd.DataFrame, fname: PathLike):
-    """Save data containing ``Structure``s to a file.
+def save_struct_data(df: pd.DataFrame, fname: PathLike):
+    """Save data containing ``Structure`` s to a file.
 
     Serializes the "structure" column to a string.
-    The converse of :func:`load_struct_data`.
+    The converse of :func:`_load_struct_data`.
 
     Args:
         df: The :class:`pd.DataFrame` to serialize.
